@@ -1,0 +1,114 @@
+name: Validate
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static:
+    name: Source and frontend tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+
+      - name: Compile Python
+        run: python3 -m py_compile custom_components/sv_dashboard/*.py
+
+      - name: Check frontend JavaScript
+        run: |
+          node --check custom_components/sv_dashboard/static/frontend.js
+          node --check custom_components/sv_dashboard/static/i18n-core.js
+          node --check custom_components/sv_dashboard/static/i18n.js
+          node --check custom_components/sv_dashboard/static/i18n-extra-west.js
+          node --check custom_components/sv_dashboard/static/i18n-extra-north.js
+          node --check custom_components/sv_dashboard/static/i18n-extra-east.js
+          node --check custom_components/sv_dashboard/static/i18n-advanced-west.js
+          node --check custom_components/sv_dashboard/static/i18n-advanced-north.js
+          node --check custom_components/sv_dashboard/static/i18n-advanced-east.js
+          node --check custom_components/sv_dashboard/static/sv_dashboard.js
+          node --check custom_components/sv_dashboard/static/vehicle-overview-card.js
+          node --check custom_components/sv_dashboard/static/gps-history-card.js
+          node --check custom_components/sv_dashboard/static/gps-history-core.js
+          node --check custom_components/sv_dashboard/static/trip-history-card.js
+          node --check custom_components/sv_dashboard/static/charge-history-card.js
+          node --check custom_components/sv_dashboard/static/charge-history-core.js
+
+      - name: Run Node regression tests
+        run: node --test tests/*.test.mjs
+
+      - name: Validate JSON
+        run: |
+          python3 -m json.tool hacs.json >/dev/null
+          python3 -m json.tool custom_components/sv_dashboard/manifest.json >/dev/null
+          python3 -m json.tool custom_components/sv_dashboard/strings.json >/dev/null
+          for file in custom_components/sv_dashboard/translations/*.json; do
+            python3 -m json.tool "$file" >/dev/null
+          done
+
+      - name: Verify SV domain and branding
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d custom_components/sv_dashboard
+          test ! -e custom_components/e_c3_dashboard
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          manifest = json.loads(Path('custom_components/sv_dashboard/manifest.json').read_text())
+          assert manifest['domain'] == 'sv_dashboard'
+          assert manifest['name'] == 'SV Dashboard'
+          assert manifest['documentation'] == 'https://github.com/CaneTLOTW/sv_dashboard'
+          assert manifest['issue_tracker'] == 'https://github.com/CaneTLOTW/sv_dashboard/issues'
+          translations = sorted(p.stem for p in Path('custom_components/sv_dashboard/translations').glob('*.json'))
+          expected = sorted('de en fr it es pt nl da nb sv fi pl cs sk hu ro sl hr'.split())
+          assert translations == expected, (translations, expected)
+          PY
+          if grep -RIl --exclude-dir=.git --exclude='*.md' 'e_c3_dashboard' custom_components tests .github hacs.json; then
+            echo 'Active old HA domain remains'; exit 1
+          fi
+          if grep -RIl --exclude-dir=.git 'e-C3 Dashboard' custom_components tests .github hacs.json; then
+            echo 'Active old product name remains'; exit 1
+          fi
+
+      - name: Translation semantic guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -RIl 'battery, mileage and tracker' custom_components/sv_dashboard/strings.json custom_components/sv_dashboard/translations; then
+            echo 'Stale universal battery prerequisite remains'; exit 1
+          fi
+
+      - name: Check whitespace errors
+        run: git diff --check HEAD^ HEAD
+
+  hacs:
+    name: HACS validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate repository as an integration
+        uses: hacs/action@main
+        with:
+          category: integration
+
+  hassfest:
+    name: Hassfest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate Home Assistant integration metadata
+        uses: home-assistant/actions/hassfest@master
