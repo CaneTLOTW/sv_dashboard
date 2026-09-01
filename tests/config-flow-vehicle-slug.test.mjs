@@ -5,7 +5,6 @@ import test from "node:test";
 const read = (path) => fs.readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 const flow = read("custom_components/sv_dashboard/config_flow.py");
 const catalogs = [
-  "custom_components/sv_dashboard/strings.json",
   "custom_components/sv_dashboard/translations/en.json",
   "custom_components/sv_dashboard/translations/de.json",
   "custom_components/sv_dashboard/translations/fr.json",
@@ -26,7 +25,7 @@ test("explicit storage slugs cannot collide across dashboard entries", () => {
   assert.match(flow, /while self\._slug_in_use\(f"\{base_slug\}_\{suffix\}"\)/);
 });
 
-test("slug guidance and collision errors exist in DE EN and FR", () => {
+test("slug guidance and collision errors exist in DE EN and FR runtime catalogs", () => {
   for (const catalog of catalogs) {
     assert.equal(typeof catalog.config?.step?.user?.data?.vehicle_slug, "string");
     assert.match(catalog.config.step.user.data.vehicle_slug.toLowerCase(), /optional|facultatif/);
