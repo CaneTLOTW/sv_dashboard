@@ -1,285 +1,169 @@
 # Dashboard features
 
-This document describes the generated SV Dashboard as of the 0.5.53 feature
-set. Exact values and available controls depend on the upstream Stellantis
-entities exposed by the configured vehicle.
+SV Dashboard is organized by task. Exact views and controls depend on the capabilities exposed by the selected Stellantis vehicle.
 
-The current UI is deliberately structured by task. **Vehicle / LIVE** contains
-the current vehicle state and recent activity; detailed histories live in
-**Charging**, **Trips**, and **GPS**; aggregated metrics live in **Statistics**;
-reachability and messaging are separated into **Wake-up** and **Notifications**;
-and integration administration is kept in **System**.
+## Screenshots
 
-## Public screenshots
-
-The following examples were captured from the running dashboard, visually
-reviewed and anonymized. Vehicle history, map/location information, recipient
-details and private integration identifiers are either omitted or covered by
-opaque redaction.
-
-### Start-page card
+The existing screenshots were captured from a real Home Assistant installation and anonymized. They remain valid as UI examples during the SV migration.
 
 ![Compact vehicle overview card](assets/vehicle-overview-card.png)
 
-### Generated dashboard
-
-![LIVE vehicle view](assets/vehicle-live.png)
+![Vehicle LIVE view](assets/vehicle-live.png)
 
 ![Historical charging curves](assets/charging-history.png)
 
 ![Long-term statistics](assets/statistics.png)
 
-![Trip history with rows redacted](assets/trips-history.png)
+![Trip history](assets/trips-history.png)
 
-![GPS history with position and map redacted](assets/gps-history.png)
+![GPS history](assets/gps-history.png)
 
 ![Wake-up controls](assets/wakeup.png)
 
-![Notification switches without recipient rows](assets/notifications.png)
+![Notification controls](assets/notifications.png)
 
 ![System controls](assets/system.png)
 
-### Integration and entities
-
-![Integration and entity overview with private identifiers redacted](assets/integration-entities.png)
+![Integration and entities](assets/integration-entities.png)
 
 ## Compact vehicle overview card
 
-`custom:sv-dashboard-vehicle-overview-card` is the reusable compact presentation
-for an existing Home Assistant start page or mobility dashboard.
-
-With a single configured vehicle it is zero-config apart from the card type:
+`custom:sv-dashboard-vehicle-overview-card` is the reusable compact presentation for another Home Assistant dashboard.
 
 ```yaml
 type: custom:sv-dashboard-vehicle-overview-card
 ```
 
-It provides the vehicle picture, range, contextual temperature or charging
-state, SOC/battery bar, cable/driving indicators and preconditioning. Tapping the
-vehicle opens the generated `/vehicle` view. Range and the contextual right-hand
-status expose native Home Assistant More Info.
+With multiple SV Dashboard entries, bind the card to a specific config entry with `entry_id`.
 
-The generated LIVE hero uses the same canonical card implementation internally
-(`variant: live`). With multiple vehicles, the portable card can be bound to a
-specific e-C3 config entry through `entry_id`.
+The generated LIVE hero uses the same canonical card implementation (`variant: live`).
 
-See [Vehicle overview card](VEHICLE_OVERVIEW_CARD.md) for the full card contract.
+See [Vehicle overview card](VEHICLE_OVERVIEW_CARD.md).
 
 ## Vehicle / LIVE
 
-Vehicle / LIVE is the primary day-to-day cockpit and intentionally focuses on
-the **current** vehicle state.
+Vehicle / LIVE is the day-to-day cockpit. Depending on the selected vehicle it can show:
 
-It includes, where corresponding upstream data exists:
-
-- LIVE hero with vehicle picture and battery/SOC presentation;
-- range;
-- contextual temperature or active charging information;
+- vehicle picture;
+- electric range/SOC or fuel state/range;
+- contextual temperature/charging information;
 - remote-connection state;
-- preconditioning/remote quick actions;
-- consumption and usage information;
-- odometer/mileage;
-- current charging and range information;
-- high-voltage battery health, including available SOH capacity/resistance data;
+- preconditioning/remote quick actions where available;
+- mileage;
+- consumption/usage information;
+- battery/SOH information where the vehicle exposes it;
 - 12-V/service-battery information;
 - current position;
-- latest trip;
-- latest charge;
-- shared vehicle and maintenance information popup.
+- latest trip and charge;
+- vehicle/maintenance information.
 
-Range and the contextual right-hand hero value expose native Home Assistant More
-Info.
-
-Detailed trip, charging and GPS histories are **not duplicated here**. They are
-kept in the dedicated views below. Likewise, integration administration is kept
-in System rather than mixed into Vehicle.
+Unsupported electric/fuel sections remain hidden rather than showing invented values.
 
 ## Charging
 
-Charging is the dedicated history view for completed charging sessions.
+Charging is shown only when the vehicle exposes relevant charging capabilities.
 
-Supported presentation includes:
+It can include:
 
-- selection of completed AC/DC charging sessions;
-- available start/end SOC information;
+- completed AC/DC sessions;
+- start/end SOC;
 - duration;
-- energy in kWh when derivable from the available source data;
-- average charging power when derivable;
-- a reconstructed historical SOC/time curve.
+- energy when source data permits;
+- average charging power when defensibly derivable;
+- reconstructed SOC/time curves.
 
-The curve is reconstructed from vehicle-side history. It must not be interpreted
-as a meter-grade wallbox power trace.
-
-Current charging state remains part of Vehicle / LIVE; Charging is the detailed
-session-history view.
+Derived power/energy values are estimates, not wallbox meter data.
 
 ## Statistics
 
-Statistics contains aggregated and long-term metrics rather than individual trip
-or charging rows. Depending on source availability, it presents:
+Depending on available data, Statistics can include:
 
-- SOH capacity;
-- SOH resistance;
-- mileage;
-- driven distance;
-- trailing average consumption over approximately 500 km.
+- mileage and driven distance;
+- trailing consumption;
+- fuel-consumption metrics;
+- SOH capacity/resistance;
+- Home Assistant long-term statistics.
 
-### Long-term statistics caveat
-
-Driven-distance charts rely on Home Assistant long-term statistics for the
-relevant source statistic. The dashboard deliberately does not conceal or
-silently rewrite malformed historical LTS segments. If Home Assistant already
-contains a statistics reset/discontinuity, a historical negative or otherwise
-implausible period can remain visible until that stored statistics history is
-corrected through a supported Home Assistant statistics path.
-
-This is separate from canonical trip-history repair.
+SV Dashboard does not silently rewrite malformed stored LTS history. The dedicated LTS investigation is tracked in issue #4.
 
 ## Trips
 
-Trips is the dedicated driving-history view and uses a canonical server-history
-model rather than displaying every upstream row as trusted data.
+Trips uses canonical Stellantis server history with:
 
-The view provides:
-
-- canonical server history;
-- an explicit server-history refresh action;
+- server-history refresh;
 - filters;
-- data-quality handling;
-- controls for zero-distance and short trips.
+- short/zero-distance handling;
+- plausibility checks;
+- continuity repair only when strong evidence exists.
 
-Canonical processing applies plausibility guards before a trip may participate
-in downstream metrics. Invalid or unrepaired rows do not become
-odometer-continuity anchors for later trips.
+Raw upstream values remain retained for diagnostics when a derived boundary is repaired.
 
-When an upstream trip contains an implausible odometer boundary and sufficiently
-strong continuity evidence exists, the canonical layer may repair the **derived**
-start/end boundary. The original upstream/raw record remains unchanged for
-diagnostics. If the evidence is insufficient, the trip remains invalid instead
-of inventing a replacement distance.
+Electric trip-energy columns appear only when electric data exists.
 
 ## GPS
 
-GPS is the dedicated position-history view. It combines local Home Assistant
-history and canonical server-side history while keeping the current vehicle
-position separate.
+GPS combines available Home Assistant Recorder points and canonical Stellantis history while keeping the current position separate from archived history.
 
-The date controls include:
-
-- Today;
-- Yesterday;
-- an explicit Home Assistant date/range picker;
-- All.
-
-The map/history layer can combine:
-
-- Home Assistant Recorder points;
-- canonical Stellantis server-history geometry;
-- the current vehicle position as a distinct live marker.
-
-The current position is not silently treated as another archived history point.
-Vehicle / LIVE may show compact current-position information, while GPS handles
-the historical exploration.
+Sparse points and straight server start/stop lines are expected when the upstream vehicle reports only occasional positions.
 
 ## Wake-up
 
-Wake-up contains reachability controls rather than ordinary vehicle status.
-
-The view includes:
+Wake-up contains reachability controls such as:
 
 - wake vehicle now;
 - hourly wake-up;
-- reachability probe with wake-up;
-- wake-up while charging;
-- remote-connection status.
+- availability probe;
+- wake-up while charging where relevant;
+- remote-connection state.
 
-### Reachability probe semantics
-
-If the reliable vehicle heartbeat becomes older than the configured reachability
-limit, the integration may send one wake-up as a probe and then wait for the
-configured probe interval.
-
-Recovery requires fresh, trustworthy vehicle data. A command status such as
-`accepted` or `forwarded` alone does not count as recovery.
+A command marked `accepted` or `forwarded` is not treated as proof of fresh telemetry.
 
 ## Notifications
 
-Notifications is the dedicated communication-policy view. Recipient activation
-is always explicit.
+Notification controls are opt-in and capability-aware. The view can include:
 
-The generated view includes:
-
-- master notification switch;
-- vehicle warnings;
+- master switch;
+- vehicle alerts;
 - trip reports;
-- charging reports;
-- explicitly selected recipients;
-- recipient management;
-- test notification;
-- warning and reset thresholds;
-- reachability controls;
-- probe wait time;
-- charging-start delay;
+- charge reports for charging-capable vehicles;
+- selected recipients;
+- thresholds/delays;
 - quiet hours;
-- diagnostics.
+- diagnostics;
+- test notification.
 
-### Recipient safety
+Notify-service discovery never silently activates a recipient.
 
-Notify-service discovery may make a Home Assistant recipient available for
-selection, but discovery must never silently activate that recipient. Sending
-remains opt-in, and installation does not send a notification.
+Focused runtime QA is tracked in issue #3.
 
 ## System
 
-System contains package/integration administration rather than everyday driving
-information.
+System contains integration/runtime administration rather than everyday vehicle status. It can include:
 
-It includes:
-
-- connection and setup status;
-- detected upstream entity count;
+- setup/connection status;
+- mapped upstream entities;
 - privacy/data-sharing state;
 - refresh interval;
-- battery-value correction;
-- ABRP controls and status where configured.
+- battery-value correction where applicable;
+- ABRP controls/status where configured.
 
-This separation is intentional: Vehicle / LIVE remains focused on the car,
-while System explains and controls how the e-C3 integration is operating.
+## Capability gating
 
-## Integration, entities and configuration
+SV Dashboard is not model-hardcoded.
 
-Each e-C3 Home Assistant config entry maps the selected Stellantis vehicle and
-its upstream entities dynamically. The generated dashboard therefore does not
-need VIN-derived or household-specific fixed entity IDs.
+- **Electric:** electric SOC/range/charging/battery analytics where available.
+- **Hybrid:** electric and fuel features independently where available.
+- **Thermic / combustion:** fuel features without electric-only charging/battery analytics.
+- **Hydrogen / unknown:** only actual mapped capabilities are shown.
 
-The responsibilities are split as follows:
+See [Vehicle capability matrix](VEHICLE_CAPABILITY_MATRIX.en.md).
 
-- **Config flow** — initial vehicle selection, module selection and explicit
-  notification opt-in.
-- **Home Assistant options** — later entry-level configuration changes.
-- **System view** — ongoing runtime/operational integration controls and status.
-- **Integration/device/entity view** — the Home Assistant technical view of the
-  mapped entities.
+## Multi-vehicle behavior
 
-With multiple vehicles, each config entry remains independent and owns its own
-generated dashboard. The portable overview card can select a specific entry with
-`entry_id`.
+Each `sv_dashboard` config entry owns its selected upstream device, generated dashboard and package state. The frontend uses the explicit config-entry ID rather than localized entity IDs or dashboard ordering.
 
-## Data ownership and privacy
+## Data quality and privacy
 
-The SV Dashboard consumes Home Assistant entities created by the upstream
-Stellantis integration and stores its own derived/canonical data where needed.
-Raw upstream history used for diagnostics is not rewritten merely to make the UI
-look plausible.
+Direct upstream data and derived estimates are deliberately distinguished. SOC-derived energy, SOC/time charging power and sparse GPS geometry are never presented as meter-grade/live telemetry.
 
-When publishing screenshots or diagnostics, remove or redact at least:
-
-- VIN/chassis number;
-- exact street names and private locations;
-- GPS coordinates and private map positions;
-- personal `mobile_app_*` or other Notify recipient names;
-- config-entry IDs and other private identifiers;
-- credentials, tokens and raw account exports.
-
-Use opaque redaction for identifiers rather than reversible or weak visual
-obfuscation.
+Before publishing screenshots or diagnostics, redact private VINs, account identifiers, GPS coordinates/locations, Notify recipient names, config-entry IDs, credentials and tokens.
