@@ -77,7 +77,7 @@ jobs:
           expected = sorted('de en fr it es pt nl da nb sv fi pl cs sk hu ro sl hr'.split())
           assert translations == expected, (translations, expected)
           PY
-          if grep -RIl --exclude-dir=.git -E 'e_c3_dashboard|e-C3 Dashboard|e-c3-' custom_components tests .github hacs.json; then
+          if grep -RIl --exclude-dir=.git -E 'e_c3_dashboard|e-C3 Dashboard|e-c3-' custom_components tests hacs.json; then
             echo 'Active old e-C3 identifier remains'; exit 1
           fi
 
