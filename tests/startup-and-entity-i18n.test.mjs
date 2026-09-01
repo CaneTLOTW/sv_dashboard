@@ -9,7 +9,7 @@ const numberSource = read("custom_components/sv_dashboard/number.py");
 const timeSource = read("custom_components/sv_dashboard/time.py");
 const switchSource = read("custom_components/sv_dashboard/switch.py");
 const buttonSource = read("custom_components/sv_dashboard/button.py");
-const strings = JSON.parse(read("custom_components/sv_dashboard/strings.json"));
+const en = JSON.parse(read("custom_components/sv_dashboard/translations/en.json"));
 const de = JSON.parse(read("custom_components/sv_dashboard/translations/de.json"));
 
 test("config-entry setup never globally drains Home Assistant tasks", () => {
@@ -25,7 +25,7 @@ test("notification controls use Home Assistant entity translation keys", () => {
   assert.match(buttonSource, /self\._attr_translation_key = key/);
 });
 
-test("German notification control translations are complete", () => {
+test("German and English notification control runtime translations are complete", () => {
   const required = {
     number: [
       "range_warning_km", "range_reset_km", "home_soc_warning", "home_soc_reset",
@@ -43,7 +43,7 @@ test("German notification control translations are complete", () => {
 
   for (const [domain, keys] of Object.entries(required)) {
     for (const key of keys) {
-      assert.equal(typeof strings.entity?.[domain]?.[key]?.name, "string", `missing English ${domain}.${key}`);
+      assert.equal(typeof en.entity?.[domain]?.[key]?.name, "string", `missing English ${domain}.${key}`);
       assert.equal(typeof de.entity?.[domain]?.[key]?.name, "string", `missing German ${domain}.${key}`);
     }
   }
