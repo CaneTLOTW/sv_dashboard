@@ -1,9 +1,16 @@
 {
   "domain": "sv_dashboard",
   "name": "SV Dashboard",
-  "codeowners": ["@CaneTLOTW"],
+  "codeowners": [
+    "@CaneTLOTW"
+  ],
   "config_flow": true,
-  "dependencies": ["frontend", "http", "lovelace", "recorder"],
+  "dependencies": [
+    "frontend",
+    "http",
+    "lovelace",
+    "recorder"
+  ],
   "documentation": "https://github.com/CaneTLOTW/sv_dashboard",
   "integration_type": "hub",
   "iot_class": "local_push",

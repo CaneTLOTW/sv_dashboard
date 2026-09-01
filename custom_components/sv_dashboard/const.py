@@ -5,13 +5,7 @@ from __future__ import annotations
 from homeassistant.const import Platform
 
 DOMAIN = "sv_dashboard"
-PLATFORMS: list[Platform] = [
-    Platform.SENSOR,
-    Platform.SWITCH,
-    Platform.BUTTON,
-    Platform.NUMBER,
-    Platform.TIME,
-]
+PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH, Platform.BUTTON, Platform.NUMBER, Platform.TIME]
 
 UPSTREAM_DOMAIN = "stellantis_vehicles"
 MIN_UPSTREAM_VERSION = "2026.7.2"
@@ -47,6 +41,19 @@ FRONTEND_VERSION = "0.6.0-beta.1"
 STATIC_VERSION = FRONTEND_VERSION
 FRONTEND_RESOURCE_URLS = (FRONTEND_URL,)
 
+# Historical package-owned Resource entries that must disappear from Lovelace
+# storage when the consolidated frontend is installed. Static routes can still
+# exist for internal module imports; only the HA resource registration goes.
+LEGACY_FRONTEND_RESOURCE_URLS = (
+    "/sv_dashboard/sv_dashboard.js",
+    "/sv_dashboard/map-marker-fix.js",
+    "/sv_dashboard/gps-history-fix.js",
+    "/sv_dashboard/trip-history-card.js",
+    "/sv_dashboard/charge-history-card.js",
+    "/sv_dashboard/live-vehicle-picture-fix.js",
+    "/sv_dashboard/vehicle-overview-card.js",
+)
+
 REQUIRED_DASHBOARD_CARDS = (
     ("Bubble Card", "bubble-card", "bubble-card"),
     ("Button Card", "button-card", "button-card"),
@@ -71,3 +78,4 @@ METRIC_KEYS = (
 
 AUTO_DASHBOARD_STORAGE_VERSION = 1
 AUTO_DASHBOARD_STRATEGY = "custom:sv-dashboard"
+LEGACY_AUTO_DASHBOARD_STRATEGY = "sv-dashboard"

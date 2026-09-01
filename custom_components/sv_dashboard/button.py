@@ -1,0 +1,57 @@
+"""Safe package-owned buttons for manual wake-up and notification testing."""
+
+from __future__ import annotations
+
+from homeassistant.components.button import ButtonEntity
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+
+from .const import DOMAIN
+from .entity_identity import apply_vehicle_entity_identity
+
+
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    async_add_entities([
+        Ec3ActionButton(coordinator, entry, "manual_wakeup", "mdi:car-key"),
+        Ec3ActionButton(coordinator, entry, "test_notification", "mdi:message-alert-outline"),
+        Ec3ActionButton(coordinator, entry, "sync_server_history", "mdi:database-sync"),
+    ])
+    await coordinator.notifications.async_refresh_entities()
+
+
+class Ec3ActionButton(ButtonEntity):
+    # Keep Home Assistant entity naming enabled so translation keys remain the
+    # visible action names instead of falling back to the dashboard device name.
+    _attr_has_entity_name = True
+    _attr_should_poll = False
+
+    def __init__(self, coordinator, entry: ConfigEntry, key: str, icon: str) -> None:
+        self.coordinator = coordinator
+        self.entry = entry
+        self.key = key
+        self._attr_translation_key = key
+        self._attr_icon = icon
+        apply_vehicle_entity_identity(self, coordinator.hass, entry, "button", key)
+
+    async def async_press(self) -> None:
+        if self.key == "manual_wakeup":
+            await self.coordinator.notifications.async_manual_wakeup()
+        elif self.key == "sync_server_history":
+            await self.coordinator.server_history.async_full_sync()
+        else:
+            await self.coordinator.notifications.async_test_notification()
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        vehicle_name = self.coordinator.data.get("vehicle_name") or "Stellantis"
+        return DeviceInfo(
+            identifiers={(DOMAIN, self.entry.entry_id)},
+            name=f"{vehicle_name} dashboard",
+            manufacturer="SV Dashboard",
+            model="Local dashboard companion",
+        )

@@ -1,4 +1,4 @@
-"""Stable VIN-based identity for SV Dashboard entities."""
+"""Stable VIN-based identity for package-owned Home Assistant entities."""
 
 from __future__ import annotations
 
@@ -46,7 +46,13 @@ def apply_vehicle_entity_identity(
     entity_domain: str,
     technical_key: str,
 ) -> None:
-    """Apply one language-neutral VIN + technical-key identity to a new entity."""
+    """Apply one language-neutral VIN + technical-key identity to a new entity.
+
+    Setting ``entity_id`` before platform registration is Home Assistant's
+    integration-side suggestion for the initial object id. Existing registry
+    entries still win after migration, while fresh installs never derive the
+    entity id from a translated display name.
+    """
     unique_id = vehicle_entity_unique_id(hass, entry, technical_key)
     entity._attr_unique_id = unique_id
     entity.entity_id = f"{entity_domain}.{slugify(unique_id)}"
@@ -55,23 +61,27 @@ def apply_vehicle_entity_identity(
 def registry_technical_key(
     registry_entry: er.RegistryEntry, entry: ConfigEntry, vin: str | None
 ) -> str | None:
-    """Return the technical suffix from current SV Dashboard unique IDs."""
+    """Return the technical suffix from current or legacy package unique IDs."""
     unique_id = str(registry_entry.unique_id or "")
     if vin and unique_id.startswith(f"{vin}_"):
         return unique_id[len(vin) + 1 :]
 
-    entry_prefix = f"{entry.entry_id}_"
-    if unique_id.startswith(entry_prefix):
-        return unique_id[len(entry_prefix) :]
+    legacy_prefix = f"{entry.entry_id}_"
+    if unique_id.startswith(legacy_prefix):
+        return unique_id[len(legacy_prefix) :]
     return None
 
 
 def async_migrate_package_entity_ids(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Normalize package-owned registry rows to VIN + technical-key identities."""
+    """Migrate package-owned registry rows to VIN + technical-key identities.
+
+    This touches only entities owned by this integration and this config entry.
+    Upstream Stellantis entities are never modified.
+    """
     vin = vehicle_vin(hass, entry)
     if not vin:
         _LOGGER.warning(
-            "Cannot normalize SV Dashboard entity identities because the selected "
+            "Cannot migrate SV Dashboard entity identities because the selected "
             "Stellantis device exposes no VIN identifier"
         )
         return
@@ -85,7 +95,9 @@ def async_migrate_package_entity_ids(hass: HomeAssistant, entry: ConfigEntry) ->
             continue
 
         desired_unique_id = f"{vin}_{technical_key}"
-        desired_entity_id = f"{registry_entry.domain}.{slugify(desired_unique_id)}"
+        desired_entity_id = (
+            f"{registry_entry.domain}.{slugify(desired_unique_id)}"
+        )
         if (
             registry_entry.unique_id == desired_unique_id
             and registry_entry.entity_id == desired_entity_id
@@ -95,7 +107,7 @@ def async_migrate_package_entity_ids(hass: HomeAssistant, entry: ConfigEntry) ->
         existing = registry.async_get(desired_entity_id)
         if existing is not None and existing.entity_id != registry_entry.entity_id:
             _LOGGER.warning(
-                "Keeping existing entity id %s while normalizing unique id to %s "
+                "Keeping existing entity id %s while migrating unique id to %s "
                 "because %s is already registered",
                 registry_entry.entity_id,
                 desired_unique_id,
@@ -113,7 +125,7 @@ def async_migrate_package_entity_ids(hass: HomeAssistant, entry: ConfigEntry) ->
             new_entity_id=desired_entity_id,
         )
         _LOGGER.info(
-            "Normalized SV Dashboard entity %s to %s (%s)",
+            "Migrated SV Dashboard entity %s to %s (%s)",
             registry_entry.entity_id,
             desired_entity_id,
             desired_unique_id,

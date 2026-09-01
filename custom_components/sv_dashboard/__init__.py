@@ -19,6 +19,7 @@ from .const import (
     FRONTEND_RESOURCE_URLS,
     FRONTEND_URL,
     FRONTEND_VERSION,
+    LEGACY_FRONTEND_RESOURCE_URLS,
     PLATFORMS,
 )
 from .coordinator import SvDashboardCoordinator
@@ -35,7 +36,13 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 async def _async_register_frontend_resource(hass: HomeAssistant) -> None:
-    """Keep exactly one SV Dashboard Lovelace resource registered."""
+    """Keep exactly one package-owned Lovelace resource registered.
+
+    Internal package JavaScript remains available through static paths and is
+    imported by ``frontend.js``. Older installations registered several SV
+    modules independently; remove only those package-owned legacy entries so
+    Home Assistant no longer has competing load points/orderings.
+    """
     lovelace = hass.data.get("lovelace")
     if lovelace is None or getattr(lovelace, "resource_mode", "storage") != "storage":
         _LOGGER.warning(
@@ -55,6 +62,15 @@ async def _async_register_frontend_resource(hass: HomeAssistant) -> None:
             for item in existing_items
             if item.get("url")
         }
+
+        for legacy_url in LEGACY_FRONTEND_RESOURCE_URLS:
+            if legacy_url == FRONTEND_URL:
+                continue
+            legacy = existing.get(legacy_url)
+            if legacy is None:
+                continue
+            await lovelace.resources.async_delete_item(legacy["id"])
+            _LOGGER.info("Removed legacy SV Dashboard resource %s", legacy_url)
 
         for resource_url in FRONTEND_RESOURCE_URLS:
             expected_url = f"{resource_url}?v={FRONTEND_VERSION}"
@@ -92,10 +108,6 @@ async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
         "i18n-extra-west.js",
         "i18n-extra-north.js",
         "i18n-extra-east.js",
-        "i18n-advanced-west.js",
-        "i18n-advanced-north.js",
-        "i18n-advanced-east.js",
-        "i18n-core.js",
     ]
     await hass.http.async_register_static_paths(
         [
@@ -116,6 +128,9 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: SvDashboardConfigEntry
 ) -> bool:
     """Set up one selected upstream Stellantis vehicle."""
+    # Normalize only package-owned registry rows before platform setup. This
+    # gives existing test installs the same VIN + technical-key identity that a
+    # fresh install receives, without touching any Stellantis Vehicles entity.
     async_migrate_package_entity_ids(hass, entry)
 
     coordinator = SvDashboardCoordinator(hass, entry)
@@ -136,6 +151,11 @@ async def async_setup_entry(
     coordinator.server_history = server_history
     metrics.server_history = server_history
 
+    # Server/maintenance history is optional enrichment.  It can involve a slow
+    # upstream HTTP request through Stellantis Vehicles and must therefore never
+    # hold the config-entry/bootstrap path open.  Start it in the background;
+    # the history entities read the manager state and are refreshed when the
+    # background initialization completes.
     server_history_task = hass.async_create_task(server_history.async_initialize())
     entry.async_on_unload(server_history_task.cancel)
 
@@ -148,6 +168,11 @@ async def async_setup_entry(
     hass.data[DOMAIN][entry.entry_id] = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
+    # Never use ``hass.async_block_till_done()`` from config-entry setup.  That
+    # waits for unrelated global Home Assistant tasks and can turn a slow
+    # background integration into a bootstrap-stage timeout.  Publish once now
+    # and once again shortly afterwards so Number/Time registry entries are
+    # visible to the dashboard strategy without blocking startup.
     await notifications.async_refresh_entities()
 
     async def _refresh_control_mapping(_now: Any) -> None:
@@ -156,6 +181,9 @@ async def async_setup_entry(
     entry.async_on_unload(async_call_later(hass, 1, _refresh_control_mapping))
 
     coordinator.data["dashboard_url_path"] = await async_ensure_dashboard(hass, entry)
+    # The status sensor is already registered at this point. Publish the actual
+    # package/user-managed dashboard path so compact-card navigation never has
+    # to reconstruct a URL from an SV-specific slug.
     await notifications.async_refresh_entities()
     entry.async_on_unload(entry.add_update_listener(_async_reload_entry))
     return True
@@ -177,7 +205,7 @@ async def async_unload_entry(
 async def async_remove_entry(
     hass: HomeAssistant, entry: SvDashboardConfigEntry
 ) -> None:
-    """Remove only SV Dashboard persisted state for a deleted config entry."""
+    """Remove only package-owned persisted state for a deleted config entry."""
     slug = entry.data[CONF_VEHICLE_SLUG]
     await Store(hass, 1, f"{DOMAIN}_{slug}_metrics").async_remove()
     await Store(hass, 1, f"{DOMAIN}_{slug}_server_history").async_remove()

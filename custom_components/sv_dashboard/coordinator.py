@@ -22,6 +22,11 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+
+# Battery is deliberately not required: Thermic vehicles have none. The
+# upstream ``type`` sensor plus entity capabilities determine which UI modules
+# are valid for the selected vehicle.
 _REQUIRED_ENTITY_KEYS = {"vehicle", "mileage"}
 
 
@@ -42,7 +47,9 @@ class SvDashboardCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Build a safe, VIN-independent snapshot from the entity registry."""
         device_registry = dr.async_get(self.hass)
         entity_registry = er.async_get(self.hass)
-        device = device_registry.async_get(self.entry.data[CONF_VEHICLE_DEVICE_ID])
+        device = device_registry.async_get(
+            self.entry.data[CONF_VEHICLE_DEVICE_ID]
+        )
 
         upstream_entry_ids = {
             config_entry.entry_id
@@ -65,9 +72,12 @@ class SvDashboardCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             key = registry_entry.translation_key
             if not key:
                 continue
+            # A few upstream capabilities deliberately share one translation
+            # key across domains (notably charge-limit number + switch).
+            # Preserve the domain-qualified address for the strategy instead
+            # of relying on entity registry iteration order.
             entity_mapping[f"{key}_{registry_entry.domain}"] = registry_entry.entity_id
             entity_mapping.setdefault(key, registry_entry.entity_id)
-
         tracker = entity_mapping.get("vehicle") or next(
             (
                 registry_entry.entity_id
@@ -81,7 +91,11 @@ class SvDashboardCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
         powertrain = powertrain_from_mapping(self.hass, entity_mapping)
         capabilities = capability_map(powertrain, entity_mapping)
+
         compatibility = await async_check_upstream_compatibility(self.hass)
+        # Keep the public module contract deliberately closed. Older beta
+        # entries may contain now-removed migration options, but those must
+        # never reintroduce references to installation-specific helpers.
         options = {
             key: self.entry.options.get(key, default)
             for key, default in DEFAULT_OPTIONS.items()

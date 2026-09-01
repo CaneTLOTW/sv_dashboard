@@ -1,8 +1,8 @@
 """Vehicle powertrain and capability helpers.
 
 The upstream Stellantis integration exposes a stable ``type`` sensor whose
-native state is one of electric/hybrid/thermic/hydrogen. Entity presence is
-kept as a fallback so a temporarily unavailable type sensor does not turn a
+native state is one of electric/hybrid/thermic/hydrogen.  Entity presence is
+kept as a fallback so an temporarily unavailable type sensor does not turn a
 known vehicle into an unsupported one.
 """
 
@@ -60,6 +60,8 @@ def capability_map(powertrain: str, entity_mapping: dict[str, str]) -> dict[str,
     electric = powertrain in {POWERTRAIN_ELECTRIC, POWERTRAIN_HYBRID}
     fuel = powertrain in {POWERTRAIN_THERMIC, POWERTRAIN_HYBRID}
 
+    # For an unavailable/older type state, entity presence may safely enable a
+    # capability, but it may never invent a charge feature that is not mapped.
     if powertrain == POWERTRAIN_UNKNOWN:
         electric = bool(entity_mapping.get("battery") or entity_mapping.get("autonomy"))
         fuel = bool(entity_mapping.get("fuel") or entity_mapping.get("fuel_autonomy"))

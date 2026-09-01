@@ -1,0 +1,124 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+
+const source = await readFile(
+  new URL("../custom_components/sv_dashboard/static/gps-history-core.js", import.meta.url),
+  "utf8",
+);
+const {
+  dateRangeWindow,
+  dateWindow,
+  earliestGeoJsonTime,
+  filterGeoJsonByWindow,
+  localDateKey,
+  normalizeDateKey,
+  shiftDateKey,
+} = await import(`data:text/javascript,${encodeURIComponent(source)}`);
+
+const trip = (id, start, end) => ({
+  type: "Feature",
+  geometry: { type: "LineString", coordinates: [[8.5, 51.2], [8.6, 51.3]] },
+  properties: { trip_id: id, start_time: start, end_time: end },
+});
+const iso = (timestamp) => new Date(timestamp).toISOString();
+
+const fixedNow = new Date(2026, 7, 28, 12, 0, 0);
+
+test("normalizes and shifts local date keys without moving into the future", () => {
+  assert.equal(localDateKey(fixedNow), "2026-08-28");
+  assert.equal(normalizeDateKey("invalid", fixedNow), "2026-08-28");
+  assert.equal(normalizeDateKey("2026-08-29", fixedNow), "2026-08-28");
+  assert.equal(shiftDateKey("2026-08-28", -1, fixedNow), "2026-08-27");
+  assert.equal(shiftDateKey("2026-08-28", 1, fixedNow), "2026-08-28");
+});
+
+test("today uses now as the display end while past days use next midnight", () => {
+  const today = dateWindow("2026-08-28", fixedNow);
+  assert.equal(today.isToday, true);
+  assert.equal(today.historyEnd, "now");
+  assert.equal(today.endMs, fixedNow.getTime());
+
+  const past = dateWindow("2026-08-27", fixedNow);
+  assert.equal(past.isToday, false);
+  assert.equal(past.endMs - past.startMs, 24 * 60 * 60 * 1000);
+});
+
+test("accepts a multi-day range from the Home Assistant period selector", () => {
+  const start = new Date(2026, 7, 23, 0, 0, 0);
+  const end = new Date(2026, 7, 26, 23, 59, 59);
+  const window = dateRangeWindow(start, end, fixedNow);
+  assert.equal(window.startMs, start.getTime());
+  assert.equal(window.endMs, end.getTime());
+  assert.equal(window.historyEnd, end.toISOString());
+});
+
+test("clamps a range ending today to now instead of querying the future", () => {
+  const start = new Date(2026, 7, 23, 0, 0, 0);
+  const end = new Date(2026, 7, 28, 23, 59, 59);
+  const window = dateRangeWindow(start, end, fixedNow);
+  assert.equal(window.endMs, fixedNow.getTime());
+  assert.equal(window.historyEnd, "now");
+});
+
+test("filters canonical server features to the selected local day", () => {
+  const window = dateWindow("2026-08-27", fixedNow);
+  const geojson = {
+    type: "FeatureCollection",
+    features: [
+      trip("old", iso(window.startMs - 60 * 60 * 1000), iso(window.startMs - 30 * 60 * 1000)),
+      trip("selected", iso(window.startMs + 60 * 60 * 1000), iso(window.startMs + 90 * 60 * 1000)),
+      trip("crossing", iso(window.endMs - 5 * 60 * 1000), iso(window.endMs + 5 * 60 * 1000)),
+      trip("future", iso(window.endMs + 60 * 60 * 1000), iso(window.endMs + 90 * 60 * 1000)),
+    ],
+  };
+
+  const filtered = filterGeoJsonByWindow(geojson, window);
+  assert.deepEqual(
+    filtered.features.map((feature) => feature.properties.trip_id),
+    ["selected", "crossing"],
+  );
+  assert.equal(geojson.features.length, 4, "source archive must remain untouched");
+});
+
+test("filters the same canonical overlay across an arbitrary multi-day range", () => {
+  const start = new Date(2026, 7, 23, 0, 0, 0);
+  const end = new Date(2026, 7, 26, 0, 0, 0);
+  const window = dateRangeWindow(start, end, fixedNow);
+  const geojson = {
+    type: "FeatureCollection",
+    features: [
+      trip("before", iso(start.getTime() - 3600000), iso(start.getTime() - 1800000)),
+      trip("day1", iso(start.getTime() + 3600000), iso(start.getTime() + 7200000)),
+      trip("day3", iso(end.getTime() - 7200000), iso(end.getTime() - 3600000)),
+      trip("after", iso(end.getTime() + 3600000), iso(end.getTime() + 7200000)),
+    ],
+  };
+  assert.deepEqual(
+    filterGeoJsonByWindow(geojson, window).features.map((feature) => feature.properties.trip_id),
+    ["day1", "day3"],
+  );
+});
+
+test("finds the first timestamp for an explicit all-history selection", () => {
+  const geojson = {
+    type: "FeatureCollection",
+    features: [
+      trip("new", "2026-08-20T12:00:00Z", "2026-08-20T12:30:00Z"),
+      trip("old", "2026-06-03T08:00:00Z", "2026-06-03T08:30:00Z"),
+    ],
+  };
+  assert.equal(earliestGeoJsonTime(geojson), Date.parse("2026-06-03T08:00:00Z"));
+});
+
+test("drops features without timestamps instead of leaking archive data", () => {
+  const window = dateWindow("2026-08-27", fixedNow);
+  const filtered = filterGeoJsonByWindow(
+    {
+      type: "FeatureCollection",
+      features: [{ type: "Feature", geometry: null, properties: {} }],
+    },
+    window,
+  );
+  assert.deepEqual(filtered.features, []);
+});

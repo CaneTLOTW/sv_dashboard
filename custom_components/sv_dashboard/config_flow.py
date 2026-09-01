@@ -54,6 +54,7 @@ def _vehicle_capabilities_for_device(hass, device_id: str) -> dict[str, bool]:
 
 
 def _battery_capacity_selector() -> selector.NumberSelector:
+    """Return the per-vehicle manual battery-capacity fallback selector."""
     return selector.NumberSelector(
         selector.NumberSelectorConfig(
             min=1,
@@ -66,11 +67,12 @@ def _battery_capacity_selector() -> selector.NumberSelector:
 
 
 class SvDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Set up an SV Dashboard entry for exactly one upstream vehicle."""
+    """Set up a dashboard entry for exactly one upstream vehicle."""
 
     VERSION = 1
 
     async def async_step_user(self, user_input=None):
+        """Select one vehicle; request traction capacity only when relevant."""
         if not self.context.get("dashboard_card_preflight_seen"):
             return await self.async_step_dashboard_cards()
 
@@ -147,6 +149,7 @@ class SvDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_dashboard_cards(self, user_input=None):
+        """Show a best-effort Lovelace-resource preflight before setup."""
         if user_input is not None:
             self.context["dashboard_card_preflight_seen"] = True
             return await self.async_step_user()
@@ -163,12 +166,15 @@ class SvDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="dashboard_cards",
             data_schema=vol.Schema(
-                {vol.Required("dashboard_cards_confirmed", default=False): bool}
+                {
+                    vol.Required("dashboard_cards_confirmed", default=False): bool,
+                }
             ),
             description_placeholders={"card_status": card_status},
         )
 
     def _dashboard_card_resource_status(self) -> list[tuple[str, bool]] | None:
+        """Return resource-registry matches for required dashboard cards."""
         lovelace = self.hass.data.get(LOVELACE_DATA)
         resources = getattr(lovelace, "resources", None)
         if resources is None or not getattr(resources, "loaded", False):
@@ -185,6 +191,7 @@ class SvDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         ]
 
     def _is_upstream_vehicle(self, device_id: str) -> bool:
+        """Require a selected device from an installed upstream config entry."""
         device = dr.async_get(self.hass).async_get(device_id)
         if device is None:
             return False
@@ -195,6 +202,7 @@ class SvDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return bool(set(device.config_entries) & upstream_entry_ids)
 
     def _has_required_upstream_entities(self, device_id: str) -> bool:
+        """Require universal vehicle basics; battery is capability-specific."""
         entries = _upstream_vehicle_entries(self.hass, device_id)
         keys = {registry_entry.translation_key for registry_entry in entries}
         return (
@@ -203,12 +211,14 @@ class SvDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     def _slug_in_use(self, vehicle_slug: str) -> bool:
+        """Return whether another dashboard entry already owns this storage slug."""
         return any(
             entry.data.get(CONF_VEHICLE_SLUG) == vehicle_slug
             for entry in self.hass.config_entries.async_entries(DOMAIN)
         )
 
     def _available_vehicle_slug(self, base_slug: str) -> str:
+        """Return a deterministic free slug for an automatically named vehicle."""
         if not self._slug_in_use(base_slug):
             return base_slug
         suffix = 2
@@ -217,12 +227,14 @@ class SvDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return f"{base_slug}_{suffix}"
 
     def _vehicle_name(self, device_id: str) -> str:
+        """Return the selected upstream vehicle name for multi-entry fallback."""
         device = dr.async_get(self.hass).async_get(device_id)
         return device.name_by_user or device.name or "Stellantis vehicle"
 
     @staticmethod
     @callback
     def async_get_options_flow(config_entry):
+        """Expose user-configurable dashboard modules."""
         return SvDashboardOptionsFlow()
 
 
@@ -230,12 +242,16 @@ class SvDashboardOptionsFlow(config_entries.OptionsFlow):
     """Configure one vehicle dashboard without changing its identity."""
 
     async def async_step_init(self, user_input=None):
+        """Configure title, capacity fallback and portable modules."""
         if user_input is not None:
             normalized = dict(user_input)
             normalized[OPTION_DASHBOARD_NAME] = str(
                 normalized.get(OPTION_DASHBOARD_NAME, "")
             ).strip()
 
+            # Battery capacity is vehicle setup data, not a runtime module
+            # toggle. Keep one canonical value in ConfigEntry.data while still
+            # allowing an existing entry to maintain or clear it from Options.
             capacity = normalized.pop(CONF_BATTERY_CAPACITY_KWH, None)
             entry_data = dict(self.config_entry.data)
             if capacity is None:
@@ -286,7 +302,9 @@ class SvDashboardOptionsFlow(config_entries.OptionsFlow):
         fields.update(
             {
                 vol.Required(OPTION_TRIPS, default=options[OPTION_TRIPS]): bool,
-                vol.Required(OPTION_CHARGING, default=options[OPTION_CHARGING]): bool,
+                vol.Required(
+                    OPTION_CHARGING, default=options[OPTION_CHARGING]
+                ): bool,
                 vol.Required(OPTION_GPS, default=options[OPTION_GPS]): bool,
                 vol.Required(OPTION_WAKEUP, default=options[OPTION_WAKEUP]): bool,
                 vol.Required(
@@ -315,4 +333,5 @@ class SvDashboardOptionsFlow(config_entries.OptionsFlow):
                 ),
             }
         )
-        return self.async_show_form(step_id="init", data_schema=vol.Schema(fields))
+        schema = vol.Schema(fields)
+        return self.async_show_form(step_id="init", data_schema=schema)

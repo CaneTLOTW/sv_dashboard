@@ -14,10 +14,14 @@ from .const import MIN_UPSTREAM_VERSION, UPSTREAM_DOMAIN
 async def async_check_upstream_compatibility(
     hass: HomeAssistant,
 ) -> dict[str, Any]:
-    """Return a versioned, display-safe compatibility result."""
+    """Return a versioned, display-safe compatibility result.
+
+    This performs no vehicle API requests. It only reads the locally loaded
+    upstream integration manifest and is safe to run during setup and reload.
+    """
     try:
         integration = await async_get_integration(hass, UPSTREAM_DOMAIN)
-    except Exception:
+    except Exception:  # The config flow renders the translated failure state.
         return {
             "installed": False,
             "version": None,
