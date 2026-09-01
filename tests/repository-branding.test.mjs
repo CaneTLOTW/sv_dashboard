@@ -7,6 +7,8 @@ const root = path.resolve(new URL("..", import.meta.url).pathname);
 const allowedHistoricalProductName = new Set([
   "README.md",
   "CHANGELOG.md",
+  "docs/CONCEPT.md",
+  "docs/INSTALLATION.en.md",
 ]);
 
 function collect(dir, result = []) {
