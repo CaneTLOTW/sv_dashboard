@@ -1,124 +1,120 @@
-# e-C3 Fahrzeugübersicht für Home-Assistant-Startseiten
+# Vehicle overview card
 
-## Zweck
+## Purpose
 
-`custom:sv-dashboard-vehicle-overview-card` ist die portable Version der bereits produktiv genutzten Startseitenkarte. Das Layout wurde nicht neu gestaltet; die bestehende `Mobilität`-Karte wurde auf den Config-Entry-/Entity-Mapping-Vertrag von `sv_dashboard` portiert.
+`custom:sv-dashboard-vehicle-overview-card` is the reusable compact vehicle card shipped with SV Dashboard.
 
-Seit 0.5.39 nutzt auch die automatisch erzeugte **LIVE-/Vehicle-Ansicht** dieselbe kanonische Fahrzeugübersicht mit `variant: live`. Dadurch existiert nicht mehr parallel ein zweiter Strategy-Hero-Bildpfad. Startseitenkarte und LIVE-Hero beziehen das Fahrzeugbild beide aus dem gemappten Live-Tracker.
+The generated **Vehicle / LIVE** view uses the same canonical card implementation with `variant: live`. The start-page card and LIVE hero therefore share vehicle mapping, image handling and primary status semantics.
 
-![e-C3 Fahrzeugübersicht](assets/vehicle-overview-card.png)
+![Vehicle overview card](assets/vehicle-overview-card.png)
 
-## Minimaler Einsatz
+## Minimal configuration
 
 ```yaml
 type: custom:sv-dashboard-vehicle-overview-card
 ```
 
-Bei genau einem konfigurierten e-C3-Fahrzeug reicht das aus. Die Karte erzeugt intern wieder:
+With one configured SV Dashboard vehicle this is sufficient.
 
-- Heading `Mobilität`
-- 270-px-Fahrzeug-Hero
-- anklickbare Reichweite oben links
-- anklickbares Ladeende/Ladestatus bzw. Temperatur oben rechts
-- Vorklimatisierungsbutton
-- Ladekabel-Indikator
-- Fahrindikator
-- transparente Navigation über der Fahrzeugfläche
-- Batterie-Fortschrittsleiste mit Lade-/Fahrtstatus und Pulsanimation
+The card can present, depending on vehicle capabilities:
 
-Die beiden Status-Pills folgen dem bewährten Referenz-Dashboard: feste 26-px-Höhe, kompakte Icon/Text-Anordnung und natives Home-Assistant-`more-info`.
+- vehicle image;
+- electric range/SOC or fuel/range state;
+- contextual temperature or charging information;
+- preconditioning control where mapped;
+- charging-cable/driving indicators;
+- primary energy/status bar;
+- navigation to the generated Vehicle view.
 
-## Optionale Konfiguration
+## Multiple vehicles
 
 ```yaml
 type: custom:sv-dashboard-vehicle-overview-card
 entry_id: <sv_dashboard config-entry id>
 navigation_path: /optional/override/vehicle
-heading: Mobilität
+heading: Mobility
 heading_icon: fa6-solid:car
 ```
 
-`entry_id` ist nur bei mehreren e-C3 Config Entries erforderlich. `navigation_path` ist ausschließlich ein Override.
+`entry_id` is only required when more than one SV Dashboard config entry exists. `navigation_path` is an optional override.
 
-`variant: live` ist ein interner Package-Pfad für den vom Dashboard erzeugten LIVE-Hero und muss für eine normale Startseitenkarte nicht gesetzt werden.
+`variant: live` is package-internal and normally should not be set manually.
 
-## Mapping statt haushaltsspezifischer IDs
+## Mapping contract
 
-Die frühere Karte enthielt VIN-/Gerätepfade und feste Entity-IDs. Die Package-Karte verwendet ausschließlich den Statusvertrag der ausgewählten `sv_dashboard` Config Entry:
+The card does not rely on copied VIN-derived or localized entity IDs. It consumes the selected SV Dashboard config entry's mapping/capability contract.
+
+Common mapped values can include:
 
 - `vehicle_tracker`
-- `entity_mapping.battery`
-- `entity_mapping.autonomy`
-- `entity_mapping.temperature`
-- `entity_mapping.battery_charging`
-- `entity_mapping.battery_charging_end`
-- `entity_mapping.battery_plugged`
-- `entity_mapping.engine`
-- `entity_mapping.preconditioning`
-- `entity_mapping.preconditioning_start`
-- `entity_mapping.preconditioning_stop`
-- `metric_entities.current_charge_power`
-- `metric_entities.current_trip_energy`
+- battery/SOC and electric range
+- fuel level/range
+- temperature
+- charging state/end time/cable
+- engine/driving state
+- preconditioning state/start/stop
+- package metric entities such as current charge power or current trip energy
 
-Das Fahrzeugbild kommt live aus `hass.states[vehicle_tracker].attributes.entity_picture`. Die Wrapper-Karte überwacht diese URL ausdrücklich und baut die innere Button-Card neu, wenn das Bild erst nach dem ersten Render verfügbar wird oder sich ändert.
+Only values relevant to the selected vehicle are used.
 
-## Gemeinsamer LIVE-Hero ab 0.5.39
+## Vehicle image
 
-Die generierte `/vehicle`-Ansicht verwendet keine separate Hero-Implementierung mehr. Stattdessen wird die gleiche `custom:sv-dashboard-vehicle-overview-card` mit `variant: live` eingebettet.
+The vehicle image comes from the mapped tracker's `entity_picture`. The card monitors the picture URL and refreshes the inner card when the image appears late or changes.
 
-Damit teilen sich Startseitenkarte und LIVE-Ansicht insbesondere:
+The vehicle hero and map marker remain separate rendering paths.
 
-- Tracker-/Config-Entry-Auflösung,
-- `entity_picture`-Lifecycle,
-- Range-/Temperatur-/SOC-Darstellung,
-- Lade-, Kabel- und Fahrzustände,
-- Vorklimatisierungsaktionen.
+## Primary status behavior
 
-Map-Marker und Fahrzeug-Hero bleiben technisch getrennte Pfade; der transparente Kartenmarker darf das LIVE-Bild nicht nachpatchen.
+### Electric / hybrid electric capability
 
-## Navigation und Bedienung
+- parked: battery label plus residual kWh only when a trustworthy residual value is available;
+- driving: localized driving state plus current trip energy when available;
+- charging: localized charging state plus current charge power when available;
+- SOC remains the right-side primary percentage.
 
-- Tap auf die mittlere Fahrzeugfläche: SV Dashboard `/vehicle`
-- Tap/Hold auf Reichweite: natives More Info der gemappten Autonomy-/Range-Entity
-- Tap/Hold auf den rechten Status: natives More Info der tatsächlich angezeigten Entity; im Normalzustand Temperatur, beim Laden Ladeende bzw. Ladestatus
-- Tap Vorklimatisierung: `button.press` auf gemapptes `preconditioning_start`
-- Hold Vorklimatisierung: `button.press` auf gemapptes `preconditioning_stop`
-- Tap Batteriezeile: More Info des gemappten Batteriesensors
+No fixed vehicle battery capacity is used.
 
-Ist die Vorklimatisierung aktiv, wird ihr Button anhand der gemappten Fahrzeugtemperatur eingefärbt: bis einschließlich 20 °C rot als Heizindikator, über 20 °C blau als Kühlindikator. Bei inaktiver Vorklimatisierung bleibt der Button neutral/dunkel.
+### Combustion capability
 
-Im LIVE-Variant öffnet der Info-Button den gemeinsamen Dialog **Fahrzeug- und Wartungsdaten**. Wartungsdaten stehen dort zuerst, Fahrzeugdaten darunter. Eine zusätzliche, doppelte Fahrzeuginformationskarte im Vehicle-View gibt es nicht mehr.
+The hero uses fuel/range state when available and does not invent battery/SOC presentation.
 
-Der Hero besitzt einen lokalen Stacking Context. Dadurch werden Reichweiten-/Temperatur-Pills, A/C-Button und Batteriezeile bei geöffnetem Bubble-Card-Popup vollständig vom Popup-Backdrop überlagert statt vor dem Dialog stehen zu bleiben.
+## Navigation and interaction
 
-## System statt Vehicle
+Depending on mapped capabilities:
 
-Administratives gehört nicht in den LIVE-Fahrzeugbereich. Deshalb liegen folgende Controls im generierten **System**-View:
+- vehicle area → generated SV Dashboard Vehicle view;
+- range/energy/fuel status → native Home Assistant More Info;
+- preconditioning tap/hold → mapped upstream start/stop action;
+- battery/fuel status → native More Info for the displayed entity.
 
-- Aktualisierungsintervall
-- Korrektur Batteriewerte
-- ABRP Live-Daten
-- ABRP Token
+In `variant: live`, the info action opens the shared vehicle/maintenance dialog.
 
-Der Vehicle-View bleibt damit auf Fahrzeugzustand, Nutzung, Laden, Historie und Fahrzeug-/Wartungsinformationen fokussiert.
+## System vs. Vehicle
+
+Administrative integration controls belong in the generated **System** view rather than the day-to-day Vehicle hero. This includes package/integration settings such as refresh behavior, battery-value correction where relevant and optional ABRP controls.
 
 ## Packaging
 
-Die Karte ist ein internes ES-Modul des HACS-Integrationspakets. Sie bekommt **keinen eigenen Lovelace-Resource-Eintrag**. Der Package-Einstieg `frontend.js` lädt sie kontrolliert. Das gilt auch für die Nutzung als LIVE-Hero.
+The overview card is an internal ES module loaded through the single package resource:
+
+```text
+/sv_dashboard/frontend.js
+```
+
+It does not require its own Lovelace resource registration.
 
 ## Acceptance
 
-Vor Promotion eines neuen Runtime-Candidates prüfen:
+Before promoting a runtime candidate verify:
 
-1. Karte erscheint im Card Picker als `e-C3 Fahrzeugübersicht`.
-2. Minimal-YAML funktioniert.
-3. Darstellung entspricht der bisherigen Startseitenkarte.
-4. Fahrzeugbild erscheint ohne F5, auch wenn `entity_picture` verspätet kommt.
-5. Reichweite/Temperatur/Ladestatus/Kabel/Fahrt/Batterie reagieren live.
-6. Reichweite und rechter Status öffnen More Info der korrekten gemappten Entity.
-7. Vorklimatisierung Tap/Hold funktioniert und die aktive Heiz-/Kühlfarbe folgt der 20-°C-Regel.
-8. Navigation landet im package-owned SV Dashboard `/vehicle`.
-9. LIVE-/Vehicle-Ansicht verwendet dieselbe kanonische Overview-Card und keinen zweiten Hero-Bildpfad.
-10. Fahrzeug-/Wartungspopup überlagert den kompletten Hero korrekt; Wartung steht vor Fahrzeugdaten.
-11. Keine VIN/festen Fahrzeug-Entity-IDs oder Legacy-KFZ-Route im Quellcode.
-12. Karte bleibt Bestandteil des einen eC3-Frontend-Pakets und führt keinen neuen Nachpatchpfad ein.
+1. the card appears as **Vehicle overview** in the card picker/localized UI;
+2. minimal YAML works with one SV config entry;
+3. `entry_id` selects the correct vehicle with multiple entries;
+4. `entity_picture` appears without manual reload even when delayed;
+5. capability-specific range/energy/fuel/status values update correctly;
+6. displayed status opens More Info for the correct mapped entity;
+7. mapped preconditioning controls work where supported;
+8. navigation opens the correct generated Vehicle view;
+9. LIVE view and reusable card share the same canonical implementation;
+10. no VIN/fixed household entity IDs or model-specific product naming exists in active card code;
+11. the card remains part of the single SV Dashboard frontend resource model.
