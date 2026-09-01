@@ -2,58 +2,62 @@
 
 All notable user-facing changes to SV Dashboard are recorded here.
 
-This project uses semantic package versions and keeps `develop` as the integration/acceptance branch while `main` represents the last accepted publishable state.
+SV Dashboard uses semantic package versions. `develop` is the integration/acceptance branch; `main` represents the last explicitly accepted publishable state.
 
-## Unreleased
+## Unreleased — 0.6.0-beta.1 migration line
+
+### Migration
+
+- Created SV Dashboard as the successor to the former e-C3 Dashboard project.
+- Introduced the new Home Assistant domain `sv_dashboard` and component path `custom_components/sv_dashboard/`.
+- Migrated the validated predecessor `develop` source baseline from exact SHA `0a2873611d92a36eca4c41d165ea1fc1462caa50`.
+- Replaced active product/runtime identifiers with SV Dashboard naming rather than carrying the old integration domain forward.
+- Moved active migration, DS4 beta, notification QA, LTS and backlog tracking into the new SV Dashboard repository.
+
+### Added / expanded
+
+- Multi-brand vehicle naming and multi-vehicle behavior.
+- Capability-based handling for electric, hybrid and combustion vehicles, with defensive hydrogen/unknown handling.
+- Vehicle-specific battery-capacity/residual resolver with no generic fixed e-C3 capacity.
+- 18-language Home Assistant, frontend and backend message matrix:
+  `de`, `en`, `fr`, `it`, `es`, `pt`, `nl`, `da`, `nb`, `sv`, `fi`, `pl`, `cs`, `sk`, `hu`, `ro`, `sl`, `hr`.
+- Structural CI checks for Home Assistant translation keys/placeholders, frontend catalogs, backend messages and locale fallbacks.
+- New repository description/topics and HACS metadata required for repository validation.
+- GPL-3.0-or-later licensing and explicit trademark/affiliation notice.
+- Generalized vehicle capability documentation and explicit tested/beta/expected compatibility status.
 
 ### Documentation
 
-- Removed superseded version-specific bug notes, Codex runbooks, migration matrices and temporary forensic handoff documents from the current repository tree. Their history remains available through Git.
-- Consolidated still-open notification QA and Home Assistant LTS work into GitHub Issues #23 and #25 as the canonical work records.
-- Refreshed the README, architecture concept, installation guide, entity catalog, notification guide and release checklist to match the current 0.5.53 architecture.
-- Added a clear third-party trademark/affiliation notice and contributor rules that keep manufacturer names descriptive and avoid unlicensed official logos, badges or promotional artwork.
+- Rebuilt README for SV Dashboard, the new `sv_dashboard` domain and the migration/beta state.
+- Updated installation, architecture, entity catalog, dashboard features, localisation, notification/wake-up, vehicle-card, release and branch workflow documentation.
+- Retained anonymized screenshots as UI examples.
+- Kept predecessor e-C3 observations only where they are useful as clearly labelled historical/reference vehicle evidence.
 
-No runtime behavior changes are included in this documentation cleanup.
+### Validation status
 
-## 0.5.53 — 2026-08-30
+- Source/frontend test suite migrated and passing on the SV code line.
+- 97 predecessor regression tests migrated; additional HA translation-structure coverage added during migration.
+- Hassfest passing on validated migration commits.
+- HACS repository validation passing after repository metadata/license setup.
+- Owner live e-C3 regression on the new SV integration is still pending.
+- DS4 Hybrid/French external beta is still pending in issue #2.
+- Notification real-event QA continues in issue #3.
+- Mileage/LTS investigation continues in issue #4.
 
-### Added
+No stable SV Dashboard release has been promoted to `main` yet.
 
-- Generated multi-view dashboard with dedicated Vehicle, Charging, Statistics, Trips, GPS, Wake-up, Notifications and System views.
-- Reusable `custom:sv-dashboard-vehicle-overview-card` for existing dashboards, sharing the canonical LIVE hero implementation.
-- Canonical Stellantis trip history with server-history synchronization, zero-distance event retention and explicit data-quality metadata.
-- Canonical/persistent charging history with observed sessions, SOC/time curves and reconstructed fallback windows where source data permits.
-- Server-trip GPS start/stop history alongside Home Assistant Recorder history and the separate current vehicle position.
-- Package-owned notification thresholds/delays (`number` entities), quiet hours (`time` entities), explicit recipient controls and notification/reachability diagnostics.
-- Manual server-history synchronization, manual wake-up and notification test buttons.
-- Long-term-statistics presentation for available mileage/SOH metrics and trailing 500-km consumption.
-- German and English integration/frontend localization and a portable multi-vehicle config-entry model.
+## Historical predecessor baseline — e-C3 Dashboard 0.5.53 (2026-08-30)
 
-### Changed
+The migration source inherited the predecessor project's mature feature set, including:
 
-- Consolidated all package frontend loading under one Home Assistant Lovelace resource: `/sv_dashboard/frontend.js`. Internal cards/strategy are ES modules loaded by that entry point.
-- Separated current Vehicle/LIVE information from detailed historical views and kept package administration in System.
-- Notification recipient discovery is selection-only; newly discovered `notify.*` services are never silently opted in.
-- Reachability uses proven vehicle freshness, preferring the temperature/source heartbeat, instead of the newest timestamp among arbitrary static mapped entities.
-- Charge-start ETA logic prefers a valid upstream charge-end time, then an active configured charge limit, otherwise 100%; local fallback estimates use only recent plausible active-charge power samples.
-- Trip-derived metrics consume canonical quality-controlled history rather than trusting every raw server row.
+- generated Vehicle, Charging, Statistics, Trips, GPS, Wake-up, Notifications and System views;
+- reusable vehicle overview/LIVE hero card;
+- canonical Stellantis trip/charge/GPS history and data-quality handling;
+- package-owned notification thresholds, quiet hours and recipient controls;
+- manual history synchronization, wake-up and notification-test actions;
+- long-term-statistics presentation and trailing consumption metrics;
+- a single package-owned frontend resource model;
+- restart-safe local history/notification state;
+- multi-entry config-entry mapping without household-specific VIN/entity IDs.
 
-### Fixed
-
-- LIVE vehicle image/layout lifecycle and browser reload races while retaining a single canonical overview-card implementation.
-- GPS date/range filtering so Recorder history and canonical server geometry use a coherent selected time window.
-- Charging-session selection/navigation and stale charge-power display behavior.
-- Trip finalization/continuity behavior around delayed odometer updates and consecutive short drives.
-- Impossible server-trip presentation/data-quality handling so severe outliers are not treated as plausible statistics input.
-- Canonical odometer continuity repair for a retained raw trip with a zero/sentinel start mileage: raw source remains unchanged, while sufficiently supported derived continuity can be repaired and annotated with provenance.
-- Notification Store compatibility by retaining the existing backwards-compatible Store major version.
-- Package/entity naming, notification settings visibility and current view structure.
-
-### Known limitations
-
-- SOC-derived energy, charging power and consumption remain estimates, not meter-grade measurements.
-- Stellantis position history can be sparse and server-trip geometry may contain only start/stop points rather than a complete driven route.
-- A malformed pre-existing Home Assistant long-term-statistics `sum` history is not silently rewritten by the integration. The confirmed mileage-statistics reset repair remains tracked in Issue #25.
-- Full real-event functional QA for recipients, quiet hours, heartbeat outage/recovery and charge-start notifications remains tracked in Issue #23; the current UI/settings presentation is already accepted.
-
-Earlier development details remain available in Git history and closed GitHub Issues instead of being duplicated as permanent version-specific runbooks in `docs/`.
+Historical development detail remains available in the predecessor repository/Git history and closed issues. New work is tracked only in `CaneTLOTW/sv_dashboard`.
