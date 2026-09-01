@@ -33,6 +33,10 @@ The exact `develop` Candidate must pass the repository gates:
 - [ ] JavaScript syntax checks;
 - [ ] Node regression suite;
 - [ ] JSON validation;
+- [ ] Home Assistant 18-language key/placeholder parity;
+- [ ] frontend 18-language key/placeholder parity and locale fallback checks;
+- [ ] backend 18-language message/placeholder parity;
+- [ ] SV domain/branding audit;
 - [ ] `git diff --check`/whitespace checks;
 - [ ] HACS validation;
 - [ ] Hassfest.
@@ -58,12 +62,14 @@ For documentation-only changes, repository validation plus content review can be
 When applicable:
 
 - [ ] generated dashboard opens successfully;
-- [ ] Vehicle/Charging/Statistics/Trips/GPS/Wake-up/Notifications/System structure remains correct;
+- [ ] Vehicle/Charging/Statistics/Trips/GPS/Wake-up/Notifications/System structure remains correct for the selected capabilities;
 - [ ] compact vehicle-overview card works independently;
-- [ ] German and English strings are present for changed user-facing text;
+- [ ] changed user-facing strings remain complete across all 18 supported languages;
+- [ ] labels remain concise enough for Home Assistant controls/cards;
 - [ ] new/changed package entities appear with correct naming and controls;
 - [ ] setup/options flow behaves correctly for a fresh config entry;
 - [ ] multiple-vehicle behavior is not broken;
+- [ ] missing optional vehicle capabilities degrade safely rather than creating fake values;
 - [ ] missing third-party card dependencies produce a clear setup state rather than a broken dashboard.
 
 ## 6. Privacy/security review
@@ -73,7 +79,7 @@ Before promotion/release:
 - [ ] no VIN, account/customer ID, exact location, GPS track, recipient name, credential, token or raw private export was added;
 - [ ] public screenshots were visually inspected after opaque redaction;
 - [ ] no `.storage` file or private package Store dump is committed;
-- [ ] any diagnostic examples use sanitized IDs such as `sensor.<VIN>_kilometer` rather than a real identifier.
+- [ ] diagnostic examples use sanitized identifiers rather than real private values.
 
 ## 7. Stable promotion
 
@@ -88,6 +94,6 @@ After exact validation and explicit maintainer/user acceptance:
 ## 8. Release notes/documentation
 
 - [ ] update `CHANGELOG.md` for user-facing changes;
-- [ ] update README/installation/entity/feature documentation when the contract changed;
+- [ ] update README/installation/entity/feature/localisation documentation when the contract changed;
 - [ ] keep still-open work in GitHub Issues rather than duplicating temporary version-specific runbooks in `docs/`;
 - [ ] close or update the operative Issue with Candidate / Runtime / Validated and the final promotion/release SHA.
