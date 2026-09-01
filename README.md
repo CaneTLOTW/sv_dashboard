@@ -4,7 +4,7 @@
 
 SV Dashboard is a HACS custom integration that builds a vehicle-focused Home Assistant dashboard on top of [Stellantis Vehicles](https://github.com/andreadegiovine/homeassistant-stellantis-vehicles).
 
-> **Migration / beta status:** SV Dashboard is the successor to `CaneTLOTW/e_c3_dashboard`. The new Home Assistant domain is `sv_dashboard`. Migration and validation are currently performed on `develop`; no stable SV release has been promoted to `main` yet.
+> **Beta status:** SV Dashboard is the successor to `CaneTLOTW/e_c3_dashboard`. The new Home Assistant domain is `sv_dashboard`. The first owner live validation has passed on `v0.6.0-beta.2`; no stable SV release has been promoted to `main` yet.
 
 [![Open the SV Dashboard repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=CaneTLOTW&repository=sv_dashboard&category=integration)
 
@@ -41,15 +41,15 @@ Real-world SV Dashboard validation is intentionally tracked separately from expe
 
 | Brand / vehicle | SV status |
 | --- | --- |
-| Citroën e-C3 | Primary migration/reference vehicle; final SV live regression pending |
-| DS4 Hybrid | Beta test planned |
-| Peugeot | Expected from upstream support; SV vehicle test pending |
-| Opel | Expected from upstream support; SV vehicle test pending |
-| Vauxhall | Expected from upstream support; SV vehicle test pending |
+| Citroën e-C3 | **Confirmed** — owner live validation passed on `v0.6.0-beta.2` |
+| DS4 Hybrid | **Beta testing** — external Hybrid/French validation active |
+| Peugeot | **Expected / upstream-supported** — real SV vehicle test pending |
+| Opel | **Expected / upstream-supported** — real SV vehicle test pending |
+| Vauxhall | **Expected / upstream-supported** — real SV vehicle test pending |
 
 Other Stellantis brands are **not claimed as supported** unless the upstream integration exposes the required vehicle data and SV Dashboard has been validated against it.
 
-See [migration tracking](https://github.com/CaneTLOTW/sv_dashboard/issues/1) and the [DS4 Hybrid beta issue](https://github.com/CaneTLOTW/sv_dashboard/issues/2).
+See the [Vehicle validation guide](docs/VEHICLE_VALIDATION.en.md), the completed [migration record](https://github.com/CaneTLOTW/sv_dashboard/issues/1) and the active [DS4 Hybrid beta issue](https://github.com/CaneTLOTW/sv_dashboard/issues/2).
 
 ## Powertrain behavior
 
@@ -159,13 +159,13 @@ During the beta phase the recommended migration is:
 4. validate dashboard, history and controls;
 5. remove the old e-C3 Dashboard only after the SV installation is confirmed.
 
-Existing e-C3 Dashboard config entries are not silently rewritten into the new domain.
+Existing e-C3 Dashboard config entries are not silently rewritten into the new domain. SV Dashboard uses its own stores; available history is fetched/rebuilt independently rather than copying private predecessor storage.
 
-The full migration plan and acceptance status are maintained in [issue #1](https://github.com/CaneTLOTW/sv_dashboard/issues/1).
+The migration implementation and owner live acceptance are recorded in the now-completed [migration issue #1](https://github.com/CaneTLOTW/sv_dashboard/issues/1).
 
 ## Development and validation
 
-Active migration/development happens on `develop`. External beta testers receive an exact validated commit/pre-release rather than a moving development branch.
+Active development happens on `develop`. External beta testers receive an exact validated commit/pre-release rather than a moving development branch.
 
 CI currently checks:
 
@@ -179,7 +179,7 @@ CI currently checks:
 - Hassfest
 - HACS repository validation
 
-Promotion to `main` happens only after the exact candidate has passed CI and live acceptance.
+Promotion to `main` happens only after the exact candidate has passed CI and the required live acceptance.
 
 ## License and trademarks
 
@@ -190,6 +190,8 @@ SV Dashboard is an independent community project and is not affiliated with or e
 ## Documentation
 
 - [Installation](docs/INSTALLATION.en.md)
+- [Vehicle validation guide](docs/VEHICLE_VALIDATION.en.md)
+- [Community guide](docs/COMMUNITY.en.md)
 - [Concept](docs/CONCEPT.md)
 - [Dashboard features](docs/DASHBOARD_FEATURES.md)
 - [Entity catalog](docs/ENTITY_CATALOG.md)
@@ -199,4 +201,4 @@ SV Dashboard is an independent community project and is not affiliated with or e
 - [Release checklist](docs/RELEASE_CHECKLIST.md)
 - [Branch and deployment workflow](docs/BRANCH_AND_DEPLOYMENT_WORKFLOW.md)
 
-For migration-specific work, use [SV Dashboard migration issue #1](https://github.com/CaneTLOTW/sv_dashboard/issues/1).
+For current compatibility/beta testing, use the [Vehicle validation guide](docs/VEHICLE_VALIDATION.en.md) and GitHub Discussions once enabled. The completed migration history remains available in [issue #1](https://github.com/CaneTLOTW/sv_dashboard/issues/1).
