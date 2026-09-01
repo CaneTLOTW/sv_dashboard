@@ -1,40 +1,36 @@
 # Branch and deployment workflow
 
-## Purpose
+## Branch roles
 
-This repository uses two long-lived branches with deliberately different roles:
+SV Dashboard uses two long-lived branches:
 
-- `develop` is the integration and acceptance branch.
-- `main` is the last reviewed, accepted and publishable stable state.
+- `develop` — integration, validation and acceptance branch;
+- `main` — last explicitly accepted publishable state.
 
-The designated Home Assistant household instance may intentionally run an exact
-`develop` commit as a canary/acceptance deployment. That does **not** make the
-commit a public/stable release.
+A designated Home Assistant instance may run an exact `develop` commit for acceptance. That does not make the commit a stable/public release.
 
-## Normal change flow
+## Normal flow
 
 ```text
 GitHub Issue
-  -> ChatGPT prepares implementation on develop
-  -> repository/static tests on develop
+  -> implementation on develop
+  -> repository/static validation
   -> Candidate = exact develop SHA/version
-  -> Codex deploys that exact Candidate to the designated HA acceptance instance
-  -> required reload/restart, then a normal startup interval
-  -> Runtime = exact SHA/version deployed into the active Home Assistant instance
-  -> continue directly with task-specific browser/app/runtime validation
-  -> if a diagnostic patch proved the fix: integrate it into canonical source
-  -> build a new Candidate and repeat affected tests
-  -> Validated = exact integrated Runtime SHA/version that passed the required checks
-  -> Codex reports results in the Issue
-  -> ChatGPT reviews findings and prepares follow-up changes on develop if needed
-  -> user/maintainer acceptance
-  -> fast-forward promotion of that exact Validated SHA to main
+  -> deploy exact Candidate to acceptance Home Assistant
+  -> required reload/restart
+  -> Runtime = exact deployed SHA/version
+  -> task-specific browser/app/runtime validation
+  -> integrate any diagnostic-only patch back into canonical source
+  -> build/redeploy replacement Candidate if needed
+  -> Validated = exact Runtime SHA/version that passed required checks
+  -> explicit maintainer/user acceptance
+  -> fast-forward that exact Validated SHA to main
   -> tag/release from that exact main SHA
 ```
 
-## Candidate, Runtime and Validated are different states
+## Candidate, Runtime and Validated
 
-Every active deployment Issue must state all three explicitly:
+Every active deployment issue should record:
 
 ```text
 Candidate: <develop SHA> / <version>
@@ -44,104 +40,67 @@ Validated: <accepted SHA> / <version> | NOT_VALIDATED
 
 Rules:
 
-1. `Candidate` changes whenever a new intended test commit is prepared on
-   `develop`.
-2. `Runtime` changes after Codex or another authorized deployment has copied the
-   exact candidate into the active Home Assistant instance and completed the
-   reload/restart required by that change. Runtime status describes what was
-   deployed; it is not the same as functional acceptance.
-3. A newer `develop` HEAD does not silently update the runtime. Until the next
-   explicit deployment, Home Assistant continues to run the previous Runtime.
-4. `Validated` changes only after the required live/browser/app/user checks
-   have passed against the exact Runtime SHA.
-5. A failed Runtime remains useful evidence but must never be described as the
-   current Candidate once a replacement Candidate exists.
-6. Only an exact `Validated` SHA may be promoted to `main`.
-7. A diagnostic runtime patch cannot be `Validated` as the final product. The
-   proven behavior must first be integrated into canonical source and the
-   resulting new Candidate must be redeployed and retested.
+1. `Candidate` changes when a new intended test commit is prepared.
+2. `Runtime` changes only after that exact candidate is deployed.
+3. A newer `develop` HEAD does not silently change the Home Assistant runtime.
+4. `Validated` changes only after the required live/browser/app checks pass on the exact Runtime.
+5. Failed runtimes remain useful evidence but are not accepted candidates.
+6. Only an exact `Validated` SHA can be promoted to `main`.
+7. Runtime-only diagnostic patches must first be integrated into canonical source and retested as a new Candidate.
 
-This distinction is mandatory in Issue handoffs and prevents the common
-ambiguity where a fix exists on `develop` but has not yet reached the live
-acceptance instance.
+## Runtime acceptance
 
-## Normal restart and runtime acceptance
+A Home Assistant Core restart is a normal deployment step when Python/platform code changed. Frontend-only changes may require resource/cache refresh instead.
 
-A Home Assistant Core restart is an ordinary deployment step when Python or
-platform code changed. Request the restart once, allow a normal startup interval,
-and then proceed with the next functional acceptance step for the feature being
-worked on. The connection that requested the restart may close while Core stops;
-that is normal restart behavior by itself.
+Acceptance is task-specific: open the generated dashboard, resolve the config entry/entities, exercise the changed control/card/history flow and verify the exact behavior named in the active issue.
 
-Acceptance is driven by the feature under test. Examples are opening the
-package-owned dashboard, resolving the config entry and its entities, changing a
-package-owned setting, or exercising the specific frontend behavior named in the
-Issue. A successful task-specific interaction is sufficient evidence that Home
-Assistant is usable for that acceptance step.
+Transport/health interfaces are diagnostic tools, not an unrelated acceptance gate unless connectivity itself is the feature under test.
 
-Transport, management and health interfaces are useful diagnostic tools when a
-real functional action cannot be completed, or when connectivity itself is the
-subject of the Issue. They are not an additional precondition that must be
-satisfied before ordinary e-C3 functional validation can begin.
+## Patch-to-source gate
 
-## Patch-to-source integration gate
+Temporary runtime/frontend patches can be useful during diagnosis but are not permanent architecture.
 
-Temporary patches are sometimes useful during diagnosis, especially for
-frontend race conditions, third-party Shadow DOM behavior or a one-off runtime
-experiment. They are not an acceptable permanent architecture by default.
+Before acceptance:
 
-Before an Issue can be accepted or promoted:
-
-1. identify what the diagnostic patch actually proved;
-2. move that behavior into the canonical module/source path that owns it;
-3. remove the temporary post-generation/runtime patch path;
-4. bump the frontend candidate version when browser caching is affected;
+1. identify what the diagnostic patch proved;
+2. move the behavior into the canonical owning module;
+3. remove the temporary patch path;
+4. bump the frontend cache/version when browser code changed;
 5. rerun repository tests;
-6. deploy the new integrated Candidate;
-7. repeat the relevant HA/browser/app/user acceptance checks.
+6. deploy the integrated Candidate;
+7. repeat the affected runtime checks.
 
-For package frontend architecture, prefer exactly one registered e-C3 Lovelace
-entry resource. The entry may import package-owned ES modules, but Home
-Assistant should not have to race multiple e-C3 resource registrations or rely
-on their incidental execution order.
+SV Dashboard should normally register exactly one package-owned Lovelace resource:
 
-A narrowly scoped compatibility shim for a third-party component is the only
-exception. Such a shim must be necessary because the third-party public API/CSS
-contract cannot express the behavior, must opt in only e-C3-owned instances,
-must live in canonical source, and must have explicit regression coverage. It
-must not become a container for unrelated LIVE/dashboard feature patches.
+```text
+/sv_dashboard/frontend.js
+```
+
+Package-owned ES modules are imported from that entry point rather than independently registered/raced resources.
+
+A narrowly scoped compatibility shim for a third-party component is acceptable only when the third-party public API cannot express the required behavior. It must remain isolated, canonical and regression-tested.
 
 ## Invariants
 
-1. Feature, fix, documentation, test and version changes are made on `develop`.
-2. `main` must not receive an independent feature/fix commit.
-3. Before a stable promotion, `main` must be an ancestor of the validated
-   `develop` SHA. If it is not, stop and reconcile the branches first.
-4. Promotion to `main` is **fast-forward only** to the exact SHA that was
-   accepted in Home Assistant. Do not squash, rebase or cherry-pick the
-   validated change set during promotion; those operations create a different
-   commit and break traceability.
-5. A stable tag/release is created from the promoted `main` SHA, never from an
-   unvalidated `develop` head.
-6. After promotion, new development continues from the same history. At the
-   promotion point `main` and `develop` should therefore be identical; later
-   `develop` may only be ahead, never independently diverged.
-7. Emergency fixes follow the same path: fix on `develop`, perform the smallest
-   safe runtime validation, then fast-forward `main`. There is no direct-main
-   hotfix lane.
+1. Feature, fix, documentation, test and version changes are prepared on `develop`.
+2. `main` does not receive an independent product fix/feature lane.
+3. Before stable promotion, `main` must be an ancestor of the validated `develop` SHA.
+4. Promotion is **fast-forward only** to the exact accepted SHA.
+5. Do not squash, rebase or cherry-pick between runtime acceptance and promotion.
+6. Tags/releases are created from promoted `main`, never an unvalidated development head.
+7. Emergency fixes use the same `develop -> validate -> accept -> fast-forward main` path.
 
-## Versioning and browser cache
+## Version and frontend cache
 
-The integration manifest version and `FRONTEND_VERSION` are maintained on
-`develop` as part of the candidate change. A frontend behavior change must bump
-`FRONTEND_VERSION` so Home Assistant updates the versioned Lovelace resources.
-The release does not add a separate code-only version bump on `main`; any final
-version adjustment is committed and validated on `develop` before promotion.
+`manifest.json` version and `FRONTEND_VERSION` are maintained as part of the candidate on `develop`.
+
+Frontend behavior changes must use a new cache/resource version. Internal `?v=` imports must remain coherent with the intended frontend version.
+
+Documentation-only changes do not require a runtime version bump.
 
 ## Runtime deployment contract
 
-Codex must record the exact source SHA before deployment. A result report should
-include at least:
+A deployment result should record at least:
 
 ```text
 repository: CaneTLOTW/sv_dashboard
@@ -149,29 +108,18 @@ source branch: develop
 Candidate SHA/version: <sha> / <version>
 Runtime SHA/version before deploy: <sha> / <version>
 Runtime SHA/version after deploy: <sha> / <version>
-configured frontend resource version: <version>
+frontend resource version: <version>
 HA deployment/restart: PASS|FAIL
-browser light/dark: PASS|FAIL|NOT_TESTED
-HA app light/dark: PASS|FAIL|NOT_TESTED
+browser/app validation: PASS|FAIL|NOT_TESTED
 Validated SHA/version: <sha> / <version> | NOT_VALIDATED
 issue acceptance: PASS|FAIL|BLOCKED
 ```
 
-The Runtime SHA/version is established from the exact package deployed to the
-Home Assistant instance, together with the required reload/restart and the
-configured versioned package resource where applicable. Functional acceptance
-then proves whether that Runtime behaves correctly. No separate connectivity
-or health probe is required to promote a deployed candidate from `Candidate` to
-`Runtime`.
-
-A runtime copy with local modifications is not a new source of truth. If a
-runtime-only fix is unavoidable, Codex must immediately report the diff in the
-Issue and the durable fix must be committed back to `develop` before any stable
-promotion.
+A runtime copy with uncommitted/local modifications is never a new source of truth. Any useful runtime-only diff must be committed back to `develop` and retested before stable promotion.
 
 ## GitHub Issue handoff
 
-The Issue remains the operative work thread. Use:
+The issue remains the operative work thread. Recommended headings:
 
 ```md
 ## ChatGPT -> Codex Handoff
@@ -179,32 +127,27 @@ The Issue remains the operative work thread. Use:
 ## ChatGPT Review / Next Step
 ```
 
-The handoff references the exact Candidate SHA/version and separately records
-what the runtime is believed to be running. The Codex result replaces that
-belief with the actually deployed Runtime SHA/version. A later promotion comment
-records the exact Validated/stable SHA and release/tag.
+Always distinguish intended Candidate, actually deployed Runtime and finally Validated SHA.
 
 ## Prohibited branch operations
 
-Unless a dedicated branch-recovery task explicitly requires them:
+Unless an explicit branch-recovery task requires otherwise:
 
-- no direct feature/fix commits on `main`;
-- no cherry-picking the same fix independently to both long-lived branches;
-- no squash/rebase between acceptance and stable promotion;
-- no force-pushing either long-lived branch;
-- no blind `main -> develop` or `develop -> main` content merge to resolve a
-  semantic conflict;
-- no release from a commit that was not the accepted runtime candidate.
+- no direct product feature/fix commits on `main`;
+- no independent cherry-picks to both long-lived branches;
+- no squash/rebase between acceptance and promotion;
+- no force-push of `main`/`develop`;
+- no blind branch-content merge to hide semantic conflicts;
+- no release from an unvalidated commit.
 
-## Branch health check
+## Branch health
 
-Before beginning or closing substantial work, verify:
+Before beginning or closing substantial work verify:
 
 ```text
 main ancestor of develop: YES
-main-only functional commits: 0
+main-only product commits: 0
 develop status: equal to main OR ahead of main
 ```
 
-If `main` and `develop` report `diverged`, create/reuse a maintenance Issue and
-resolve the divergence before the next release.
+If the branches diverge, stop release work and resolve the divergence through a maintenance issue before the next promotion.
