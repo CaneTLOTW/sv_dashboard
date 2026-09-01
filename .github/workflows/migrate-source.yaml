@@ -3,9 +3,7 @@ name: One-shot source migration
 on:
   push:
     branches: [migration-phase1]
-    paths:
-      - .migration-trigger
-  workflow_dispatch:
+    paths: [.migration-trigger]
 
 permissions:
   contents: write
@@ -18,171 +16,60 @@ jobs:
         with:
           ref: migration-phase1
           fetch-depth: 0
-
-      - name: Import frozen e-C3 develop snapshot
+      - name: Import frozen source and transform to SV
         shell: bash
         run: |
           set -euo pipefail
-          SOURCE_SHA=0a2873611d92a36eca4c41d165ea1fc1462caa50
-          SOURCE_REPO=https://github.com/CaneTLOTW/e_c3_dashboard.git
-
-          git clone --quiet "$SOURCE_REPO" /tmp/source
-          git -C /tmp/source checkout --quiet "$SOURCE_SHA"
-          test "$(git -C /tmp/source rev-parse HEAD)" = "$SOURCE_SHA"
-
-          rm -rf /tmp/migrated
-          mkdir -p /tmp/migrated
-          rsync -a --exclude=.git /tmp/source/ /tmp/migrated/
-
-          rm -f /tmp/migrated/LICENSE /tmp/migrated/TRADEMARKS.md
-          mv /tmp/migrated/custom_components/e_c3_dashboard /tmp/migrated/custom_components/sv_dashboard
-          mv /tmp/migrated/custom_components/sv_dashboard/static/e_c3_dashboard.js /tmp/migrated/custom_components/sv_dashboard/static/sv_dashboard.js
-
+          SRC=0a2873611d92a36eca4c41d165ea1fc1462caa50
+          git clone --quiet https://github.com/CaneTLOTW/e_c3_dashboard.git /tmp/src
+          git -C /tmp/src checkout --quiet "$SRC"
+          test "$(git -C /tmp/src rev-parse HEAD)" = "$SRC"
+          rm -rf /tmp/mig && mkdir /tmp/mig
+          rsync -a --exclude=.git /tmp/src/ /tmp/mig/
+          rm -f /tmp/mig/LICENSE /tmp/mig/TRADEMARKS.md
+          mv /tmp/mig/custom_components/e_c3_dashboard /tmp/mig/custom_components/sv_dashboard
+          mv /tmp/mig/custom_components/sv_dashboard/static/e_c3_dashboard.js /tmp/mig/custom_components/sv_dashboard/static/sv_dashboard.js
           python3 - <<'PY'
           from pathlib import Path
-
-          root = Path('/tmp/migrated')
-          binary_suffixes = {'.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico', '.zip', '.pdf'}
-          common = [
-              ('CaneTLOTW/e_c3_dashboard', 'CaneTLOTW/sv_dashboard'),
-              ('custom_components/e_c3_dashboard', 'custom_components/sv_dashboard'),
-              ('e_c3_dashboard.js', 'sv_dashboard.js'),
-              ('e_c3_dashboard', 'sv_dashboard'),
-              ('e-c3-dashboard-vehicle-overview-card', 'sv-dashboard-vehicle-overview-card'),
-              ('e-c3-dashboard-strategy-editor', 'sv-dashboard-strategy-editor'),
-              ('ll-strategy-dashboard-e-c3-dashboard', 'll-strategy-dashboard-sv-dashboard'),
-              ('e-c3-dashboard', 'sv-dashboard'),
-              ('Ec3Dashboard', 'SvDashboard'),
-              ('EC3 Dashboard', 'SV Dashboard'),
-              ('e-C3 Dashboard', 'SV Dashboard'),
-              ('e-C3 dashboard', 'SV Dashboard'),
-              ('e-C3-Dashboard', 'SV Dashboard'),
-              ('__ec3Dashboard', '__svDashboard'),
-              ('--ec3-', '--sv-'),
-              ('e_c3_charge', 'sv_charge'),
-          ]
-          for path in root.rglob('*'):
-              if not path.is_file() or path.suffix.lower() in binary_suffixes:
-                  continue
-              try:
-                  text = path.read_text(encoding='utf-8')
-              except UnicodeDecodeError:
-                  continue
-              original = text
-              for old, new in common:
-                  text = text.replace(old, new)
-              # Remaining e-C3 mentions inside integration source/frontend are product labels,
-              # not vehicle compatibility documentation.
-              if 'custom_components/sv_dashboard' in path.as_posix() or path.as_posix().startswith('/tmp/migrated/tests/'):
-                  text = text.replace('e-C3', 'SV')
-              if text != original:
-                  path.write_text(text, encoding='utf-8')
-
-          # New project metadata.
-          manifest = root / 'custom_components/sv_dashboard/manifest.json'
           import json
-          data = json.loads(manifest.read_text())
-          data.update({
-              'domain': 'sv_dashboard',
-              'name': 'SV Dashboard',
-              'documentation': 'https://github.com/CaneTLOTW/sv_dashboard',
-              'issue_tracker': 'https://github.com/CaneTLOTW/sv_dashboard/issues',
-              'version': '0.6.0-beta.1',
-          })
-          manifest.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n')
-
-          hacs = root / 'hacs.json'
-          hdata = json.loads(hacs.read_text())
-          hdata['name'] = 'SV Dashboard'
-          hacs.write_text(json.dumps(hdata, ensure_ascii=False, indent=2) + '\n')
-
-          # Fix the canonical stale setup prerequisite found by the translation audit.
-          strings = root / 'custom_components/sv_dashboard/strings.json'
-          sdata = json.loads(strings.read_text())
-          sdata['title'] = 'SV Dashboard'
-          sdata['config']['error']['upstream_not_ready'] = (
-              'Finish Stellantis Vehicles setup and wait for mileage and tracker entities.'
-          )
-          sdata['config']['abort']['already_configured'] = (
-              'This vehicle already has an SV Dashboard entry.'
-          )
-          strings.write_text(json.dumps(sdata, ensure_ascii=False, indent=2) + '\n')
-
-          # Canonical English translation follows strings.json semantics.
-          en = root / 'custom_components/sv_dashboard/translations/en.json'
-          edata = json.loads(en.read_text())
-          edata['title'] = 'SV Dashboard'
-          edata['config']['error']['upstream_not_ready'] = (
-              'Finish Stellantis Vehicles setup and wait for mileage and tracker entities.'
-          )
-          edata['config']['abort']['already_configured'] = (
-              'This vehicle already has an SV Dashboard entry.'
-          )
-          en.write_text(json.dumps(edata, ensure_ascii=False, indent=2) + '\n')
-
-          # The new repo starts with a new integration, so do not retain old-domain
-          # frontend cleanup semantics as compatibility promises.
-          const = root / 'custom_components/sv_dashboard/const.py'
-          ctext = const.read_text()
-          ctext = ctext.replace('FRONTEND_VERSION = "0.5.54"', 'FRONTEND_VERSION = "0.6.0-beta.1"')
-          const.write_text(ctext)
-
-          # Update active JS module cache versions without rewriting historical docs.
-          for path in (root / 'custom_components/sv_dashboard/static').glob('*.js'):
-              text = path.read_text().replace('?v=0.5.54', '?v=0.6.0-beta.1')
-              path.write_text(text)
-
-          # Keep CI current and point it at the new component/file names.
-          workflow = root / '.github/workflows/validate.yaml'
-          wtext = workflow.read_text()
-          wtext = wtext.replace('actions/setup-python@v6', 'actions/setup-python@v7')
-          wtext = wtext.replace('actions/setup-node@v5', 'actions/setup-node@v7')
-          workflow.write_text(wtext)
+          root=Path('/tmp/mig')
+          binary={'.png','.jpg','.jpeg','.gif','.webp','.ico','.zip','.pdf'}
+          repl=[('CaneTLOTW/e_c3_dashboard','CaneTLOTW/sv_dashboard'),('custom_components/e_c3_dashboard','custom_components/sv_dashboard'),('e_c3_dashboard.js','sv_dashboard.js'),('e_c3_dashboard','sv_dashboard'),('e-c3-dashboard-vehicle-overview-card','sv-dashboard-vehicle-overview-card'),('e-c3-dashboard-strategy-editor','sv-dashboard-strategy-editor'),('ll-strategy-dashboard-e-c3-dashboard','ll-strategy-dashboard-sv-dashboard'),('e-c3-dashboard','sv-dashboard'),('Ec3Dashboard','SvDashboard'),('EC3 Dashboard','SV Dashboard'),('e-C3 Dashboard','SV Dashboard'),('e-C3 dashboard','SV Dashboard'),('e-C3-Dashboard','SV Dashboard'),('__ec3Dashboard','__svDashboard'),('--ec3-','--sv-'),('e_c3_charge','sv_charge')]
+          for p in root.rglob('*'):
+            if not p.is_file() or p.suffix.lower() in binary: continue
+            try: text=p.read_text(encoding='utf-8')
+            except UnicodeDecodeError: continue
+            old=text
+            for a,b in repl: text=text.replace(a,b)
+            if 'custom_components/sv_dashboard' in p.as_posix() or p.as_posix().startswith('/tmp/mig/tests/'):
+              text=text.replace('e-C3','SV')
+            if text!=old: p.write_text(text,encoding='utf-8')
+          m=root/'custom_components/sv_dashboard/manifest.json'; d=json.loads(m.read_text()); d.update(domain='sv_dashboard',name='SV Dashboard',documentation='https://github.com/CaneTLOTW/sv_dashboard',issue_tracker='https://github.com/CaneTLOTW/sv_dashboard/issues',version='0.6.0-beta.1'); m.write_text(json.dumps(d,ensure_ascii=False,indent=2)+'\n')
+          h=root/'hacs.json'; d=json.loads(h.read_text()); d['name']='SV Dashboard'; h.write_text(json.dumps(d,ensure_ascii=False,indent=2)+'\n')
+          for name in ['strings.json','translations/en.json']:
+            p=root/'custom_components/sv_dashboard'/name; d=json.loads(p.read_text()); d['title']='SV Dashboard'; d['config']['error']['upstream_not_ready']='Finish Stellantis Vehicles setup and wait for mileage and tracker entities.'; d['config']['abort']['already_configured']='This vehicle already has an SV Dashboard entry.'; p.write_text(json.dumps(d,ensure_ascii=False,indent=2)+'\n')
+          p=root/'custom_components/sv_dashboard/const.py'; p.write_text(p.read_text().replace('FRONTEND_VERSION = "0.5.54"','FRONTEND_VERSION = "0.6.0-beta.1"'))
+          for p in (root/'custom_components/sv_dashboard/static').glob('*.js'): p.write_text(p.read_text().replace('?v=0.5.54','?v=0.6.0-beta.1'))
           PY
-
-          # Replace old project-owned tree while preserving the new repo's GPL/trademark files.
           rm -rf custom_components tests docs images
           rm -f AGENTS.md CHANGELOG.md CODE_OF_CONDUCT.md CONTRIBUTING.md SECURITY.md SUPPORT.md hacs.json .gitignore
           rm -rf .github/ISSUE_TEMPLATE
-          rm -f .github/CODEOWNERS .github/PULL_REQUEST_TEMPLATE.md .github/dependabot.yml .github/workflows/validate.yaml
-
-          rsync -a /tmp/migrated/custom_components ./
-          for d in tests docs images; do [ ! -e "/tmp/migrated/$d" ] || cp -a "/tmp/migrated/$d" ./; done
-          for f in AGENTS.md CHANGELOG.md CODE_OF_CONDUCT.md CONTRIBUTING.md SECURITY.md SUPPORT.md hacs.json .gitignore README.md; do
-            [ ! -f "/tmp/migrated/$f" ] || cp "/tmp/migrated/$f" ./
-          done
-          mkdir -p .github/workflows
-          [ ! -d /tmp/migrated/.github/ISSUE_TEMPLATE ] || cp -a /tmp/migrated/.github/ISSUE_TEMPLATE .github/
-          for f in CODEOWNERS PULL_REQUEST_TEMPLATE.md dependabot.yml; do
-            [ ! -f "/tmp/migrated/.github/$f" ] || cp "/tmp/migrated/.github/$f" .github/
-          done
-          cp /tmp/migrated/.github/workflows/validate.yaml .github/workflows/validate.yaml
-
-          # One-shot control files must not become project content.
-          rm -f .migration-trigger .github/workflows/migrate-source.yaml
-
-          # Preserve the already-created GPL and trademark notice from this repository.
-          test -s LICENSE
-          test -s TRADEMARKS.md
-
-          # Hard gate: no active old HA domain/component remains.
-          ! grep -RIl --exclude-dir=.git --exclude=CHANGELOG.md --exclude='*.md' 'e_c3_dashboard' custom_components tests .github hacs.json || {
-            echo 'Active e_c3_dashboard identifier remains'; exit 1;
-          }
-          ! grep -RIl --exclude-dir=.git 'e-C3 Dashboard' custom_components tests .github hacs.json || {
-            echo 'Active e-C3 Dashboard product label remains'; exit 1;
-          }
-
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
-          git commit -m 'migration: import develop as SV Dashboard'
-          git push origin HEAD:migration-phase1
-
-      - name: Static migration smoke
-        shell: bash
-        run: |
+          rm -f .github/CODEOWNERS .github/PULL_REQUEST_TEMPLATE.md .github/dependabot.yml
+          rsync -a /tmp/mig/custom_components ./
+          for d in tests docs images; do [ ! -e "/tmp/mig/$d" ] || cp -a "/tmp/mig/$d" ./; done
+          for f in AGENTS.md CHANGELOG.md CODE_OF_CONDUCT.md CONTRIBUTING.md SECURITY.md SUPPORT.md hacs.json .gitignore README.md; do [ ! -f "/tmp/mig/$f" ] || cp "/tmp/mig/$f" ./; done
+          [ ! -d /tmp/mig/.github/ISSUE_TEMPLATE ] || cp -a /tmp/mig/.github/ISSUE_TEMPLATE .github/
+          for f in CODEOWNERS PULL_REQUEST_TEMPLATE.md dependabot.yml; do [ ! -f "/tmp/mig/.github/$f" ] || cp "/tmp/mig/.github/$f" .github/; done
+          rm -f .migration-trigger .migration-trigger-v2
+          test -s LICENSE && test -s TRADEMARKS.md
+          ! grep -RIl --exclude-dir=.git --exclude='*.md' 'e_c3_dashboard' custom_components tests .github hacs.json
+          ! grep -RIl --exclude-dir=.git 'e-C3 Dashboard' custom_components tests .github hacs.json
           python3 -m py_compile custom_components/sv_dashboard/*.py
           python3 -m json.tool hacs.json >/dev/null
           python3 -m json.tool custom_components/sv_dashboard/manifest.json >/dev/null
-          git diff --check HEAD^
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A -- ':!.github/workflows'
+          git commit -m 'migration: import develop as SV Dashboard'
+          git push origin HEAD:migration-phase1
