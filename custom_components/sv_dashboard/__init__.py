@@ -95,20 +95,10 @@ async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
         return True
 
     static_dir = Path(__file__).parent / "static"
-    static_paths = [
-        "frontend.js",
-        "sv_dashboard.js",
-        "gps-history-card.js",
-        "gps-history-core.js",
-        "vehicle-overview-card.js",
-        "trip-history-card.js",
-        "charge-history-card.js",
-        "charge-history-core.js",
-        "i18n.js",
-        "i18n-extra-west.js",
-        "i18n-extra-north.js",
-        "i18n-extra-east.js",
-    ]
+    # Every bundled JavaScript module must be reachable below /sv_dashboard/.
+    # Keep this directory-driven so adding a new local ES-module dependency can
+    # never silently omit its Home Assistant static route.
+    static_paths = sorted(path.name for path in static_dir.glob("*.js"))
     await hass.http.async_register_static_paths(
         [
             StaticPathConfig(
