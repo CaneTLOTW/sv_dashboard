@@ -52,7 +52,7 @@ def vehicle_entity_id(
     entity_domain: str,
     technical_key: str,
 ) -> str:
-    """Build an SV-namespaced entity ID that cannot collide with e-C3 Dashboard."""
+    """Build an SV-namespaced entity ID that cannot collide with the predecessor."""
     base = _vehicle_identity_base(hass, entry)
     object_id = slugify(f"{ENTITY_ID_PREFIX}_{base}_{technical_key}")
     return f"{entity_domain}.{object_id}"
@@ -68,9 +68,9 @@ def apply_vehicle_entity_identity(
     """Apply one language-neutral SV + VIN + technical-key identity to an entity.
 
     ``unique_id`` and the suggested ``entity_id`` are intentionally namespaced
-    separately from the discontinued e-C3 Dashboard integration. This lets both
-    integrations target the same upstream vehicle during migration acceptance
-    without requesting the same entity-registry IDs.
+    separately from the predecessor integration. This lets both integrations
+    target the same upstream vehicle during migration acceptance without
+    requesting the same entity-registry IDs.
     """
     entity._attr_unique_id = vehicle_entity_unique_id(hass, entry, technical_key)
     entity.entity_id = vehicle_entity_id(
@@ -89,8 +89,8 @@ def registry_technical_key(
         if unique_id.startswith(current_vin_prefix):
             return unique_id[len(current_vin_prefix) :]
 
-        # Pre-release SV builds used the same VIN-based unique ID shape as the
-        # predecessor. Recognize those rows so a test installation can migrate.
+        # Pre-release SV builds used an unnamespaced VIN-based unique ID shape.
+        # Recognize those rows so an early test installation can migrate.
         legacy_vin_prefix = f"{vin}_"
         if unique_id.startswith(legacy_vin_prefix):
             return unique_id[len(legacy_vin_prefix) :]
@@ -109,7 +109,7 @@ def async_migrate_package_entity_ids(hass: HomeAssistant, entry: ConfigEntry) ->
     """Migrate package-owned registry rows to the SV entity namespace.
 
     This touches only entities owned by this integration and this config entry.
-    Upstream Stellantis entities and predecessor e-C3 Dashboard entities are
+    Upstream Stellantis entities and entities owned by another integration are
     never modified.
     """
     vin = vehicle_vin(hass, entry)
