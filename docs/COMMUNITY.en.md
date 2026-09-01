@@ -8,7 +8,8 @@ SV Dashboard is a small volunteer-maintained project. This guide explains where 
 | --- | --- | --- |
 | [Bug report](../.github/ISSUE_TEMPLATE/bug_report.yml) | A reproducible problem in a released version | Setup questions, a single unavailable upstream value, or private data |
 | [Feature request](../.github/ISSUE_TEMPLATE/feature_request.yml) | A well-defined, portable improvement | Early ideas or requests tied to one household |
-| [Discussions](https://github.com/CaneTLOTW/sv_dashboard/discussions) | Questions, ideas, feedback, screenshots, and shared configurations | Reproducible defects that need tracking |
+| [Discussions](https://github.com/CaneTLOTW/sv_dashboard/discussions) | Questions, ideas, feedback, screenshots, compatibility reports and shared configurations | Reproducible defects that need tracking |
+| [Vehicle validation guide](VEHICLE_VALIDATION.en.md) | Repeatable beta/compatibility testing for new models, brands, powertrains and languages | General support unrelated to SV Dashboard |
 | Private security advisory | Vulnerabilities or accidental data exposure | General product support |
 
 ## Discussions
@@ -19,6 +20,8 @@ Use the category that best matches the topic:
 - **Ideas** for early proposals that need community feedback before becoming a feature request.
 - **Show and tell** for dashboards, screenshots, automations and practical Stellantis-vehicle experiences.
 - **General** for project-wide feedback and compatibility observations.
+
+For a new vehicle/model/powertrain report, follow the [Vehicle validation guide](VEHICLE_VALIDATION.en.md). It contains the parallel-install procedure, powertrain-specific checks, history rebuild expectations, notification/push checks, language review guidance and a reusable test-report template.
 
 Discussion threads are community support. A reply is welcome but not guaranteed, and neither the project nor its maintainers can provide vehicle, Stellantis-account or Home Assistant support on a fixed schedule.
 
@@ -36,6 +39,8 @@ When reporting a new brand/model/powertrain, distinguish between:
 - SV Dashboard displaying/mapping it correctly;
 - a remote command being accepted;
 - the physical vehicle effect being verified.
+
+Use an immutable beta/pre-release for external testing rather than a moving `develop` checkout. Keep a predecessor dashboard installed in parallel during a migration test until the SV data, history and controls have been validated.
 
 Do not trigger intrusive commands merely to discover compatibility.
 
