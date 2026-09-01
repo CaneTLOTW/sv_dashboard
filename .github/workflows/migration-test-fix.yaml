@@ -25,7 +25,9 @@ jobs:
 
           for path in Path('tests').glob('*.mjs'):
               text = path.read_text(encoding='utf-8')
-              text = text.replace('0\\.5\\.54', '0\\.6\\.0-beta\\.1')
+              # Handle both literal regex-source escaping and plain cache-version text.
+              text = text.replace(r'0\\.5\\.54', r'0\\.6\\.0-beta\\.1')
+              text = text.replace(r'0\.5\.54', r'0\.6\.0-beta\.1')
               text = text.replace('0.5.54', '0.6.0-beta.1')
               text = text.replace('e-c3-', 'sv-')
               path.write_text(text, encoding='utf-8')
@@ -37,6 +39,7 @@ jobs:
                   text = path.read_text(encoding='utf-8')
               except UnicodeDecodeError:
                   continue
+              text = text.replace('0.5.54', '0.6.0-beta.1')
               text = text.replace('e-c3-', 'sv-')
               text = text.replace('e-C3', 'SV')
               path.write_text(text, encoding='utf-8')
