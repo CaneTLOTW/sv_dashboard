@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-`SV Dashboard` is installed as a HACS **custom integration repository**.
+SV Dashboard is installed as a HACS **custom integration repository**.
 
 Required Home Assistant baseline: **2026.5.0 or later**.
 
@@ -14,9 +14,9 @@ Install and configure these projects first:
 4. [ha-map-card](https://github.com/nathan-gs/ha-map-card)
 5. [layout-card](https://github.com/thomasloven/lovelace-layout-card)
 
-The Stellantis Vehicles integration must already be logged in and expose the selected vehicle's real Home Assistant device/entities, including battery, mileage and vehicle tracker. A downloaded but unconfigured upstream integration is not a functional prerequisite.
+Stellantis Vehicles must already be authenticated and expose a real Home Assistant vehicle device. Mileage and tracker data form the universal baseline. Battery entities are only required for battery-specific features.
 
-The four frontend dependencies must also be loaded as Lovelace JavaScript modules. HACS may show a card as downloaded before the browser has actually loaded its custom element.
+The four frontend dependencies must also be loaded as Lovelace JavaScript modules.
 
 ## Install through HACS
 
@@ -26,113 +26,130 @@ The four frontend dependencies must also be loaded as Lovelace JavaScript module
 4. Restart Home Assistant.
 5. Open **Settings → Devices & services → Add integration**.
 6. Select **SV Dashboard**.
-7. Select the configured Stellantis vehicle, choose the desired modules and provide the local dashboard/vehicle settings requested by config flow.
-8. Complete setup. The package creates a dedicated e-C3 storage dashboard for that config entry.
-9. Refresh the browser/app once and open the generated dashboard from the sidebar.
+7. Select the configured Stellantis vehicle and choose the desired modules/options.
+8. Complete setup. SV Dashboard creates a dedicated storage dashboard for that config entry.
+9. Refresh the browser/app once and open the generated dashboard.
+
+## Migration from e-C3 Dashboard
+
+SV Dashboard uses the new Home Assistant domain `sv_dashboard`. It is a separate integration, not an in-place rename of `e_c3_dashboard`.
+
+For migration testing:
+
+1. leave the old e-C3 Dashboard installed temporarily;
+2. install SV Dashboard separately;
+3. configure the same upstream Stellantis vehicle;
+4. compare dashboard, history and controls;
+5. remove the old integration only after the SV installation is confirmed.
+
+Old e-C3 config entries are not silently rewritten into the new domain.
 
 ## Frontend resource model
 
-Current versions register exactly one package-owned Lovelace resource:
+SV Dashboard registers one package-owned Lovelace resource:
 
 ```text
 /sv_dashboard/frontend.js
 ```
 
-All e-C3 cards and the dashboard strategy are internal ES modules loaded by that entry point. Do **not** manually add old resources such as:
+The dashboard strategy and bundled custom cards are internal ES modules loaded through this entry point. Do not manually register individual package modules.
 
-- `/sv_dashboard/sv_dashboard.js`
-- `/sv_dashboard/map-marker-fix.js`
-- `/sv_dashboard/gps-history-fix.js`
-- individual trip/charge/vehicle card resource URLs
-
-The integration contains migration cleanup for historical resource registrations from older package versions.
-
-After an update that changes frontend code:
-
-1. restart/reload Home Assistant as required by the update;
-2. hard-refresh the browser, or fully close/reopen the HA mobile app if it still serves an older module graph.
+After a frontend update, restart/reload Home Assistant when required and hard-refresh the browser or fully reopen the mobile app if it still serves an older module graph.
 
 ## More than one vehicle
 
-Add one SV Dashboard config entry for each Stellantis vehicle. Each entry has its own selected device, slug, generated dashboard, derived/canonical data and notification/wake-up state.
+Add one SV Dashboard config entry per Stellantis vehicle. Each entry owns its selected device, generated dashboard, derived/canonical data and notification/wake-up state.
 
-The generated dashboard strategy stores the explicit config-entry ID, so multiple vehicles do not depend on dashboard order or VIN-shaped entity-name guesses.
+The dashboard strategy stores the explicit config-entry ID, so multiple vehicles do not depend on dashboard order or VIN-shaped entity-name guesses.
 
-The compact card can also be bound to a specific entry:
+The compact card can be bound to a specific entry:
 
 ```yaml
 type: custom:sv-dashboard-vehicle-overview-card
 entry_id: YOUR_CONFIG_ENTRY_ID
 ```
 
-With only one e-C3 entry, `entry_id` is optional.
+With only one SV Dashboard entry, `entry_id` is optional.
+
+## Capability-based views
+
+SV Dashboard only shows features supported by the selected vehicle's mapped capabilities.
+
+- Electric vehicles can expose SOC, electric range, charging and battery/SOH views.
+- Hybrids may expose electric and fuel capabilities independently.
+- Combustion vehicles can expose fuel level/range/consumption without electric-only charging or traction-battery analytics.
+- Missing battery capacity/residual data is treated as unknown; no fixed e-C3 capacity is substituted.
+
+See [Vehicle capability matrix](VEHICLE_CAPABILITY_MATRIX.en.md).
 
 ## Notifications
 
 Notifications remain inactive after installation.
 
-To use them:
+To enable them:
 
 1. open **Settings → Devices & services → SV Dashboard → Configure**;
 2. enable the notification/recipient module if needed;
-3. explicitly select one or more available Notify services;
-4. reload the config entry if Home Assistant requests it;
-5. in the generated **Notifications** view enable the notification master, desired topic(s) and the intended recipient switch(es).
+3. select one or more available Notify services;
+4. reload the config entry if requested;
+5. enable the desired notification master/topics/recipient switches in the generated **Notifications** view.
 
-A discovered Notify service is only a choice. Discovery never silently opts it in.
+A discovered Notify service is only a choice; discovery never opts it in automatically.
 
-Thresholds, delays and quiet hours are package-owned Home Assistant Number/Time entities visible in the Notifications view. See `NOTIFICATIONS_AND_WAKEUP.en.md`.
+Thresholds, delays and quiet hours are package-owned Number/Time entities. See [Notifications and wake-up](NOTIFICATIONS_AND_WAKEUP.en.md).
 
 ## History and retention
 
-The package combines several history sources:
+SV Dashboard combines:
 
 - canonical Stellantis server history for retained trip/charge records;
 - a restart-safe package store for local/observed session data;
-- Home Assistant Recorder for HA-side state history such as detailed tracker history and local history reconstruction;
+- Home Assistant Recorder for HA-side state/tracker history;
 - Home Assistant long-term statistics for supported aggregate/statistics cards.
 
-The **History display window** option defaults to 2,160 hours (90 days), but it is only a query/display limit. It does not change Recorder retention.
+The **History display window** defaults to 2,160 hours (90 days). It is only a query/display limit and does not change Recorder retention.
 
-If you expect 90 days of Recorder-backed data, ensure your Recorder configuration retains the required entities for at least that long. The integration never changes `purge_keep_days`, Recorder include/exclude filters, database backend or purge schedule.
-
-Canonical server history can remain available beyond the local Recorder window, but that does not manufacture missing detailed GPS/HA state samples.
+If you need 90 days of Recorder-backed data, configure Recorder accordingly. SV Dashboard does not change `purge_keep_days`, Recorder filters, database backend or purge schedule.
 
 ## Data quality expectations
 
-The package deliberately distinguishes direct upstream values from derived estimates:
+SV Dashboard distinguishes direct upstream values from derived estimates:
 
 - mileage/odometer deltas are used when valid;
-- energy from SOC × capacity is an estimate;
+- SOC × capacity energy is an estimate and requires trustworthy vehicle-specific capacity;
 - charging power derived from SOC/time is an estimate;
 - server-trip GPS lines can be start-to-stop approximations rather than complete routes.
 
-If an upstream server row is implausible, the canonical layer can mark it invalid or, where strong evidence exists, repair only a derived boundary while retaining the raw source value for diagnostics.
+Implausible upstream rows can be excluded from derived metrics while raw source values remain available for diagnostics.
 
 ## Troubleshooting
 
 ### Missing custom card / setup page
 
-If the generated dashboard reports a missing dependency, verify that Bubble Card, Button Card, ha-map-card and layout-card are installed **and loaded** as Lovelace resources. Restart Home Assistant if HACS requests it, then hard-refresh the browser.
+Verify Bubble Card, Button Card, ha-map-card and layout-card are installed **and loaded** as Lovelace resources. Restart Home Assistant if HACS requests it, then hard-refresh the browser.
 
 ### Dashboard still shows an old frontend
 
-Confirm the current package version is installed, then hard-refresh. Current e-C3 versions use only `/sv_dashboard/frontend.js`; manually registered historical e-C3 resources should be removed by migration cleanup.
+Confirm the current SV Dashboard version is installed and `/sv_dashboard/frontend.js` is the registered package resource, then hard-refresh the client.
 
 ### Vehicle cannot be selected
 
-Verify Stellantis Vehicles is configured, compatible and currently exposes battery, mileage and tracker entities for that Home Assistant device.
+Verify Stellantis Vehicles is configured, compatible and exposes mileage and tracker entities for the selected device. Battery entities are not a universal prerequisite.
+
+### Battery-specific features are missing
+
+Check whether the selected vehicle actually exposes the relevant electric/battery entities. Hybrid and combustion vehicles can validly omit battery capacity/residual/SOH data.
 
 ### Normal telemetry works but remote values are unavailable
 
-Check the upstream Stellantis Vehicles authentication/session/config-entry health first. A previous live incident showed ordinary vehicle telemetry continuing while the remote channel was unavailable because the upstream module needed re-authentication. That is not by itself evidence of an SV Dashboard mapping regression.
+Check the upstream Stellantis Vehicles authentication/session/config-entry health first. Remote-channel availability can fail independently of ordinary telemetry.
 
 ### History is shorter than the configured window
 
-Check Recorder retention and include filters. The integration reports/uses the available data; it does not recreate Recorder history that has already been purged.
+Check Recorder retention and include filters. SV Dashboard cannot recreate Recorder history already purged.
 
 ## Updating
 
-Install the new version through HACS. For Python/platform or frontend changes, follow the release notes and restart Home Assistant when requested. Browser/app cache should be refreshed after frontend version changes.
+Install updates through HACS. Restart Home Assistant when release notes require it and refresh browser/app cache after frontend changes.
 
-The project's acceptance workflow validates exact `develop` SHAs before stable promotion; published `main` remains the accepted line rather than an independent hotfix branch.
+During migration, development is validated on exact `develop` SHAs before any stable promotion to `main`.
