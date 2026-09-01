@@ -11,10 +11,14 @@ const allowedHistoricalProductName = new Set([
 
 function collect(dir, result = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if ([".git", "custom_components", "tests"].includes(entry.name)) continue;
     const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) collect(full, result);
-    else if (/\.(md|yml|yaml|json)$/.test(entry.name)) result.push(full);
+    const relative = path.relative(root, full).replaceAll(path.sep, "/");
+    if (entry.isDirectory()) {
+      if ([".git", "custom_components", "tests", ".github/workflows"].includes(relative)) continue;
+      collect(full, result);
+    } else if (/\.(md|yml|yaml|json)$/.test(entry.name)) {
+      result.push(full);
+    }
   }
   return result;
 }
