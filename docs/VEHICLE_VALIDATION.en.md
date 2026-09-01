@@ -28,7 +28,7 @@ Record at minimum:
 
 ## Safe parallel installation
 
-When migrating from the predecessor e-C3 Dashboard, keep the old integration/dashboard installed during the first SV Dashboard test.
+When migrating from a predecessor dashboard integration, keep the old integration/dashboard installed during the first SV Dashboard test.
 
 SV Dashboard uses:
 
