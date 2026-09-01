@@ -5,7 +5,9 @@
       "dashboard_cards": {
         "title": "Voorcontrole dashboardkaarten",
         "description": "SV Dashboard vereist Bubble Card, Button Card, ha-map-card en layout-card. Dit is een best-effortcontrole van de in Home Assistant geregistreerde Lovelace-bronnen:\n\n{card_status}\n\nEen geregistreerde bron bewijst niet dat de browser deze heeft geladen. Installeer ontbrekende kaarten via HACS, controleer of elke kaart als JavaScript-module is geregistreerd, herstart Home Assistant en vernieuw daarna de browser. Het dashboard voert vóór weergave de definitieve browsercontrole uit.",
-        "data": {"dashboard_cards_confirmed": "Ik heb de vereiste dashboardkaarten gecontroleerd"}
+        "data": {
+          "dashboard_cards_confirmed": "Ik heb de vereiste dashboardkaarten gecontroleerd"
+        }
       },
       "user": {
         "title": "Voertuig selecteren",
@@ -19,7 +21,7 @@
     },
     "error": {
       "invalid_vehicle": "Het geselecteerde apparaat hoort niet bij Stellantis Vehicles.",
-      "upstream_not_ready": "Voltooi de configuratie van Stellantis Vehicles en wacht tot de accu-, kilometerstand- en tracker-entiteiten van het voertuig beschikbaar zijn voordat je dit dashboard toevoegt.",
+      "upstream_not_ready": "Rond de configuratie van Stellantis Vehicles af en wacht op kilometerstand- en tracker-entiteiten.",
       "invalid_slug": "Voer een geldige voertuigidentifier in.",
       "slug_in_use": "Deze voertuigidentifier wordt al door een andere dashboardvermelding gebruikt."
     },
@@ -49,48 +51,116 @@
   },
   "entity": {
     "sensor": {
-      "server_trip_history": {"name": "Server-rithistorie"},
-      "server_gps_history": {"name": "Server-GPS-historie"},
-      "server_charge_history": {"name": "Server-laadhistorie"},
-      "vehicle_info": {"name": "Voertuiginformatie"},
-      "trailing_consumption_500km": {"name": "Gemiddeld verbruik (500 km)"},
-      "distance_since_charge": {"name": "Afstand sinds laatste laadbeurt"},
-      "current_trip_energy": {"name": "Energie huidige rit"},
-      "current_charge_power": {"name": "Huidig laadvermogen"},
-      "last_trip_result": {"name": "Resultaat laatste lokale rit"},
-      "last_charge_result": {"name": "Resultaat laatste lokale laadbeurt"}
+      "server_trip_history": {
+        "name": "Server-rithistorie"
+      },
+      "server_gps_history": {
+        "name": "Server-GPS-historie"
+      },
+      "server_charge_history": {
+        "name": "Server-laadhistorie"
+      },
+      "vehicle_info": {
+        "name": "Voertuiginformatie"
+      },
+      "trailing_consumption_500km": {
+        "name": "Gemiddeld verbruik (500 km)"
+      },
+      "distance_since_charge": {
+        "name": "Afstand sinds laatste laadbeurt"
+      },
+      "current_trip_energy": {
+        "name": "Energie huidige rit"
+      },
+      "current_charge_power": {
+        "name": "Huidig laadvermogen"
+      },
+      "last_trip_result": {
+        "name": "Resultaat laatste lokale rit"
+      },
+      "last_charge_result": {
+        "name": "Resultaat laatste lokale laadbeurt"
+      }
     },
     "number": {
-      "range_warning_km": {"name": "Waarschuwing lage actieradius"},
-      "range_reset_km": {"name": "Reset lage actieradius"},
-      "home_soc_warning": {"name": "SOC-waarschuwing thuis"},
-      "home_soc_reset": {"name": "SOC-reset thuis"},
-      "home_delay_minutes": {"name": "Vertraging laadherinnering thuis"},
-      "service_battery_warning": {"name": "Waarschuwing 12V-accu"},
-      "service_battery_reset": {"name": "Reset 12V-accu"},
-      "stale_home_hours": {"name": "Beschikbaarheidstime-out thuis"},
-      "stale_away_hours": {"name": "Beschikbaarheidstime-out onderweg"},
-      "probe_wait_minutes": {"name": "Wachttijd beschikbaarheidscontrole"},
-      "charge_start_delay_minutes": {"name": "Vertraging melding laadstart"}
+      "range_warning_km": {
+        "name": "Waarschuwing lage actieradius"
+      },
+      "range_reset_km": {
+        "name": "Reset lage actieradius"
+      },
+      "home_soc_warning": {
+        "name": "SOC-waarschuwing thuis"
+      },
+      "home_soc_reset": {
+        "name": "SOC-reset thuis"
+      },
+      "home_delay_minutes": {
+        "name": "Vertraging laadherinnering thuis"
+      },
+      "service_battery_warning": {
+        "name": "Waarschuwing 12V-accu"
+      },
+      "service_battery_reset": {
+        "name": "Reset 12V-accu"
+      },
+      "stale_home_hours": {
+        "name": "Beschikbaarheidstime-out thuis"
+      },
+      "stale_away_hours": {
+        "name": "Beschikbaarheidstime-out onderweg"
+      },
+      "probe_wait_minutes": {
+        "name": "Wachttijd beschikbaarheidscontrole"
+      },
+      "charge_start_delay_minutes": {
+        "name": "Vertraging melding laadstart"
+      }
     },
     "time": {
-      "quiet_start": {"name": "Begin stille uren"},
-      "quiet_end": {"name": "Einde stille uren"}
+      "quiet_start": {
+        "name": "Begin stille uren"
+      },
+      "quiet_end": {
+        "name": "Einde stille uren"
+      }
     },
     "switch": {
-      "notifications": {"name": "Meldingen"},
-      "trip_reports": {"name": "Ritrapporten"},
-      "charge_reports": {"name": "Laadrapporten"},
-      "alerts": {"name": "Voertuigwaarschuwingen"},
-      "wakeup_hourly": {"name": "Elk uur wake-up"},
-      "wakeup_charging": {"name": "Wake-up tijdens laden"},
-      "wakeup_probe": {"name": "Beschikbaarheidscontrole met wake-up"},
-      "notify_recipient": {"name": "Notify-ontvanger: {recipient}"}
+      "notifications": {
+        "name": "Meldingen"
+      },
+      "trip_reports": {
+        "name": "Ritrapporten"
+      },
+      "charge_reports": {
+        "name": "Laadrapporten"
+      },
+      "alerts": {
+        "name": "Voertuigwaarschuwingen"
+      },
+      "wakeup_hourly": {
+        "name": "Elk uur wake-up"
+      },
+      "wakeup_charging": {
+        "name": "Wake-up tijdens laden"
+      },
+      "wakeup_probe": {
+        "name": "Beschikbaarheidscontrole met wake-up"
+      },
+      "notify_recipient": {
+        "name": "Notify-ontvanger: {recipient}"
+      }
     },
     "button": {
-      "manual_wakeup": {"name": "Voertuig nu wekken"},
-      "test_notification": {"name": "Testmelding"},
-      "sync_server_history": {"name": "Serverhistorie synchroniseren"}
+      "manual_wakeup": {
+        "name": "Voertuig nu wekken"
+      },
+      "test_notification": {
+        "name": "Testmelding"
+      },
+      "sync_server_history": {
+        "name": "Serverhistorie synchroniseren"
+      }
     }
   }
 }

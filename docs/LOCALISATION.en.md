@@ -8,10 +8,7 @@ English is the fallback language.
 
 ## Home Assistant UI
 
-Home Assistant config flows, options and package-owned entity names use:
-
-- `strings.json` as the canonical schema
-- `translations/<language>.json` for all 18 languages
+Home Assistant config flows, options and package-owned entity names use the runtime catalogs in `translations/<language>.json` for all 18 languages. `translations/en.json` defines the canonical key set and English fallback. Custom integrations do not use `strings.json`.
 
 All translation files must keep identical keys and format placeholders.
 
@@ -30,7 +27,7 @@ Trip history, charging history, vehicle overview and dashboard views use the sam
 
 ## Backend messages
 
-Server-side notifications and Logbook messages use `custom_components/sv_dashboard/i18n.py`. The backend catalog covers the same 18-language matrix and preserves format placeholders across languages.
+Server-side notifications, push messages and Logbook messages use `custom_components/sv_dashboard/i18n.py`. The backend catalog covers the same 18-language matrix and preserves keys and format placeholders across languages. Any new backend message key must be added to all 18 languages in the same change.
 
 ## Translation rules
 

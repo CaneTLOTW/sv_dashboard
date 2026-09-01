@@ -54,7 +54,6 @@ jobs:
         run: |
           python3 -m json.tool hacs.json >/dev/null
           python3 -m json.tool custom_components/sv_dashboard/manifest.json >/dev/null
-          python3 -m json.tool custom_components/sv_dashboard/strings.json >/dev/null
           for file in custom_components/sv_dashboard/translations/*.json; do
             python3 -m json.tool "$file" >/dev/null
           done
@@ -81,13 +80,12 @@ jobs:
             echo 'Active old e-C3 identifier remains'; exit 1
           fi
 
-      - name: Translation semantic guard
+      - name: Translation runtime guard
         shell: bash
         run: |
           set -euo pipefail
-          if grep -RIl 'battery, mileage and tracker' custom_components/sv_dashboard/strings.json custom_components/sv_dashboard/translations; then
-            echo 'Stale universal battery prerequisite remains'; exit 1
-          fi
+          test ! -e custom_components/sv_dashboard/strings.json
+          node --test tests/ha-translation-structure.test.mjs tests/frontend-i18n.test.mjs tests/server-i18n.test.mjs
 
       - name: Check whitespace errors
         run: git diff --check HEAD^ HEAD

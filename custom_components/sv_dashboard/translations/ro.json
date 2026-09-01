@@ -5,7 +5,9 @@
       "dashboard_cards": {
         "title": "Verificare preliminară a cardurilor tabloului de bord",
         "description": "SV Dashboard necesită Bubble Card, Button Card, ha-map-card și layout-card. Aceasta este o verificare orientativă a resurselor Lovelace înregistrate în Home Assistant:\n\n{card_status}\n\nO resursă înregistrată nu înseamnă că browserul a încărcat-o. Instalați cardurile lipsă cu HACS, asigurați-vă că fiecare este înregistrat ca modul JavaScript, apoi reporniți Home Assistant și reîmprospătați browserul. Tabloul de bord efectuează verificarea finală în browser înainte de afișare.",
-        "data": {"dashboard_cards_confirmed": "Am verificat cardurile necesare ale tabloului de bord"}
+        "data": {
+          "dashboard_cards_confirmed": "Am verificat cardurile necesare ale tabloului de bord"
+        }
       },
       "user": {
         "title": "Selectați vehiculul",
@@ -19,7 +21,7 @@
     },
     "error": {
       "invalid_vehicle": "Dispozitivul selectat nu aparține Stellantis Vehicles.",
-      "upstream_not_ready": "Finalizați configurarea Stellantis Vehicles și așteptați entitățile pentru baterie, kilometraj și tracker înainte de a adăuga acest tablou de bord.",
+      "upstream_not_ready": "Finalizează configurarea Stellantis Vehicles și așteaptă entitățile de kilometraj și tracker.",
       "invalid_slug": "Introduceți un identificator de vehicul valid.",
       "slug_in_use": "Acest identificator de vehicul este deja utilizat de o altă intrare a tabloului de bord."
     },
@@ -49,48 +51,116 @@
   },
   "entity": {
     "sensor": {
-      "server_trip_history": {"name": "Istoric deplasări server"},
-      "server_gps_history": {"name": "Istoric GPS server"},
-      "server_charge_history": {"name": "Istoric încărcări server"},
-      "vehicle_info": {"name": "Informații vehicul"},
-      "trailing_consumption_500km": {"name": "Consum mediu (500 km)"},
-      "distance_since_charge": {"name": "Distanță de la ultima încărcare"},
-      "current_trip_energy": {"name": "Energia deplasării curente"},
-      "current_charge_power": {"name": "Putere de încărcare curentă"},
-      "last_trip_result": {"name": "Rezultatul ultimei deplasări locale"},
-      "last_charge_result": {"name": "Rezultatul ultimei încărcări locale"}
+      "server_trip_history": {
+        "name": "Istoric deplasări server"
+      },
+      "server_gps_history": {
+        "name": "Istoric GPS server"
+      },
+      "server_charge_history": {
+        "name": "Istoric încărcări server"
+      },
+      "vehicle_info": {
+        "name": "Informații vehicul"
+      },
+      "trailing_consumption_500km": {
+        "name": "Consum mediu (500 km)"
+      },
+      "distance_since_charge": {
+        "name": "Distanță de la ultima încărcare"
+      },
+      "current_trip_energy": {
+        "name": "Energia deplasării curente"
+      },
+      "current_charge_power": {
+        "name": "Putere de încărcare curentă"
+      },
+      "last_trip_result": {
+        "name": "Rezultatul ultimei deplasări locale"
+      },
+      "last_charge_result": {
+        "name": "Rezultatul ultimei încărcări locale"
+      }
     },
     "number": {
-      "range_warning_km": {"name": "Avertizare autonomie redusă"},
-      "range_reset_km": {"name": "Resetare autonomie redusă"},
-      "home_soc_warning": {"name": "Avertizare SOC acasă"},
-      "home_soc_reset": {"name": "Resetare SOC acasă"},
-      "home_delay_minutes": {"name": "Întârziere memento încărcare acasă"},
-      "service_battery_warning": {"name": "Avertizare baterie 12 V"},
-      "service_battery_reset": {"name": "Resetare baterie 12 V"},
-      "stale_home_hours": {"name": "Expirare disponibilitate acasă"},
-      "stale_away_hours": {"name": "Expirare disponibilitate în deplasare"},
-      "probe_wait_minutes": {"name": "Așteptare test disponibilitate"},
-      "charge_start_delay_minutes": {"name": "Întârziere notificare început încărcare"}
+      "range_warning_km": {
+        "name": "Avertizare autonomie redusă"
+      },
+      "range_reset_km": {
+        "name": "Resetare autonomie redusă"
+      },
+      "home_soc_warning": {
+        "name": "Avertizare SOC acasă"
+      },
+      "home_soc_reset": {
+        "name": "Resetare SOC acasă"
+      },
+      "home_delay_minutes": {
+        "name": "Întârziere memento încărcare acasă"
+      },
+      "service_battery_warning": {
+        "name": "Avertizare baterie 12 V"
+      },
+      "service_battery_reset": {
+        "name": "Resetare baterie 12 V"
+      },
+      "stale_home_hours": {
+        "name": "Expirare disponibilitate acasă"
+      },
+      "stale_away_hours": {
+        "name": "Expirare disponibilitate în deplasare"
+      },
+      "probe_wait_minutes": {
+        "name": "Așteptare test disponibilitate"
+      },
+      "charge_start_delay_minutes": {
+        "name": "Întârziere notificare început încărcare"
+      }
     },
     "time": {
-      "quiet_start": {"name": "Început interval silențios"},
-      "quiet_end": {"name": "Sfârșit interval silențios"}
+      "quiet_start": {
+        "name": "Început interval silențios"
+      },
+      "quiet_end": {
+        "name": "Sfârșit interval silențios"
+      }
     },
     "switch": {
-      "notifications": {"name": "Notificări"},
-      "trip_reports": {"name": "Rapoarte deplasări"},
-      "charge_reports": {"name": "Rapoarte încărcare"},
-      "alerts": {"name": "Alerte vehicul"},
-      "wakeup_hourly": {"name": "Trezire la fiecare oră"},
-      "wakeup_charging": {"name": "Trezire în timpul încărcării"},
-      "wakeup_probe": {"name": "Test disponibilitate cu trezire"},
-      "notify_recipient": {"name": "Destinatar Notify: {recipient}"}
+      "notifications": {
+        "name": "Notificări"
+      },
+      "trip_reports": {
+        "name": "Rapoarte deplasări"
+      },
+      "charge_reports": {
+        "name": "Rapoarte încărcare"
+      },
+      "alerts": {
+        "name": "Alerte vehicul"
+      },
+      "wakeup_hourly": {
+        "name": "Trezire la fiecare oră"
+      },
+      "wakeup_charging": {
+        "name": "Trezire în timpul încărcării"
+      },
+      "wakeup_probe": {
+        "name": "Test disponibilitate cu trezire"
+      },
+      "notify_recipient": {
+        "name": "Destinatar Notify: {recipient}"
+      }
     },
     "button": {
-      "manual_wakeup": {"name": "Trezește vehiculul acum"},
-      "test_notification": {"name": "Notificare de test"},
-      "sync_server_history": {"name": "Sincronizează istoricul serverului"}
+      "manual_wakeup": {
+        "name": "Trezește vehiculul acum"
+      },
+      "test_notification": {
+        "name": "Notificare de test"
+      },
+      "sync_server_history": {
+        "name": "Sincronizează istoricul serverului"
+      }
     }
   }
 }

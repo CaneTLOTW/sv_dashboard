@@ -6,7 +6,7 @@ Thanks for improving SV Dashboard.
 
 - Check the [installation guide](docs/INSTALLATION.en.md),
   [entity catalog](docs/ENTITY_CATALOG.md), and
-  [Stellantis ë-C3 capability matrix](docs/STELLANTIS_EC3_CAPABILITY_MATRIX.en.md).
+  [vehicle capability matrix](docs/VEHICLE_CAPABILITY_MATRIX.en.md).
 - Confirm the issue also occurs with a supported version of Home Assistant and
   the upstream Stellantis Vehicles integration.
 - Redact VINs, account IDs, exact home locations, GPS tracks, Notify recipient
@@ -24,7 +24,7 @@ discussion rules.
   from Stellantis Vehicles and does not call the Stellantis API.
 - Never hard-code a vehicle, VIN, entity ID, image URL, user, or notify target.
 - New dashboard behaviour must handle unavailable or absent upstream entities.
-- Add German and English strings at the same time; see
+- Add or update every user-facing string across all 18 supported languages in the same change, including config/options/entity text, frontend labels, notifications, push messages and Logbook text; see
   [localisation](docs/LOCALISATION.en.md).
 - Keep third-party HACS cards as dependencies. Do not vendor or modify them.
 - Use third-party product and brand names only where needed to describe

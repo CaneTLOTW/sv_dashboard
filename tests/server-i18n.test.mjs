@@ -18,10 +18,18 @@ if messages is None:
     raise SystemExit("_MESSAGES not found")
 def placeholders(text):
     return sorted(re.findall(r"\{([a-zA-Z0-9_]+)\}", text))
+used = set()
+for path in Path("custom_components/sv_dashboard").glob("*.py"):
+    module = ast.parse(path.read_text())
+    for node in ast.walk(module):
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "text":
+            if len(node.args) >= 2 and isinstance(node.args[1], ast.Constant) and isinstance(node.args[1].value, str):
+                used.add(node.args[1].value)
 print(json.dumps({
     "languages": list(messages),
     "keys": {lang: sorted(data) for lang, data in messages.items()},
     "placeholders": {lang: {key: placeholders(value) for key, value in data.items()} for lang, data in messages.items()},
+    "used": sorted(used),
 }))
 `], { encoding: "utf8" });
 
@@ -41,4 +49,10 @@ test("server translations preserve every format placeholder", () => {
       assert.deepEqual(data.placeholders[language][key], canonical[key], `${language}/${key} placeholder mismatch`);
     }
   }
+});
+
+
+test("every used backend notification/logbook key exists in the 18-language catalog", () => {
+  const canonical = new Set(data.keys.en);
+  for (const key of data.used) assert.ok(canonical.has(key), `backend text key missing from catalog: ${key}`);
 });

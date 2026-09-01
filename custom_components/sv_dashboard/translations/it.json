@@ -21,7 +21,7 @@
     },
     "error": {
       "invalid_vehicle": "Il dispositivo selezionato non appartiene a Stellantis Vehicles.",
-      "upstream_not_ready": "Completa la configurazione di Stellantis Vehicles e attendi che siano disponibili le entità batteria, chilometraggio e tracker del veicolo prima di aggiungere questa dashboard.",
+      "upstream_not_ready": "Completa la configurazione di Stellantis Vehicles e attendi le entità chilometraggio e tracker.",
       "invalid_slug": "Inserisci un identificatore veicolo valido.",
       "slug_in_use": "Questo identificatore veicolo è già utilizzato da un'altra voce della dashboard."
     },
@@ -51,48 +51,116 @@
   },
   "entity": {
     "sensor": {
-      "server_trip_history": {"name": "Cronologia viaggi server"},
-      "server_gps_history": {"name": "Cronologia GPS server"},
-      "server_charge_history": {"name": "Cronologia ricariche server"},
-      "vehicle_info": {"name": "Informazioni veicolo"},
-      "trailing_consumption_500km": {"name": "Consumo medio (500 km)"},
-      "distance_since_charge": {"name": "Distanza dall'ultima ricarica"},
-      "current_trip_energy": {"name": "Energia viaggio corrente"},
-      "current_charge_power": {"name": "Potenza di ricarica attuale"},
-      "last_trip_result": {"name": "Risultato ultimo viaggio locale"},
-      "last_charge_result": {"name": "Risultato ultima ricarica locale"}
+      "server_trip_history": {
+        "name": "Cronologia viaggi server"
+      },
+      "server_gps_history": {
+        "name": "Cronologia GPS server"
+      },
+      "server_charge_history": {
+        "name": "Cronologia ricariche server"
+      },
+      "vehicle_info": {
+        "name": "Informazioni veicolo"
+      },
+      "trailing_consumption_500km": {
+        "name": "Consumo medio (500 km)"
+      },
+      "distance_since_charge": {
+        "name": "Distanza dall'ultima ricarica"
+      },
+      "current_trip_energy": {
+        "name": "Energia viaggio corrente"
+      },
+      "current_charge_power": {
+        "name": "Potenza di ricarica attuale"
+      },
+      "last_trip_result": {
+        "name": "Risultato ultimo viaggio locale"
+      },
+      "last_charge_result": {
+        "name": "Risultato ultima ricarica locale"
+      }
     },
     "number": {
-      "range_warning_km": {"name": "Avviso autonomia bassa"},
-      "range_reset_km": {"name": "Reset autonomia bassa"},
-      "home_soc_warning": {"name": "Avviso SOC a casa"},
-      "home_soc_reset": {"name": "Reset SOC a casa"},
-      "home_delay_minutes": {"name": "Ritardo promemoria ricarica a casa"},
-      "service_battery_warning": {"name": "Avviso batteria 12 V"},
-      "service_battery_reset": {"name": "Reset batteria 12 V"},
-      "stale_home_hours": {"name": "Timeout disponibilità a casa"},
-      "stale_away_hours": {"name": "Timeout disponibilità fuori casa"},
-      "probe_wait_minutes": {"name": "Attesa verifica disponibilità"},
-      "charge_start_delay_minutes": {"name": "Ritardo notifica inizio ricarica"}
+      "range_warning_km": {
+        "name": "Avviso autonomia bassa"
+      },
+      "range_reset_km": {
+        "name": "Reset autonomia bassa"
+      },
+      "home_soc_warning": {
+        "name": "Avviso SOC a casa"
+      },
+      "home_soc_reset": {
+        "name": "Reset SOC a casa"
+      },
+      "home_delay_minutes": {
+        "name": "Ritardo promemoria ricarica a casa"
+      },
+      "service_battery_warning": {
+        "name": "Avviso batteria 12 V"
+      },
+      "service_battery_reset": {
+        "name": "Reset batteria 12 V"
+      },
+      "stale_home_hours": {
+        "name": "Timeout disponibilità a casa"
+      },
+      "stale_away_hours": {
+        "name": "Timeout disponibilità fuori casa"
+      },
+      "probe_wait_minutes": {
+        "name": "Attesa verifica disponibilità"
+      },
+      "charge_start_delay_minutes": {
+        "name": "Ritardo notifica inizio ricarica"
+      }
     },
     "time": {
-      "quiet_start": {"name": "Inizio ore silenziose"},
-      "quiet_end": {"name": "Fine ore silenziose"}
+      "quiet_start": {
+        "name": "Inizio ore silenziose"
+      },
+      "quiet_end": {
+        "name": "Fine ore silenziose"
+      }
     },
     "switch": {
-      "notifications": {"name": "Notifiche"},
-      "trip_reports": {"name": "Rapporti viaggio"},
-      "charge_reports": {"name": "Rapporti ricarica"},
-      "alerts": {"name": "Avvisi veicolo"},
-      "wakeup_hourly": {"name": "Risveglio orario"},
-      "wakeup_charging": {"name": "Risveglio durante la ricarica"},
-      "wakeup_probe": {"name": "Verifica disponibilità con risveglio"},
-      "notify_recipient": {"name": "Destinatario Notify: {recipient}"}
+      "notifications": {
+        "name": "Notifiche"
+      },
+      "trip_reports": {
+        "name": "Rapporti viaggio"
+      },
+      "charge_reports": {
+        "name": "Rapporti ricarica"
+      },
+      "alerts": {
+        "name": "Avvisi veicolo"
+      },
+      "wakeup_hourly": {
+        "name": "Risveglio orario"
+      },
+      "wakeup_charging": {
+        "name": "Risveglio durante la ricarica"
+      },
+      "wakeup_probe": {
+        "name": "Verifica disponibilità con risveglio"
+      },
+      "notify_recipient": {
+        "name": "Destinatario Notify: {recipient}"
+      }
     },
     "button": {
-      "manual_wakeup": {"name": "Risveglia veicolo ora"},
-      "test_notification": {"name": "Notifica di prova"},
-      "sync_server_history": {"name": "Sincronizza cronologia server"}
+      "manual_wakeup": {
+        "name": "Risveglia veicolo ora"
+      },
+      "test_notification": {
+        "name": "Notifica di prova"
+      },
+      "sync_server_history": {
+        "name": "Sincronizza cronologia server"
+      }
     }
   }
 }

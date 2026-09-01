@@ -62,10 +62,11 @@ Full rationale: [Branch and deployment workflow](docs/BRANCH_AND_DEPLOYMENT_WORK
 
 ## User-facing text
 
-- Config/options/entity text belongs in `strings.json` plus `translations/`.
+- Config/options/entity text belongs in `translations/<language>.json`; `translations/en.json` defines the canonical runtime key set. Do not add `strings.json` to this custom integration.
 - Custom dashboard/card text belongs in the shared frontend i18n catalogs under `static/`.
-- Notification and Logbook text belongs in `i18n.py`.
-- Preserve the full supported 18-language matrix for changed user-facing keys.
+- Notification, push and Logbook text belongs in `i18n.py`.
+- Every new or changed user-facing string — config, options, entities, frontend, notification, push or Logbook — must be carried through the full supported 18-language matrix in the same change.
+- `tests/ha-translation-structure.test.mjs`, `tests/frontend-i18n.test.mjs` and `tests/server-i18n.test.mjs` are mandatory parity guards; do not bypass them for new text.
 - Keep keys/placeholders structurally identical across languages.
 - Keep UI labels concise and technically precise; do not expand badges, controls or card labels into explanatory prose.
 - Do not place language conditionals in calculations or notification business logic.

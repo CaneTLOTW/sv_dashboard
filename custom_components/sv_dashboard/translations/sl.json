@@ -5,7 +5,9 @@
       "dashboard_cards": {
         "title": "Predhodno preverjanje kart nadzorne plošče",
         "description": "SV Dashboard zahteva Bubble Card, Button Card, ha-map-card in layout-card. To je okvirno preverjanje virov Lovelace, registriranih v Home Assistant:\n\n{card_status}\n\nRegistriran vir še ne pomeni, da ga je brskalnik naložil. Manjkajoče kartice namestite prek HACS, preverite, da je vsaka registrirana kot modul JavaScript, nato ponovno zaženite Home Assistant in osvežite brskalnik. Nadzorna plošča pred prikazom izvede končno preverjanje v brskalniku.",
-        "data": {"dashboard_cards_confirmed": "Pregledal sem zahtevane kartice nadzorne plošče"}
+        "data": {
+          "dashboard_cards_confirmed": "Pregledal sem zahtevane kartice nadzorne plošče"
+        }
       },
       "user": {
         "title": "Izberite vozilo",
@@ -19,7 +21,7 @@
     },
     "error": {
       "invalid_vehicle": "Izbrana naprava ne pripada Stellantis Vehicles.",
-      "upstream_not_ready": "Dokončajte nastavitev Stellantis Vehicles in počakajte na entitete baterije, kilometrine ter sledilnika vozila, preden dodate to nadzorno ploščo.",
+      "upstream_not_ready": "Dokončajte nastavitev Stellantis Vehicles in počakajte na entitete kilometrine in sledilnika.",
       "invalid_slug": "Vnesite veljaven identifikator vozila.",
       "slug_in_use": "Ta identifikator vozila že uporablja drug vnos nadzorne plošče."
     },
@@ -49,48 +51,116 @@
   },
   "entity": {
     "sensor": {
-      "server_trip_history": {"name": "Strežniška zgodovina voženj"},
-      "server_gps_history": {"name": "Strežniška zgodovina GPS"},
-      "server_charge_history": {"name": "Strežniška zgodovina polnjenja"},
-      "vehicle_info": {"name": "Podatki o vozilu"},
-      "trailing_consumption_500km": {"name": "Povprečna poraba (500 km)"},
-      "distance_since_charge": {"name": "Razdalja od zadnjega polnjenja"},
-      "current_trip_energy": {"name": "Energija trenutne vožnje"},
-      "current_charge_power": {"name": "Trenutna moč polnjenja"},
-      "last_trip_result": {"name": "Rezultat zadnje lokalne vožnje"},
-      "last_charge_result": {"name": "Rezultat zadnjega lokalnega polnjenja"}
+      "server_trip_history": {
+        "name": "Strežniška zgodovina voženj"
+      },
+      "server_gps_history": {
+        "name": "Strežniška zgodovina GPS"
+      },
+      "server_charge_history": {
+        "name": "Strežniška zgodovina polnjenja"
+      },
+      "vehicle_info": {
+        "name": "Podatki o vozilu"
+      },
+      "trailing_consumption_500km": {
+        "name": "Povprečna poraba (500 km)"
+      },
+      "distance_since_charge": {
+        "name": "Razdalja od zadnjega polnjenja"
+      },
+      "current_trip_energy": {
+        "name": "Energija trenutne vožnje"
+      },
+      "current_charge_power": {
+        "name": "Trenutna moč polnjenja"
+      },
+      "last_trip_result": {
+        "name": "Rezultat zadnje lokalne vožnje"
+      },
+      "last_charge_result": {
+        "name": "Rezultat zadnjega lokalnega polnjenja"
+      }
     },
     "number": {
-      "range_warning_km": {"name": "Opozorilo za nizek doseg"},
-      "range_reset_km": {"name": "Ponastavitev nizkega dosega"},
-      "home_soc_warning": {"name": "Opozorilo SOC doma"},
-      "home_soc_reset": {"name": "Ponastavitev SOC doma"},
-      "home_delay_minutes": {"name": "Zamik opomnika za polnjenje doma"},
-      "service_battery_warning": {"name": "Opozorilo za 12 V baterijo"},
-      "service_battery_reset": {"name": "Ponastavitev 12 V baterije"},
-      "stale_home_hours": {"name": "Časovna omejitev dosegljivosti doma"},
-      "stale_away_hours": {"name": "Časovna omejitev dosegljivosti zdoma"},
-      "probe_wait_minutes": {"name": "Čakanje preverjanja dosegljivosti"},
-      "charge_start_delay_minutes": {"name": "Zamik obvestila o začetku polnjenja"}
+      "range_warning_km": {
+        "name": "Opozorilo za nizek doseg"
+      },
+      "range_reset_km": {
+        "name": "Ponastavitev nizkega dosega"
+      },
+      "home_soc_warning": {
+        "name": "Opozorilo SOC doma"
+      },
+      "home_soc_reset": {
+        "name": "Ponastavitev SOC doma"
+      },
+      "home_delay_minutes": {
+        "name": "Zamik opomnika za polnjenje doma"
+      },
+      "service_battery_warning": {
+        "name": "Opozorilo za 12 V baterijo"
+      },
+      "service_battery_reset": {
+        "name": "Ponastavitev 12 V baterije"
+      },
+      "stale_home_hours": {
+        "name": "Časovna omejitev dosegljivosti doma"
+      },
+      "stale_away_hours": {
+        "name": "Časovna omejitev dosegljivosti zdoma"
+      },
+      "probe_wait_minutes": {
+        "name": "Čakanje preverjanja dosegljivosti"
+      },
+      "charge_start_delay_minutes": {
+        "name": "Zamik obvestila o začetku polnjenja"
+      }
     },
     "time": {
-      "quiet_start": {"name": "Začetek časa tišine"},
-      "quiet_end": {"name": "Konec časa tišine"}
+      "quiet_start": {
+        "name": "Začetek časa tišine"
+      },
+      "quiet_end": {
+        "name": "Konec časa tišine"
+      }
     },
     "switch": {
-      "notifications": {"name": "Obvestila"},
-      "trip_reports": {"name": "Poročila o vožnjah"},
-      "charge_reports": {"name": "Poročila o polnjenju"},
-      "alerts": {"name": "Opozorila vozila"},
-      "wakeup_hourly": {"name": "Prebujanje vsako uro"},
-      "wakeup_charging": {"name": "Prebujanje med polnjenjem"},
-      "wakeup_probe": {"name": "Preverjanje dosegljivosti s prebujanjem"},
-      "notify_recipient": {"name": "Prejemnik Notify: {recipient}"}
+      "notifications": {
+        "name": "Obvestila"
+      },
+      "trip_reports": {
+        "name": "Poročila o vožnjah"
+      },
+      "charge_reports": {
+        "name": "Poročila o polnjenju"
+      },
+      "alerts": {
+        "name": "Opozorila vozila"
+      },
+      "wakeup_hourly": {
+        "name": "Prebujanje vsako uro"
+      },
+      "wakeup_charging": {
+        "name": "Prebujanje med polnjenjem"
+      },
+      "wakeup_probe": {
+        "name": "Preverjanje dosegljivosti s prebujanjem"
+      },
+      "notify_recipient": {
+        "name": "Prejemnik Notify: {recipient}"
+      }
     },
     "button": {
-      "manual_wakeup": {"name": "Prebudi vozilo zdaj"},
-      "test_notification": {"name": "Preizkusno obvestilo"},
-      "sync_server_history": {"name": "Sinhroniziraj strežniško zgodovino"}
+      "manual_wakeup": {
+        "name": "Prebudi vozilo zdaj"
+      },
+      "test_notification": {
+        "name": "Preizkusno obvestilo"
+      },
+      "sync_server_history": {
+        "name": "Sinhroniziraj strežniško zgodovino"
+      }
     }
   }
 }

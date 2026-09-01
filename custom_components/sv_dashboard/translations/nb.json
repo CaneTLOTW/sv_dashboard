@@ -5,7 +5,9 @@
       "dashboard_cards": {
         "title": "Forhåndskontroll av dashboard-kort",
         "description": "SV Dashboard krever Bubble Card, Button Card, ha-map-card og layout-card. Dette er en veiledende kontroll av Lovelace-ressursene som er registrert i Home Assistant:\n\n{card_status}\n\nEn registrert ressurs betyr ikke nødvendigvis at nettleseren har lastet den. Installer manglende kort med HACS, kontroller at hvert kort er registrert som en JavaScript-modul, start Home Assistant på nytt og oppdater nettleseren. Dashboardet utfører den endelige nettleserkontrollen før visning.",
-        "data": {"dashboard_cards_confirmed": "Jeg har gjennomgått de nødvendige dashboard-kortene"}
+        "data": {
+          "dashboard_cards_confirmed": "Jeg har gjennomgått de nødvendige dashboard-kortene"
+        }
       },
       "user": {
         "title": "Velg kjøretøy",
@@ -19,7 +21,7 @@
     },
     "error": {
       "invalid_vehicle": "Den valgte enheten tilhører ikke Stellantis Vehicles.",
-      "upstream_not_ready": "Fullfør oppsettet av Stellantis Vehicles og vent til kjøretøyets batteri-, kjørelengde- og sporingsenheter er tilgjengelige før du legger til dette dashboardet.",
+      "upstream_not_ready": "Fullfør oppsettet av Stellantis Vehicles og vent på kilometer- og tracker-entiteter.",
       "invalid_slug": "Skriv inn en gyldig kjøretøyidentifikator.",
       "slug_in_use": "Denne kjøretøyidentifikatoren brukes allerede av en annen dashboard-oppføring."
     },
@@ -49,48 +51,116 @@
   },
   "entity": {
     "sensor": {
-      "server_trip_history": {"name": "Server-turhistorikk"},
-      "server_gps_history": {"name": "Server-GPS-historikk"},
-      "server_charge_history": {"name": "Server-ladehistorikk"},
-      "vehicle_info": {"name": "Kjøretøyinformasjon"},
-      "trailing_consumption_500km": {"name": "Gjennomsnittlig forbruk (500 km)"},
-      "distance_since_charge": {"name": "Avstand siden siste lading"},
-      "current_trip_energy": {"name": "Energi for gjeldende tur"},
-      "current_charge_power": {"name": "Gjeldende ladeeffekt"},
-      "last_trip_result": {"name": "Resultat for siste lokale tur"},
-      "last_charge_result": {"name": "Resultat for siste lokale lading"}
+      "server_trip_history": {
+        "name": "Server-turhistorikk"
+      },
+      "server_gps_history": {
+        "name": "Server-GPS-historikk"
+      },
+      "server_charge_history": {
+        "name": "Server-ladehistorikk"
+      },
+      "vehicle_info": {
+        "name": "Kjøretøyinformasjon"
+      },
+      "trailing_consumption_500km": {
+        "name": "Gjennomsnittlig forbruk (500 km)"
+      },
+      "distance_since_charge": {
+        "name": "Avstand siden siste lading"
+      },
+      "current_trip_energy": {
+        "name": "Energi for gjeldende tur"
+      },
+      "current_charge_power": {
+        "name": "Gjeldende ladeeffekt"
+      },
+      "last_trip_result": {
+        "name": "Resultat for siste lokale tur"
+      },
+      "last_charge_result": {
+        "name": "Resultat for siste lokale lading"
+      }
     },
     "number": {
-      "range_warning_km": {"name": "Advarsel om lav rekkevidde"},
-      "range_reset_km": {"name": "Tilbakestilling av lav rekkevidde"},
-      "home_soc_warning": {"name": "SOC-advarsel hjemme"},
-      "home_soc_reset": {"name": "SOC-tilbakestilling hjemme"},
-      "home_delay_minutes": {"name": "Forsinkelse for ladepåminnelse hjemme"},
-      "service_battery_warning": {"name": "Advarsel for 12 V-batteri"},
-      "service_battery_reset": {"name": "Tilbakestilling for 12 V-batteri"},
-      "stale_home_hours": {"name": "Tilgjengelighetstimeout hjemme"},
-      "stale_away_hours": {"name": "Tilgjengelighetstimeout borte"},
-      "probe_wait_minutes": {"name": "Ventetid for tilgjengelighetstest"},
-      "charge_start_delay_minutes": {"name": "Forsinkelse for varsel ved ladestart"}
+      "range_warning_km": {
+        "name": "Advarsel om lav rekkevidde"
+      },
+      "range_reset_km": {
+        "name": "Tilbakestilling av lav rekkevidde"
+      },
+      "home_soc_warning": {
+        "name": "SOC-advarsel hjemme"
+      },
+      "home_soc_reset": {
+        "name": "SOC-tilbakestilling hjemme"
+      },
+      "home_delay_minutes": {
+        "name": "Forsinkelse for ladepåminnelse hjemme"
+      },
+      "service_battery_warning": {
+        "name": "Advarsel for 12 V-batteri"
+      },
+      "service_battery_reset": {
+        "name": "Tilbakestilling for 12 V-batteri"
+      },
+      "stale_home_hours": {
+        "name": "Tilgjengelighetstimeout hjemme"
+      },
+      "stale_away_hours": {
+        "name": "Tilgjengelighetstimeout borte"
+      },
+      "probe_wait_minutes": {
+        "name": "Ventetid for tilgjengelighetstest"
+      },
+      "charge_start_delay_minutes": {
+        "name": "Forsinkelse for varsel ved ladestart"
+      }
     },
     "time": {
-      "quiet_start": {"name": "Start på stilleperiode"},
-      "quiet_end": {"name": "Slutt på stilleperiode"}
+      "quiet_start": {
+        "name": "Start på stilleperiode"
+      },
+      "quiet_end": {
+        "name": "Slutt på stilleperiode"
+      }
     },
     "switch": {
-      "notifications": {"name": "Varsler"},
-      "trip_reports": {"name": "Turrapporter"},
-      "charge_reports": {"name": "Laderapporter"},
-      "alerts": {"name": "Kjøretøyvarsler"},
-      "wakeup_hourly": {"name": "Wake-up hver time"},
-      "wakeup_charging": {"name": "Wake-up under lading"},
-      "wakeup_probe": {"name": "Tilgjengelighetstest med wake-up"},
-      "notify_recipient": {"name": "Notify-mottaker: {recipient}"}
+      "notifications": {
+        "name": "Varsler"
+      },
+      "trip_reports": {
+        "name": "Turrapporter"
+      },
+      "charge_reports": {
+        "name": "Laderapporter"
+      },
+      "alerts": {
+        "name": "Kjøretøyvarsler"
+      },
+      "wakeup_hourly": {
+        "name": "Wake-up hver time"
+      },
+      "wakeup_charging": {
+        "name": "Wake-up under lading"
+      },
+      "wakeup_probe": {
+        "name": "Tilgjengelighetstest med wake-up"
+      },
+      "notify_recipient": {
+        "name": "Notify-mottaker: {recipient}"
+      }
     },
     "button": {
-      "manual_wakeup": {"name": "Vekk kjøretøyet nå"},
-      "test_notification": {"name": "Testvarsel"},
-      "sync_server_history": {"name": "Synkroniser serverhistorikk"}
+      "manual_wakeup": {
+        "name": "Vekk kjøretøyet nå"
+      },
+      "test_notification": {
+        "name": "Testvarsel"
+      },
+      "sync_server_history": {
+        "name": "Synkroniser serverhistorikk"
+      }
     }
   }
 }
