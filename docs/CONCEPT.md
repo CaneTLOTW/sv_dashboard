@@ -2,17 +2,20 @@
 
 ## Purpose
 
-`sv_dashboard` is a Home Assistant custom **integration** distributed through HACS. It is not a copied Lovelace YAML bundle and it is not a replacement for the upstream Stellantis integration.
+`sv_dashboard` is a Home Assistant custom integration distributed through HACS. It builds a vehicle-focused Home Assistant experience on top of the upstream **Stellantis Vehicles** integration.
 
-The package turns a configured Stellantis vehicle into a portable Home Assistant experience consisting of:
+Each SV Dashboard config entry provides:
 
-- one generated multi-view dashboard per config entry;
+- one generated multi-view dashboard;
 - package-owned derived/canonical history and controls;
-- a reusable compact vehicle-overview card for other dashboards.
+- one reusable vehicle-overview card;
+- independent state for the selected vehicle.
+
+SV Dashboard is not an alternative Stellantis API client.
 
 ## Upstream boundary
 
-[Stellantis Vehicles](https://github.com/andreadegiovine/homeassistant-stellantis-vehicles) remains solely responsible for:
+[Stellantis Vehicles](https://github.com/andreadegiovine/homeassistant-stellantis-vehicles) remains responsible for:
 
 - authentication;
 - Stellantis API/MQTT communication;
@@ -20,42 +23,72 @@ The package turns a configured Stellantis vehicle into a portable Home Assistant
 - upstream polling/update behavior;
 - native remote commands.
 
-`sv_dashboard` never calls the Stellantis API directly and does not import private upstream Python implementation code. It consumes only Home Assistant entities belonging to the vehicle selected during config flow.
+SV Dashboard consumes Home Assistant entities belonging to the vehicle selected during config flow. It does not call the Stellantis API directly or import private upstream implementation code.
 
-This boundary is deliberate: a dashboard update must not become an alternative Stellantis client or increase vehicle polling.
+## Vehicle mapping
 
-## Config-entry and vehicle mapping model
+Each SV Dashboard config entry stores the selected upstream Home Assistant device plus a stable local identifier. Mapping is resolved from entity-registry/device relationships rather than guessed from VIN-shaped entity IDs.
 
-Each e-C3 config entry stores a selected upstream Home Assistant device plus a stable local slug. Mapping is resolved from the selected device's entity-registry entries rather than guessed from VIN-prefixed entity IDs.
-
-Every config entry owns its own:
+Every entry owns its own:
 
 - dynamic upstream mapping;
+- capability profile;
 - generated dashboard;
 - derived sensors and controls;
 - metrics/session state;
-- canonical server-history store;
+- canonical history store;
 - notification/wake-up state.
 
-This provides multi-vehicle support without relying on dashboard order or household-specific entity names.
+This supports multiple vehicles without relying on dashboard order or localized entity IDs.
 
-## User experience
+## Capability model
 
-```text
-HACS custom repository
-  → install SV Dashboard
-  → Home Assistant restart
-  → Settings / Devices & services / Add integration
-  → select configured Stellantis vehicle and modules
-  → dedicated SV Dashboard appears
-  → optional compact card can be added to another dashboard
-```
+SV Dashboard is capability-based rather than model-hardcoded.
 
-The normal setup does not require copying VINs, raw entity IDs or dashboard YAML.
+The selected vehicle is classified from upstream type/data into an effective profile such as:
+
+- electric;
+- hybrid;
+- thermic / combustion;
+- hydrogen;
+- unknown.
+
+Views and metrics are enabled by actual mapped capabilities.
+
+### Electric
+
+May expose SOC, electric range, charging, traction-battery/SOH and electric energy metrics.
+
+### Hybrid
+
+Electric and fuel capabilities can exist independently. Missing battery capacity/residual/SOH data is valid and must not produce invented values.
+
+### Thermic / combustion
+
+Fuel level, fuel range and fuel consumption can be shown where available. Electric-only charging and traction-battery analytics remain hidden.
+
+### Hydrogen / unknown
+
+Handled defensively. Only mapped capabilities are exposed.
+
+See [Vehicle capability matrix](VEHICLE_CAPABILITY_MATRIX.en.md).
+
+## Battery data
+
+SV Dashboard has no generic fixed vehicle capacity.
+
+Trust order for battery capacity is:
+
+1. current usable upstream value;
+2. persisted last valid upstream value;
+3. configured per-vehicle fallback;
+4. unknown.
+
+Residual energy prefers a direct upstream residual value. SOC × capacity is used only when a trustworthy capacity exists. Unknown values are omitted rather than estimated from an e-C3-specific constant.
 
 ## Generated dashboard
 
-The current generated view order is:
+The dashboard is organized by task:
 
 1. Vehicle
 2. Charging
@@ -66,140 +99,117 @@ The current generated view order is:
 7. Notifications
 8. System
 
-The separation is intentional:
+Unsupported views/content are capability-gated.
 
-- **Vehicle / LIVE** contains current state and the most relevant recent activity;
-- **Charging**, **Trips** and **GPS** own detailed history;
-- **Statistics** owns aggregates/long-term metrics;
-- **Wake-up** owns reachability actions;
-- **Notifications** owns communication policy and diagnostics;
-- **System** owns integration/runtime administration.
-
-The generated LIVE hero and the standalone compact card share one canonical `vehicle-overview-card` implementation.
+The generated LIVE hero and the standalone compact card share the same canonical `vehicle-overview-card` implementation.
 
 ## Frontend resource model
 
-Home Assistant knows exactly **one** package-owned Lovelace resource:
+Home Assistant registers one package-owned Lovelace resource:
 
 ```text
 /sv_dashboard/frontend.js
 ```
 
-That entry point:
+That entry point loads package-owned modules, performs required dependency checks and loads the SV Dashboard strategy.
 
-1. installs the narrowly scoped ha-map-card picture-marker compatibility hook;
-2. loads package-owned history/overview cards as ES modules;
-3. verifies required third-party custom elements;
-4. loads the Community Dashboard strategy.
-
-Internal package modules are not independently registered as Lovelace resources. This avoids resource-order races and keeps browser cache invalidation tied to one frontend version.
-
-Historical resource URLs such as `map-marker-fix.js`, `gps-history-fix.js`, old card resources and the former strategy entry remain only in the backend legacy-resource cleanup list. They are migration targets, not current architecture.
+Internal modules are not registered individually as Lovelace resources. This reduces load-order and cache-version problems.
 
 ## Third-party Lovelace dependencies
 
-The generated dashboard deliberately depends on maintained HACS cards instead of vendoring them:
+The generated dashboard uses maintained HACS cards rather than vendoring them:
 
 - Bubble Card
 - Button Card
 - ha-map-card
 - layout-card
 
-Config flow performs a best-effort registered-resource preflight. The frontend performs the definitive browser-side custom-element readiness check before generating the normal dashboard views.
+Config flow performs a registered-resource preflight. The frontend performs the final browser-side custom-element check.
 
-## Dashboard creation and ownership
+## Dashboard ownership
 
-After successful setup, the integration creates one dedicated storage dashboard for the config entry and records its ownership marker. The strategy configuration contains the explicit config-entry ID, so the frontend does not guess which vehicle belongs to the dashboard.
+After setup, SV Dashboard creates one dedicated storage dashboard for the config entry and stores the explicit config-entry ID in the strategy configuration.
 
-The package does not treat arbitrary user dashboards as disposable package state. A user-created dashboard is never globally replaced just because the e-C3 integration reloads.
+The integration does not treat arbitrary user-created dashboards as disposable package state.
 
-## Data model
-
-### Upstream current state
-
-Battery SOC, range, mileage, climate state, tracker position, charging state, service-battery values and remote-command entities remain upstream Stellantis entities. Their accuracy and refresh cadence are defined by the upstream integration/API.
+## History and data quality
 
 ### Canonical server history
 
-The package maintains retained canonical history for Stellantis trip/charge data. Canonical processing can add normalization, quality classification and derived fields while preserving the retained raw source record.
+SV Dashboard retains normalized Stellantis trip/charge history while preserving raw source values for diagnostics.
 
-Trip quality rules cross-check available distance, duration, speed and odometer evidence. Severe invalid rows do not feed statistics. If a zero/sentinel start mileage can be repaired from sufficiently strong continuity evidence, only the **derived canonical boundary** is repaired; raw source values remain unchanged and repair provenance is recorded.
+Implausible rows do not feed derived statistics. A derived boundary can be repaired only when strong continuity evidence exists; the original upstream value remains unchanged.
 
 ### Recorder history
 
-Home Assistant Recorder is still used for HA-side state history, especially detailed tracker history and other local timeline reconstruction. The configured “history window” is a query/display boundary, not a Recorder retention setting.
+Home Assistant Recorder provides HA-side state/tracker history and local timeline reconstruction. The SV history window is only a display/query boundary and does not change Recorder retention.
 
 ### Package stores
 
-Restart-safe package stores retain:
+Restart-safe stores retain package-owned history, metrics and notification/wake-up state per config entry.
 
-- local trip/charge sessions and derived metrics;
-- canonical server history and observed charge archive data;
-- notification switches, settings, markers and wake-up diagnostics.
-
-Stores are namespaced by config entry/slug and are not user-created helpers.
-
-## Derived values and quality
+### Derived values
 
 The package distinguishes direct values from estimates:
 
-- odometer deltas can provide high-quality distance once the delayed upstream mileage update arrives;
+- valid odometer deltas can provide high-quality distance;
 - SOC × capacity energy is an estimate;
 - SOC/time charging power is an estimate;
-- charge curves reconstructed from sparse SOC samples are historical orientation, not charger-meter traces;
-- server GPS start/stop points are not claimed to be a complete driven route.
+- sparse GPS points are not presented as a complete driven route.
 
-The frontend/entity attributes preserve these distinctions rather than manufacturing false precision.
+No artificial precision is added.
 
 ## Long-term statistics
 
-Statistics view data can include Home Assistant long-term statistics for mileage/SOH sources. The package does not silently rewrite malformed existing LTS history.
+Statistics views may consume Home Assistant long-term statistics for supported mileage/SOH sources. SV Dashboard does not silently rewrite malformed existing statistics.
 
-A confirmed case where Home Assistant `sum` reset while odometer `state` remained monotonic is tracked separately in GitHub Issue #25. That problem is different from canonical trip continuity and is not a reason to add a generic vehicle odometer guard.
+The known mileage/LTS reset investigation is tracked in **SV Dashboard issue #4**.
 
 ## Notifications and wake-up
 
 Notification and automatic wake-up behavior is opt-in.
 
-The integration provides:
+SV Dashboard provides:
 
 - notification master/topic switches;
 - explicitly selected recipient switches;
-- package-owned Number settings for thresholds/delays;
-- package-owned Time settings for quiet hours;
+- Number settings for thresholds/delays;
+- Time settings for quiet hours;
 - manual wake-up and notification-test buttons;
 - persisted episode/diagnostic state.
 
-Vehicle recovery requires a proven fresh vehicle heartbeat; command `accepted`/`forwarded` alone is never treated as recovery. Quiet-hours availability warnings are deferred rather than discarded. Charge-start end-time logic prefers a valid upstream end time and only falls back to a defensible local estimate.
+A command being accepted/forwarded is not treated as fresh telemetry. Quiet-hour availability warnings are deferred rather than discarded.
 
-Focused real-event QA remains tracked in Issue #23.
+Focused event QA is tracked in **SV Dashboard issue #3**.
 
 ## Remote capabilities
 
-An upstream command entity being present does not prove the selected vehicle supports the physical action. The dashboard therefore keeps native availability/command results intact and does not run automatic capability tests.
+An upstream command entity being present does not prove that the selected vehicle supports the physical action. SV Dashboard keeps upstream availability/command results intact and does not automatically probe locks, horn, lights, climate or charging.
 
-The tested ë-C3 capability interpretation is documented in `STELLANTIS_EC3_CAPABILITY_MATRIX.en.md`.
+Vehicle-specific observations and the general validation policy are documented in [Vehicle capability matrix](VEHICLE_CAPABILITY_MATRIX.en.md).
 
-## Compatibility and migration
+## New integration and migration
 
-The backend checks the installed upstream integration version and required entity mapping. Existing config entries switch to a clear compatibility state rather than guessing unknown entities after an incompatible upstream change.
+SV Dashboard uses the new Home Assistant domain `sv_dashboard` and component path `custom_components/sv_dashboard/`.
 
-Migration compatibility intentionally includes:
+The predecessor `e_c3_dashboard` is not kept as the active domain in this project. Existing e-C3 Dashboard config entries are not silently mutated into SV Dashboard entries.
 
-- cleanup of historical e-C3 Lovelace resource registrations;
-- recognition of the legacy automatic-dashboard strategy identifier;
-- backwards-compatible package Store data where practical.
+Migration is explicit: install SV Dashboard, configure the upstream vehicle again, validate the new dashboard, then remove the predecessor integration when satisfied.
 
-Legacy cleanup constants are therefore not dead code merely because the old frontend files no longer exist.
+The migration plan is maintained in **issue #1**.
+
+## Localisation
+
+Home Assistant UI, frontend and backend messages cover 18 languages with English fallback. Technical keys and placeholders remain language-neutral. See [Localisation](LOCALISATION.en.md).
 
 ## Privacy
 
-The repository must never contain household-specific VINs, account/customer IDs, exact GPS history, Notify recipient names, credentials, tokens or raw private exports.
+The repository must not contain private VINs, account/customer IDs, exact private GPS history, Notify recipient names, credentials, tokens or raw private exports.
 
-Vehicle-specific values may exist at runtime inside the user's Home Assistant instance. Public documentation/screenshots must redact those values opaquely.
+Screenshots and examples must redact private values where needed.
 
 ## Development and release model
 
-All source, test and documentation changes are prepared on `develop`. The designated acceptance instance may run an exact `develop` SHA. `main` remains the last accepted publishable state.
+Development is prepared and validated on `develop`. External testers receive an exact validated SHA/pre-release rather than a moving branch.
 
-Only the exact validated SHA is fast-forwarded to `main` after maintainer/user acceptance; no squash, rebase or cherry-pick is used for stable promotion. See `BRANCH_AND_DEPLOYMENT_WORKFLOW.md` and `RELEASE_CHECKLIST.md`.
+`main` is promoted only after CI and explicit runtime acceptance. See [Branch and deployment workflow](BRANCH_AND_DEPLOYMENT_WORKFLOW.md) and [Release checklist](RELEASE_CHECKLIST.md).
