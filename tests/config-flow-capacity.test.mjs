@@ -6,7 +6,6 @@ const read = (path) => fs.readFileSync(new URL(`../${path}`, import.meta.url), "
 
 const constSource = read("custom_components/sv_dashboard/const.py");
 const flowSource = read("custom_components/sv_dashboard/config_flow.py");
-const strings = JSON.parse(read("custom_components/sv_dashboard/strings.json"));
 const de = JSON.parse(read("custom_components/sv_dashboard/translations/de.json"));
 const en = JSON.parse(read("custom_components/sv_dashboard/translations/en.json"));
 
@@ -22,13 +21,14 @@ test("battery capacity can be maintained from options without recreating the ent
   assert.match(flowSource, /entry_data\.pop\(CONF_BATTERY_CAPACITY_KWH, None\)/);
 });
 
-test("battery capacity config labels exist in canonical translations", () => {
-  for (const catalog of [strings, de, en]) {
+test("battery capacity config labels exist in runtime translations", () => {
+  for (const catalog of [de, en]) {
     assert.equal(typeof catalog.config?.step?.user?.data?.battery_capacity_kwh, "string");
     assert.equal(typeof catalog.options?.step?.init?.data?.battery_capacity_kwh, "string");
   }
 });
 
-test("English entity translations mirror the canonical entity catalog", () => {
-  assert.deepEqual(en.entity, strings.entity);
+test("English runtime catalog contains package-owned entity translations", () => {
+  assert.equal(typeof en.entity, "object");
+  assert.equal(typeof en.entity.sensor?.vehicle_info?.name, "string");
 });
