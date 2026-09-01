@@ -93,7 +93,7 @@ test("vehicle overview contains no legacy household route, VIN or fixed vehicle 
   assert.doesNotMatch(source, /button\.vr7/i);
   assert.match(source, /attributes\?\.dashboard_url_path/);
   assert.match(source, /`\/\$\{path\}\/vehicle`/);
-  assert.doesNotMatch(source, /`\/e-c3-\$\{/);
+  assert.doesNotMatch(source, /`\/sv-\$\{/);
 });
 
 test("late tracker picture rebuilds the wrapper instead of freezing the URL", () => {
@@ -109,7 +109,7 @@ test("live variant reuses the same hero while removing heading and self-navigati
   assert.match(source, /const navigationPath = liveVariant \? undefined/);
   assert.match(source, /if \(!showHeading\) return heroCard/);
   assert.match(source, /showInfo = liveVariant && Boolean\(vehicleInfo\)/);
-  assert.match(source, /navigation_path: "#e-c3-vehicle-info"/);
+  assert.match(source, /navigation_path: "#sv-vehicle-info"/);
 });
 
 test("single vehicle stays zero-config while multiple vehicles require an entry selection", () => {
@@ -132,7 +132,7 @@ test("card editor persists the selected config entry instead of a VIN", () => {
 
 
 test("vehicle overview localizes runtime and editor text through the shared catalog", () => {
-  assert.match(source, /import \{ languageFor, textFor \} from "\.\/i18n\.js\?v=0\.5\.54"/);
+  assert.match(source, /import \{ languageFor, textFor \} from "\.\/i18n\.js\?v=0\.6\.0-beta\.1"/);
   assert.match(source, /textFor\(hass, "vehicleOverview"\)/);
   assert.match(source, /languageFor\(this\._hass\)/);
   assert.match(source, /registrationStrings\.cardName/);

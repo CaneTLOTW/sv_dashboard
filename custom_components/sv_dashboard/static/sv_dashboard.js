@@ -374,7 +374,7 @@ class SvDashboardStrategy extends HTMLElement {
     const vehicleInfoPopupCard = vehicleInfoEntity ? {
       type: "custom:bubble-card",
       card_type: "pop-up",
-      hash: "#e-c3-vehicle-info",
+      hash: "#sv-vehicle-info",
       name: strings.vehicleMaintenanceData,
       icon: "mdi:car-info",
       popup_mode: "adaptive-dialog",

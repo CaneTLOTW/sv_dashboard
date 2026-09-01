@@ -264,8 +264,8 @@ function buildConfig(hass, config, statusState) {
           show_state: false,
           show_icon: true,
           icon: "mdi:information-outline",
-          tap_action: { action: "navigate", navigation_path: "#e-c3-vehicle-info" },
-          hold_action: { action: "navigate", navigation_path: "#e-c3-vehicle-info" },
+          tap_action: { action: "navigate", navigation_path: "#sv-vehicle-info" },
+          hold_action: { action: "navigate", navigation_path: "#sv-vehicle-info" },
           styles: {
             card: [
               { width: "30px" }, { height: "30px" }, { "min-height": "30px" }, { padding: 0 },

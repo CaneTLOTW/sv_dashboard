@@ -36,12 +36,12 @@ test("dashboard title is derived from the upstream Stellantis mobile-app brand",
 test("new package dashboard URLs are generic brand paths, not SV paths", () => {
   assert.match(dashboardSource, /return f"\{brand\}-dashboard"/);
   assert.match(dashboardSource, /candidate = f"\{base\}-\{suffix\}"/);
-  assert.doesNotMatch(dashboardSource, /url_path = slugify\(f"e-c3-/);
+  assert.doesNotMatch(dashboardSource, /url_path = slugify\(f"sv-/);
 });
 
 test("existing package dashboard URLs remain stable while new installs use brand paths", () => {
   assert.doesNotMatch(dashboardSource, /_async_migrate_generated_dashboard_url/);
-  assert.doesNotMatch(dashboardSource, /current_url_path\.startswith\("e-c3-"\)/);
+  assert.doesNotMatch(dashboardSource, /current_url_path\.startswith\("sv-"\)/);
   assert.match(dashboardSource, /if marker\.get\("handled"\):/);
   assert.match(dashboardSource, /url_path = marker\.get\("url_path"\)/);
 });
@@ -52,11 +52,11 @@ test("actual dashboard path is published for frontend navigation", () => {
   assert.match(dashboardSource, /return await _async_matching_strategy_url_path/);
 });
 
-test("dashboard display name remains a per-entry option and 0.5.54 cache version", () => {
+test("dashboard display name remains a per-entry option and 0.6.0-beta.1 cache version", () => {
   assert.match(configFlowSource, /OPTION_DASHBOARD_NAME/);
   assert.match(configFlowSource, /normalized\[OPTION_DASHBOARD_NAME\]/);
   assert.match(constSource, /OPTION_DASHBOARD_NAME = "dashboard_name"/);
-  assert.match(constSource, /FRONTEND_VERSION = "0\.5\.54"/);
+  assert.match(constSource, /FRONTEND_VERSION = "0\.6\.0-beta\.1"/);
 });
 
 

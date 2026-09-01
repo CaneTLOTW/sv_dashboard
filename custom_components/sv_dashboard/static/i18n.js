@@ -2,7 +2,7 @@
  *
  * Keep the established DE/EN/FR + base extra-language catalog in i18n-core.js,
  * then overlay the reviewed advanced completion catalogs. All browser-facing
- * imports use the same 0.5.54 cache key as the release candidate resources.
+ * imports use the same 0.6.0-beta.1 cache key as the release candidate resources.
  */
 import {
   FRONTEND_TEXT,
