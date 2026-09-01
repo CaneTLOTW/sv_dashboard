@@ -14,8 +14,10 @@ const sw = read("custom_components/sv_dashboard/switch.py");
 const metrics = read("custom_components/sv_dashboard/metrics.py");
 const configFlow = read("custom_components/sv_dashboard/config_flow.py");
 
-test("package-owned entities use VIN plus a language-neutral technical key", () => {
-  assert.match(identity, /return f"\{prefix\}_\{technical_key\}"/);
+test("package-owned entities use an SV namespace plus VIN and technical key", () => {
+  assert.match(identity, /ENTITY_ID_PREFIX = "sv"/);
+  assert.match(identity, /return f"\{DOMAIN\}_\{base\}_\{technical_key\}"/);
+  assert.match(identity, /slugify\(f"\{ENTITY_ID_PREFIX\}_\{base\}_\{technical_key\}"\)/);
   assert.match(identity, /identifier\[0\] == UPSTREAM_DOMAIN/);
   assert.match(identity, /new_unique_id=desired_unique_id/);
   assert.match(identity, /new_entity_id=desired_entity_id/);
@@ -29,6 +31,18 @@ test("package-owned entities use VIN plus a language-neutral technical key", () 
   assert.doesNotMatch(time, /_attr_unique_id = f"\{entry\.entry_id\}_/);
   assert.doesNotMatch(button, /_attr_unique_id = f"\{entry\.entry_id\}_/);
   assert.doesNotMatch(sw, /_attr_unique_id = f"\{entry\.entry_id\}_/);
+});
+
+test("parallel e-C3 and SV installs cannot request the same package entity id", () => {
+  assert.match(identity, /return f"\{entity_domain\}\.\{object_id\}"/);
+  assert.match(identity, /ENTITY_ID_PREFIX = "sv"/);
+  assert.doesNotMatch(
+    identity,
+    /entity\.entity_id = f"\{entity_domain\}\.\{slugify\(unique_id\)\}"/,
+  );
+  assert.match(identity, /legacy_vin_prefix = f"\{vin\}_"/);
+  assert.match(identity, /current_vin_prefix = f"\{DOMAIN\}_\{vin\}_"/);
+  assert.match(identity, /registry_entry\.platform != DOMAIN/);
 });
 
 test("battery capacity is a per-vehicle config fallback and not an SV constant", () => {
