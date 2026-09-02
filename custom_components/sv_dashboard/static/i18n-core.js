@@ -5,9 +5,9 @@
  * use this small package-owned catalog and honour the browser/UI language (or
  * an explicit card ``language`` option) without relying on global HA state.
  */
-import { EXTRA_FRONTEND_TEXT as WESTERN_TEXT } from "./i18n-extra-west.js?v=0.6.0-beta.5";
-import { EXTRA_FRONTEND_TEXT as NORTHERN_TEXT } from "./i18n-extra-north.js?v=0.6.0-beta.5";
-import { EXTRA_FRONTEND_TEXT as EASTERN_TEXT } from "./i18n-extra-east.js?v=0.6.0-beta.5";
+import { EXTRA_FRONTEND_TEXT as WESTERN_TEXT } from "./i18n-extra-west.js?v=0.6.0-beta.6";
+import { EXTRA_FRONTEND_TEXT as NORTHERN_TEXT } from "./i18n-extra-north.js?v=0.6.0-beta.6";
+import { EXTRA_FRONTEND_TEXT as EASTERN_TEXT } from "./i18n-extra-east.js?v=0.6.0-beta.6";
 
 export const FRONTEND_TEXT = {
   tripHistory: {

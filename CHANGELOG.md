@@ -4,6 +4,13 @@ All notable user-facing changes to SV Dashboard are recorded here.
 
 SV Dashboard uses semantic package versions. `develop` is the integration/acceptance branch; `main` represents the last explicitly accepted publishable state.
 
+## 0.6.0-beta.6 owner visual QA
+
+- Fixed dual-energy hero clipping when Home Assistant placed the card in a narrow grid cell.
+- The card now requests the native 12-column wide grid size and responds to its own container width instead of the browser viewport.
+- EV owner acceptance keeps the fuel side visible with neutral missing values rather than hiding or fabricating telemetry.
+- Enlarged the vehicle presentation and added neutral battery/fuel percentage fill bars.
+
 ## 0.6.0-beta.5 candidate hardening
 
 - Removed the browser-time `unpkg.com` dependency; Lit is pinned and bundled locally with its license notice.
