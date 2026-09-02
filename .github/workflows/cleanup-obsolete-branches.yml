@@ -1,0 +1,32 @@
+name: Cleanup obsolete migration branches
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - .github/workflows/cleanup-obsolete-branches.yml
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete verified obsolete branches
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          for branch in \
+            issue-migration-temp \
+            migration-import \
+            migration-phase1 \
+            migration-stage \
+            migration-work
+          do
+            echo "Deleting ${branch}"
+            gh api --method DELETE "repos/${REPO}/git/refs/heads/${branch}"
+          done
