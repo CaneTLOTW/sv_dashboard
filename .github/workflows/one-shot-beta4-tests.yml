@@ -1,0 +1,41 @@
+name: One-shot beta4 test sync
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - .github/workflows/one-shot-beta4-tests.yml
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: develop
+          fetch-depth: 0
+      - name: Update cache-version assertions
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          changed = []
+          for path in Path("tests").glob("*.test.mjs"):
+              text = path.read_text()
+              updated = text.replace("0.6.0-beta.3", "0.6.0-beta.4").replace("0\\.6\\.0-beta\\.3", "0\\.6\\.0-beta\\.4")
+              if updated != text:
+                  path.write_text(updated)
+                  changed.append(str(path))
+          if not changed:
+              raise SystemExit("No beta.3 assertions found")
+          print("Updated:", *changed, sep="\n- ")
+          PY
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests
+          git commit -m "test: expect beta.4 frontend cache version"
+          git push origin HEAD:develop
