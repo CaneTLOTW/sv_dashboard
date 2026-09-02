@@ -65,11 +65,14 @@ def _duration_seconds(value: Any, start: Any = None, end: Any = None) -> int | N
     return None
 
 
-def _energy_entry(values: Any) -> dict[str, Any] | None:
+def _energy_entry(
+    values: Any, energy_type: str = "Electric"
+) -> dict[str, Any] | None:
+    """Return one typed energy entry without conflating powertrains."""
     if not isinstance(values, list):
         return None
     return next(
-        (item for item in values if isinstance(item, dict) and item.get("type") == "Electric"),
+        (item for item in values if isinstance(item, dict) and item.get("type") == energy_type),
         None,
     )
 
@@ -190,6 +193,12 @@ def normalize_trip(raw: dict[str, Any], capacity_kwh: Any = None) -> dict[str, A
     start_mileage = _number(raw.get("startMileage"))
     end_mileage = start_mileage + distance if start_mileage is not None and distance is not None else None
     start_soc, end_soc = _trip_soc(raw, "startEnergies"), _trip_soc(raw, "endEnergies")
+    start_fuel = _energy_entry(raw.get("startEnergies"), "Fuel")
+    end_fuel = _energy_entry(raw.get("endEnergies"), "Fuel")
+    fuel_level_start = _number(start_fuel.get("level")) if start_fuel else None
+    fuel_level_end = _number(end_fuel.get("level")) if end_fuel else None
+    fuel_range_start_km = _number(start_fuel.get("autonomy")) if start_fuel else None
+    fuel_range_end_km = _number(end_fuel.get("autonomy")) if end_fuel else None
     capacity = _capacity(capacity_kwh)
 
     electric_consumption = _energy_entry(raw.get("energyConsumptions"))
@@ -209,6 +218,20 @@ def normalize_trip(raw: dict[str, Any], capacity_kwh: Any = None) -> dict[str, A
         energy_kwh = round((start_soc - end_soc) * capacity / 100, 3)
     if energy_kwh is None:
         energy_source = "not_reliable_short_or_no_soc_change"
+
+    fuel_consumption = _energy_entry(raw.get("energyConsumptions"), "Fuel")
+    raw_fuel_consumption = _number(fuel_consumption.get("consumption")) if fuel_consumption else None
+    raw_fuel_average = _number(fuel_consumption.get("avgConsumption")) if fuel_consumption else None
+    # Upstream Stellantis Vehicles interprets Fuel trip values with /100:
+    # consumption -> liters, avgConsumption -> l/100 km. Preserve a real zero.
+    fuel_consumption_l = round(raw_fuel_consumption / 100, 3) if raw_fuel_consumption is not None and raw_fuel_consumption >= 0 else None
+    fuel_consumption_l_100km = round(raw_fuel_average / 100, 2) if raw_fuel_average is not None and raw_fuel_average >= 0 else None
+    if fuel_consumption_l_100km is None and fuel_consumption_l is not None and distance is not None and distance > 0:
+        fuel_consumption_l_100km = round(fuel_consumption_l / distance * 100, 2)
+
+    electric_used = bool((energy_kwh is not None and energy_kwh > 0) or (start_soc is not None and end_soc is not None and end_soc < start_soc))
+    fuel_used = fuel_consumption_l is not None and fuel_consumption_l > 0
+    trip_type = "hybrid" if electric_used and fuel_used else "ice" if fuel_used else "ev" if electric_used else "unknown"
 
     kinetic = raw.get("kinetic") if isinstance(raw.get("kinetic"), dict) else {}
     raw_avg_speed = _number(kinetic.get("avgSpeed", kinetic.get("averageSpeed")))
@@ -262,6 +285,13 @@ def normalize_trip(raw: dict[str, Any], capacity_kwh: Any = None) -> dict[str, A
         "end_mileage": round(end_mileage, 3) if end_mileage is not None else None,
         "soc_start": start_soc,
         "soc_end": end_soc,
+        "fuel_level_start": fuel_level_start,
+        "fuel_level_end": fuel_level_end,
+        "fuel_range_start_km": fuel_range_start_km,
+        "fuel_range_end_km": fuel_range_end_km,
+        "fuel_consumption_l": fuel_consumption_l,
+        "fuel_consumption_l_100km": fuel_consumption_l_100km,
+        "trip_type": trip_type,
         "capacity_kwh": capacity,
         "energy_kwh": energy_kwh,
         "energy_estimated": energy_estimated,

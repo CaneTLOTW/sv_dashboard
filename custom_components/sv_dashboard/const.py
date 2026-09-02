@@ -37,7 +37,7 @@ DEFAULT_OPTIONS = {
 # Home Assistant knows exactly one package-owned Lovelace resource. All other
 # package modules are internal ES modules loaded by this entry point.
 FRONTEND_URL = "/sv_dashboard/frontend.js"
-FRONTEND_VERSION = "0.6.0-beta.3"
+FRONTEND_VERSION = "0.6.0-beta.4"
 STATIC_VERSION = FRONTEND_VERSION
 FRONTEND_RESOURCE_URLS = (FRONTEND_URL,)
 

@@ -50,7 +50,7 @@ class SvDashboardFuelHistoryCard extends LitElement {
     .scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
   `;
   constructor() { super(); this._hass = undefined; this._config = {}; this._events = []; this._loading = false; this._error = null; this._loadKey = ""; }
-  setConfig(config) { this._config = { hours_to_show: 8760, max_events: 50, minimum_increase: 5, ...(config || {}) }; this._loadKey = ""; this._maybeLoad(); }
+  setConfig(config) { this._config = { hours_to_show: 2160, max_events: 50, minimum_increase: 5, ...(config || {}) }; this._loadKey = ""; this._maybeLoad(); }
   set hass(hass) { this._hass = hass; this._maybeLoad(); this.requestUpdate(); }
   get hass() { return this._hass; }
   static getConfigElement() { return document.createElement(EDITOR_TAG); }
@@ -80,13 +80,13 @@ class SvDashboardFuelHistoryCard extends LitElement {
   async _maybeLoad() {
     if (!this._hass || !this._config || this._loading) return;
     const { fuel, refill } = this._entities();
-    const key = [fuel, refill, this._config.hours_to_show, this._hass.states?.[fuel]?.last_updated, refill ? this._hass.states?.[refill]?.last_updated : ""].join("|");
+    const key = [fuel, refill, this._config.hours_to_show, this._hass.states?.[fuel]?.last_changed, refill ? this._hass.states?.[refill]?.last_changed : ""].join("|");
     if (!fuel) { this._events = []; this._error = null; this._loadKey = key; return; }
     if (key === this._loadKey) return;
     this._loadKey = key; this._loading = true; this._error = null;
     try {
       const entityIds = [fuel, refill].filter(Boolean);
-      const response = await this._hass.callWS({ type: "history/history_during_period", start_time: new Date(Date.now() - Math.max(24, Number(this._config.hours_to_show) || 8760) * 3600000).toISOString(), end_time: new Date().toISOString(), entity_ids: entityIds, minimal_response: false, no_attributes: false, significant_changes_only: false });
+      const response = await this._hass.callWS({ type: "history/history_during_period", start_time: new Date(Date.now() - Math.max(24, Number(this._config.hours_to_show) || 2160) * 3600000).toISOString(), end_time: new Date().toISOString(), entity_ids: entityIds, minimal_response: false, no_attributes: false, significant_changes_only: true });
       this._events = this._detect(this._statesFor(response, entityIds, fuel), refill ? this._statesFor(response, entityIds, refill) : []);
     } catch (error) { this._error = String(error?.message || error); }
     finally { this._loading = false; }

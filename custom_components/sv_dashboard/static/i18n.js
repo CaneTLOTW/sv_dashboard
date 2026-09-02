@@ -2,17 +2,17 @@
  *
  * Keep the established DE/EN/FR + base extra-language catalog in i18n-core.js,
  * then overlay the reviewed advanced completion catalogs. All browser-facing
- * imports use the same 0.6.0-beta.3 cache key as the release candidate resources.
+ * imports use the same 0.6.0-beta.4 cache key as the release candidate resources.
  */
 import {
   FRONTEND_TEXT,
   languageFor,
   localeFor,
   textFor,
-} from "./i18n-core.js?v=0.6.0-beta.3";
-import { ADVANCED_FRONTEND_TEXT as WESTERN_ADVANCED } from "./i18n-advanced-west.js?v=0.6.0-beta.3";
-import { ADVANCED_FRONTEND_TEXT as NORTHERN_ADVANCED } from "./i18n-advanced-north.js?v=0.6.0-beta.3";
-import { ADVANCED_FRONTEND_TEXT as EASTERN_ADVANCED } from "./i18n-advanced-east.js?v=0.6.0-beta.3";
+} from "./i18n-core.js?v=0.6.0-beta.4";
+import { ADVANCED_FRONTEND_TEXT as WESTERN_ADVANCED } from "./i18n-advanced-west.js?v=0.6.0-beta.4";
+import { ADVANCED_FRONTEND_TEXT as NORTHERN_ADVANCED } from "./i18n-advanced-north.js?v=0.6.0-beta.4";
+import { ADVANCED_FRONTEND_TEXT as EASTERN_ADVANCED } from "./i18n-advanced-east.js?v=0.6.0-beta.4";
 
 for (const catalog of [WESTERN_ADVANCED, NORTHERN_ADVANCED, EASTERN_ADVANCED]) {
   for (const [language, namespaces] of Object.entries(catalog)) {

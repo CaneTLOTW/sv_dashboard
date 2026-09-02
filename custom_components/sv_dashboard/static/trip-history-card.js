@@ -1,5 +1,5 @@
 import { LitElement, html, css, nothing } from "https://unpkg.com/lit?module";
-import { localeFor, textFor } from "./i18n.js?v=0.6.0-beta.3";
+import { localeFor, textFor } from "./i18n.js?v=0.6.0-beta.4";
 
 /**
  * Standalone Lovelace card for the historic Stellantis "last trip" sensor.
@@ -46,6 +46,7 @@ class CodexStellantisTripHistoryCardV4 extends LitElement {
         .trip-details td { padding: 0 0 10px 0; border-top: 0; white-space: normal; }
         .trip-details-content { display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 8px 10px; border-left: 3px solid var(--primary-color); background: color-mix(in srgb, var(--primary-color) 7%, transparent); }
         .quality-warning { flex: 1 0 100%; color: var(--warning-color, var(--primary-text-color)); font-weight: 600; }
+        .trip-type { display: inline-flex; align-items: center; min-height: 20px; padding: 0 7px; border-radius: 999px; background: color-mix(in srgb, var(--primary-color) 10%, transparent); font-size: 11px; font-weight: 600; }
         .muted { color: var(--secondary-text-color); }
         .error { color: var(--error-color); }
         .filters { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin: 0 0 12px; font-size: var(--ha-font-size-s); }
@@ -334,7 +335,11 @@ class CodexStellantisTripHistoryCardV4 extends LitElement {
             if (cutoff && (!Number.isFinite(timestamp) || timestamp < cutoff)) return false;
             if (!this._showZeroEvents && distance === 0) return false;
             if (this._hideShortTrips && distance > 0 && distance <= 1) return false;
-            if (this._onlyConsumption && (!Number.isFinite(Number(trip.energy_kwh)) || Number(trip.energy_kwh) <= 0)) return false;
+            if (this._onlyConsumption) {
+                const electric = trip.energy_kwh !== null && trip.energy_kwh !== undefined && Number(trip.energy_kwh) > 0;
+                const fuel = trip.fuel_consumption_l !== null && trip.fuel_consumption_l !== undefined && Number(trip.fuel_consumption_l) > 0;
+                if (!electric && !fuel) return false;
+            }
             return true;
         });
     }
@@ -355,6 +360,10 @@ class CodexStellantisTripHistoryCardV4 extends LitElement {
 
     _text() {
         return textFor(this._i18nContext(), "tripHistory");
+    }
+
+    _dashboardText() {
+        return textFor(this._i18nContext(), "dashboard");
     }
 
     _value(value, fallback = "—") {
@@ -423,11 +432,14 @@ class CodexStellantisTripHistoryCardV4 extends LitElement {
     render() {
         if (!this._config) return nothing;
         const text = this._text();
+        const dashboardText = this._dashboardText();
         const trips = this._trips ?? [];
         const hasMoreTrips = (this._allTrips?.length ?? 0) > trips.length;
         const hasMaxSpeed = trips.some((trip) => trip.attributes?.max_speed);
-        const hasEnergy = trips.some((trip) => trip.attributes?.energy_kwh !== undefined);
-        const columnCount = 4 + (hasEnergy ? 2 : 0) + (hasMaxSpeed ? 1 : 0);
+        const hasEnergy = trips.some((trip) => trip.attributes?.energy_kwh !== undefined && trip.attributes?.energy_kwh !== null);
+        const hasFuel = trips.some((trip) => trip.attributes?.fuel_consumption_l_100km !== undefined && trip.attributes?.fuel_consumption_l_100km !== null);
+        const hasTripType = trips.some((trip) => trip.attributes?.trip_type && trip.attributes.trip_type !== "unknown");
+        const columnCount = 4 + (hasEnergy ? 2 : 0) + (hasFuel ? 1 : 0) + (hasTripType ? 1 : 0) + (hasMaxSpeed ? 1 : 0);
         return html`
             <ha-card .header=${this._config.title || text.title}>
                 <div class="card-content">
@@ -451,7 +463,7 @@ class CodexStellantisTripHistoryCardV4 extends LitElement {
                     ${!this._loading && !this._error && trips.length === 0 ? html`<span class="muted">${text.empty}</span>` : nothing}
                     ${trips.length ? html`
                         <div class=${this._expandedWindow ? "table-scroll expanded" : "table-scroll"} tabindex="0" aria-label=${text.scroll} @scroll=${(event) => this._onTableScroll(event)}>
-                            <table class="trip-table"><thead><tr><th>${text.date}</th><th>${text.duration}</th><th>${text.distance}</th><th>${text.average}</th>${hasEnergy ? html`<th>${text.energy}</th><th>${text.consumption}</th>` : nothing}${hasMaxSpeed ? html`<th>${text.maximum}</th>` : nothing}</tr></thead>
+                            <table class="trip-table"><thead><tr><th>${text.date}</th><th>${text.duration}</th><th>${text.distance}</th><th>${text.average}</th>${hasEnergy ? html`<th>${text.energy}</th><th>${text.consumption}</th>` : nothing}${hasFuel ? html`<th>l/100 km</th>` : nothing}${hasTripType ? html`<th>${dashboardText.powertrain}</th>` : nothing}${hasMaxSpeed ? html`<th>${text.maximum}</th>` : nothing}</tr></thead>
                             <tbody>${trips.map((trip, index) => {
                                 const key = this._tripKey(trip, index);
                                 const expanded = this._expandedTripKey === key;
@@ -462,6 +474,8 @@ class CodexStellantisTripHistoryCardV4 extends LitElement {
                                 <td>${this._formatDistance(trip)}</td>
                                 <td>${this._formatSpeed(trip)}</td>
                                 ${hasEnergy ? html`<td>${this._value(trip.attributes?.energy_kwh)}</td><td>${invalid ? "—" : this._value(trip.attributes?.energy_per_100_km)}</td>` : nothing}
+                                ${hasFuel ? html`<td>${invalid ? "—" : this._value(trip.attributes?.fuel_consumption_l_100km)}</td>` : nothing}
+                                ${hasTripType ? html`<td><span class="trip-type">${({ ev: "EV", hybrid: "Hybrid", ice: "ICE" })[trip.attributes?.trip_type] || "—"}</span></td>` : nothing}
                                 ${hasMaxSpeed ? html`<td>${invalid ? "—" : this._value(trip.attributes?.max_speed)}</td>` : nothing}
                             </tr>${expanded ? html`<tr class="trip-details">
                                 <td colspan=${columnCount}>
@@ -469,8 +483,10 @@ class CodexStellantisTripHistoryCardV4 extends LitElement {
                                         ${invalid ? html`<span class="quality-warning">${text.invalidServerTrip}</span>` : nothing}
                                         <span><strong>${text.startMileage}:</strong> ${this._formatMileage(trip.attributes?.start_mileage)}</span>
                                         <span><strong>${text.endMileage}:</strong> ${this._formatMileage(this._endMileage(trip))}</span>
-                                        <span><strong>${text.socStart}:</strong> ${this._value(trip.attributes?.soc_start)} %</span>
-                                        <span><strong>${text.socEnd}:</strong> ${this._value(trip.attributes?.soc_end)} %</span>
+                                        ${(trip.attributes?.soc_start !== null && trip.attributes?.soc_start !== undefined) || (trip.attributes?.soc_end !== null && trip.attributes?.soc_end !== undefined) ? html`<span><strong>${text.socStart} / ${text.socEnd}:</strong> ${this._value(trip.attributes?.soc_start)} % → ${this._value(trip.attributes?.soc_end)} %</span>` : nothing}
+                                        ${(trip.attributes?.fuel_level_start !== null && trip.attributes?.fuel_level_start !== undefined) || (trip.attributes?.fuel_level_end !== null && trip.attributes?.fuel_level_end !== undefined) ? html`<span><strong>${dashboardText.fuel}:</strong> ${this._value(trip.attributes?.fuel_level_start)} % → ${this._value(trip.attributes?.fuel_level_end)} %</span>` : nothing}
+                                        ${(trip.attributes?.fuel_range_start_km !== null && trip.attributes?.fuel_range_start_km !== undefined) || (trip.attributes?.fuel_range_end_km !== null && trip.attributes?.fuel_range_end_km !== undefined) ? html`<span><strong>${dashboardText.fuelRange}:</strong> ${this._value(trip.attributes?.fuel_range_start_km)} km → ${this._value(trip.attributes?.fuel_range_end_km)} km</span>` : nothing}
+                                        ${trip.attributes?.fuel_consumption_l !== null && trip.attributes?.fuel_consumption_l !== undefined ? html`<span><strong>${dashboardText.fuelConsumption}:</strong> ${this._value(trip.attributes?.fuel_consumption_l)} l · ${this._value(trip.attributes?.fuel_consumption_l_100km)} l/100 km</span>` : nothing}
                                     </div>
                                 </td>
                             </tr>` : nothing}`;

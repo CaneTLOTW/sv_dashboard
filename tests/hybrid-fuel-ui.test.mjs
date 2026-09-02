@@ -1,0 +1,17 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import test from "node:test";
+const history=fs.readFileSync(new URL("../custom_components/sv_dashboard/server_history.py",import.meta.url),"utf8");
+const sensor=fs.readFileSync(new URL("../custom_components/sv_dashboard/sensor.py",import.meta.url),"utf8");
+const trip=fs.readFileSync(new URL("../custom_components/sv_dashboard/static/trip-history-card.js",import.meta.url),"utf8");
+const fuelHistory=fs.readFileSync(new URL("../custom_components/sv_dashboard/static/fuel-history-card.js",import.meta.url),"utf8");
+const dualHero=fs.readFileSync(new URL("../custom_components/sv_dashboard/static/dual-energy-overview-card.js",import.meta.url),"utf8");
+const frontend=fs.readFileSync(new URL("../custom_components/sv_dashboard/static/frontend.js",import.meta.url),"utf8");
+const strategy=fs.readFileSync(new URL("../custom_components/sv_dashboard/static/sv_dashboard.js",import.meta.url),"utf8");
+const languages=["de","en","fr","it","es","pt","nl","da","nb","sv","fi","pl","cs","sk","hu","ro","sl","hr"];
+test("canonical trips preserve independent fuel telemetry",()=>{assert.match(history,/_energy_entry\(raw\.get\("energyConsumptions"\), "Fuel"\)/);for(const key of ["fuel_level_start","fuel_level_end","fuel_range_start_km","fuel_range_end_km","fuel_consumption_l","fuel_consumption_l_100km","trip_type"]){assert.match(history,new RegExp(`"${key}"`));assert.match(sensor,new RegExp(`"${key}"`));}assert.match(history,/raw_fuel_consumption \/ 100/);});
+test("existing trip history expands for hybrid data",()=>{assert.match(trip,/const hasFuel = trips\.some/);assert.match(trip,/l\/100 km/);assert.match(trip,/trip-type/);assert.match(trip,/dashboardText\.fuelRange/);assert.match(trip,/ev: "EV", hybrid: "Hybrid", ice: "ICE"/);});
+test("dual-energy hero is standalone and responsive",()=>{assert.match(dualHero,/sv-dashboard-dual-energy-overview-card/);assert.match(dualHero,/grid-template-areas: "battery vehicle fuel"/);assert.match(dualHero,/@media \(max-width: 680px\)/);assert.match(dualHero,/mapped\.fuel_autonomy/);assert.doesNotMatch(dualHero,/Parkt|aktualisiert vor/);});
+test("fuel history does not invent refill liters",()=>{assert.match(fuelHistory,/increase < minimum/);assert.match(fuelHistory,/fuel_refill_amount/);assert.doesNotMatch(fuelHistory,/fuel_consumption_total/);assert.match(fuelHistory,/event\.liters === null \? "—"/);});
+test("new card strings cover 18 languages",()=>{for(const language of languages){assert.match(dualHero,new RegExp(`\\n  ${language}: \\{`));assert.match(fuelHistory,new RegExp(`\\n  ${language}: \\{`));}});
+test("frontend loads new cards and fuel history is capability gated",()=>{assert.match(frontend,/dual-energy-overview-card\.js\?v=0\.6\.0-beta\.4/);assert.match(frontend,/fuel-history-card\.js\?v=0\.6\.0-beta\.4/);assert.match(strategy,/modules\.trips && supportsFuel \? \{ type: "custom:sv-dashboard-fuel-history-card"/);});

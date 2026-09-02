@@ -4,7 +4,7 @@
  * status entity created by the backend config entry. It never derives IDs from
  * VINs or friendly names.
  */
-import { languageFor, textFor } from "./i18n.js?v=0.6.0-beta.3";
+import { languageFor, textFor } from "./i18n.js?v=0.6.0-beta.4";
 
 const STRATEGY_TYPE = "sv-dashboard";
 const STATUS_DOMAIN = "sv_dashboard";
@@ -466,6 +466,7 @@ class SvDashboardStrategy extends HTMLElement {
         lastTripDisplayEntity ? bubble("last_trip", strings.lastTrip, "mdi:map-marker-distance", [], 6, lastTripDisplayEntity) : null,
         supportsCharging && lastChargeDisplayEntity ? { ...bubble("last_charge", strings.lastCharge, "mdi:ev-station", [], 6, lastChargeDisplayEntity), styles: relativeEventStyles } : null,
         modules.trips && lastTripDisplayEntity ? { type: "custom:sv-dashboard-trip-history-card", entity: lastTripDisplayEntity, server_entity: serverTripEntity, trip_entities: [nativeLastTrip].filter(Boolean), energy_entities: supportsElectric ? [lastTripResult].filter(Boolean) : [], title: strings.tripHistory, language: language(hass), compact_filters: true, filter_days: 30, hide_short_trips: true, show_zero_events: false, hours_to_show: historyHours, max_trips: 50, grid_options: { columns: "full" } } : null,
+        modules.trips && supportsFuel ? { type: "custom:sv-dashboard-fuel-history-card", entry_id: attributes.entry_id, fuel_entity: entity("fuel"), hours_to_show: historyHours, max_events: 50, grid_options: { columns: "full" } } : null,
         modules.charging && supportsChargeHistory ? { type: "custom:sv-dashboard-charge-history-card", title: strings.chargeHistory, server_entity: serverChargeEntity, language: language(hass), charging_entity: entity("battery_charging"), soc_entity: entity("battery"), power_entity: currentChargePower, mode_entity: entity("battery_charging_type"), capacity_entity: entity("battery_capacity"), result_entity: lastChargeResult, navigation_path: chargeViewPath, selection_storage_key: chargeSelectionKey, hours_to_show: historyHours, max_sessions: 50, fallback_capacity_kwh: null, grid_options: { columns: "full" } } : null,
       ]) },
     ].filter((section) => section.cards.length);
@@ -512,6 +513,7 @@ class SvDashboardStrategy extends HTMLElement {
             markdown(strings.tripHistoryIntro),
             control("sync_server_history") ? controlButton("sync_server_history", strings.syncServerHistory, "mdi:database-sync") : null,
             { type: "custom:sv-dashboard-trip-history-card", entity: lastTripDisplayEntity, server_entity: serverTripEntity, trip_entities: [nativeLastTrip].filter(Boolean), energy_entities: supportsElectric ? [lastTripResult].filter(Boolean) : [], title: strings.tripHistory, language: language(hass), hours_to_show: historyHours, expanded_window: true, initial_visible_trips: 100, max_trips: 0, grid_options: { columns: "full", rows: 10 } },
+            supportsFuel ? { type: "custom:sv-dashboard-fuel-history-card", entry_id: attributes.entry_id, fuel_entity: entity("fuel"), hours_to_show: historyHours, max_events: 100, grid_options: { columns: "full", rows: 5 } } : null,
           ].filter(Boolean),
         }],
       });
