@@ -1,0 +1,49 @@
+name: One-shot beta6 test expectation sync
+
+on:
+  push:
+    branches:
+      - issue-22-beta6
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: issue-22-beta6
+          fetch-depth: 0
+      - name: Align escaped beta version assertions
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          changed = []
+          replacements = 0
+          for path in Path("tests").glob("*.mjs"):
+              text = path.read_text(encoding="utf-8")
+              count = text.count(r"beta\.5")
+              if not count:
+                  continue
+              path.write_text(text.replace(r"beta\.5", r"beta\.6"), encoding="utf-8")
+              changed.append(str(path))
+              replacements += count
+
+          if replacements != 10:
+              raise SystemExit(f"Expected exactly 10 escaped beta.5 assertions, found {replacements}")
+          print(f"Updated {replacements} stale assertions in {len(changed)} files")
+          for item in changed:
+              print(item)
+          PY
+      - name: Remove one-shot workflow and commit
+        run: |
+          rm .github/workflows/one-shot-beta6-test-sync.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "test: align beta.6 cache assertions"
+          git push origin HEAD:issue-22-beta6
