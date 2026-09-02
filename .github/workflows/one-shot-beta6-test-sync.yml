@@ -32,8 +32,8 @@ jobs:
               changed.append(str(path))
               replacements += count
 
-          if replacements != 10:
-              raise SystemExit(f"Expected exactly 10 escaped beta.5 assertions, found {replacements}")
+          if replacements != 12:
+              raise SystemExit(f"Expected exactly 12 escaped beta.5 assertions, found {replacements}")
           print(f"Updated {replacements} stale assertions in {len(changed)} files")
           for item in changed:
               print(item)
