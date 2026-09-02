@@ -1,0 +1,47 @@
+name: One-shot hybrid contract sync
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - .github/workflows/one-shot-hybrid-contract-sync.yml
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: develop
+          fetch-depth: 0
+      - name: Update changed source contracts
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("tests/frontend-i18n.test.mjs")
+          text = path.read_text()
+          old = '`i18n-advanced-${region}\\\\.js\\\\?v=0\\\\.6\\\\.0-beta\\\\.3`'
+          new = '`i18n-advanced-${region}\\\\.js\\\\?v=0\\\\.6\\\\.0-beta\\\\.4`'
+          if old not in text:
+              raise SystemExit("advanced catalog beta.3 assertion not found")
+          path.write_text(text.replace(old, new, 1))
+
+          path = Path("tests/vehicle-capabilities.test.mjs")
+          text = path.read_text()
+          old = 'assert.match(tripHistory, /const hasEnergy = trips\\.some\\(\\(trip\\) => trip\\.attributes\\?\\.energy_kwh !== undefined\\)/);'
+          new = 'assert.match(tripHistory, /const hasEnergy = trips\\.some\\(\\(trip\\) => trip\\.attributes\\?\\.energy_kwh !== undefined && trip\\.attributes\\?\\.energy_kwh !== null\\)/);'
+          if old not in text:
+              raise SystemExit("old hasEnergy contract not found")
+          path.write_text(text.replace(old, new, 1))
+          PY
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/frontend-i18n.test.mjs tests/vehicle-capabilities.test.mjs
+          git commit -m "test: align hybrid frontend contracts"
+          git push origin HEAD:develop
