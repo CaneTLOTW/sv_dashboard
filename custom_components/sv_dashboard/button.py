@@ -17,14 +17,14 @@ async def async_setup_entry(
 ) -> None:
     coordinator = hass.data[DOMAIN][entry.entry_id]
     async_add_entities([
-        Ec3ActionButton(coordinator, entry, "manual_wakeup", "mdi:car-key"),
-        Ec3ActionButton(coordinator, entry, "test_notification", "mdi:message-alert-outline"),
-        Ec3ActionButton(coordinator, entry, "sync_server_history", "mdi:database-sync"),
+        SvActionButton(coordinator, entry, "manual_wakeup", "mdi:car-key"),
+        SvActionButton(coordinator, entry, "test_notification", "mdi:message-alert-outline"),
+        SvActionButton(coordinator, entry, "sync_server_history", "mdi:database-sync"),
     ])
     await coordinator.notifications.async_refresh_entities()
 
 
-class Ec3ActionButton(ButtonEntity):
+class SvActionButton(ButtonEntity):
     # Keep Home Assistant entity naming enabled so translation keys remain the
     # visible action names instead of falling back to the dashboard device name.
     _attr_has_entity_name = True

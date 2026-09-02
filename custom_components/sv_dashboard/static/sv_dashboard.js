@@ -4,7 +4,7 @@
  * status entity created by the backend config entry. It never derives IDs from
  * VINs or friendly names.
  */
-import { languageFor, textFor } from "./i18n.js?v=0.6.0-beta.4";
+import { languageFor, localeFor, textFor } from "./i18n.js?v=0.6.0-beta.5";
 
 const STRATEGY_TYPE = "sv-dashboard";
 const STATUS_DOMAIN = "sv_dashboard";
@@ -314,7 +314,7 @@ class SvDashboardStrategy extends HTMLElement {
         const charging = chargingEntity?.state === 'on';
         const value = stateEntity?.state;
         const numericValue = Number(value);
-        const text = !charging ? '-' : invalid(value) || !Number.isFinite(numericValue) ? '0 kW' : numericValue.toFixed(1).replace('.', ',') + ' ' + (stateEntity.attributes?.unit_of_measurement || 'kW');`
+        const formatter = new Intl.NumberFormat(${literalText(localeFor(hass))}, { minimumFractionDigits: 1, maximumFractionDigits: 1 });\n        const text = !charging ? '-' : invalid(value) || !Number.isFinite(numericValue) ? '0 kW' : formatter.format(numericValue) + ' ' + (stateEntity.attributes?.unit_of_measurement || 'kW');`
         : kind === "time"
           ? `const value = stateEntity?.state;
         const raw = String(value ?? '').trim();

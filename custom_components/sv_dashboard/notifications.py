@@ -313,6 +313,21 @@ class VehicleNotificationManager:
             )
         else:
             message = text(self.hass, "trip_message", **common)
+        fuel_parts: list[str] = []
+        fuel_l = self._as_float(trip.get("fuel_consumption_l"))
+        fuel_average = self._as_float(trip.get("fuel_consumption_l_100km"))
+        fuel_start = self._as_float(trip.get("fuel_level_start"))
+        fuel_end = self._as_float(trip.get("fuel_level_end"))
+        if fuel_l is not None:
+            fuel_parts.append(f"⛽ {self._number(fuel_l, 2)} l")
+        if fuel_average is not None:
+            fuel_parts.append(f"{self._number(fuel_average, 2)} l/100 km")
+        elif fuel_start is not None and fuel_end is not None and fuel_start != fuel_end:
+            fuel_parts.append(
+                f"⛽ {self._number(fuel_start, 0)} → {self._number(fuel_end, 0)} %"
+            )
+        if fuel_parts:
+            message = f"{message} · {' · '.join(fuel_parts)}"
         await self._async_notify(
             title,
             message,

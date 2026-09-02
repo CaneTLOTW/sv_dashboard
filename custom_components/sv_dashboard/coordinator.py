@@ -11,9 +11,15 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from .capabilities import capability_map, powertrain_from_mapping
+from .capabilities import (
+    POWERTRAIN_UNKNOWN,
+    capability_map,
+    normalize_powertrain,
+    powertrain_from_mapping,
+)
 from .compatibility import async_check_upstream_compatibility
 from .const import (
+    CONF_POWERTRAIN_OVERRIDE,
     CONF_VEHICLE_DEVICE_ID,
     DEFAULT_OPTIONS,
     DOMAIN,
@@ -89,7 +95,24 @@ class SvDashboardCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         missing_required = sorted(
             key for key in _REQUIRED_ENTITY_KEYS if key not in entity_mapping
         )
-        powertrain = powertrain_from_mapping(self.hass, entity_mapping)
+        auto_powertrain = powertrain_from_mapping(self.hass, entity_mapping)
+        fallback_powertrain = normalize_powertrain(
+            self.entry.data.get(CONF_POWERTRAIN_OVERRIDE)
+        )
+        powertrain = (
+            fallback_powertrain
+            if auto_powertrain == POWERTRAIN_UNKNOWN
+            and fallback_powertrain != POWERTRAIN_UNKNOWN
+            else auto_powertrain
+        )
+        powertrain_source = (
+            "fallback_override"
+            if auto_powertrain == POWERTRAIN_UNKNOWN
+            and powertrain != POWERTRAIN_UNKNOWN
+            else "automatic"
+            if auto_powertrain != POWERTRAIN_UNKNOWN
+            else "unknown"
+        )
         capabilities = capability_map(powertrain, entity_mapping)
 
         compatibility = await async_check_upstream_compatibility(self.hass)
@@ -117,6 +140,8 @@ class SvDashboardCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "vehicle_slug": self.entry.data["vehicle_slug"],
             "vehicle_tracker": tracker,
             "powertrain": powertrain,
+            "auto_powertrain": auto_powertrain,
+            "powertrain_source": powertrain_source,
             "capabilities": capabilities,
             "entity_mapping": entity_mapping,
             "missing_required": missing_required,

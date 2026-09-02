@@ -44,7 +44,8 @@
           "wakeup": "Diagnostic de trezire",
           "notifications": "Notificări și destinatari",
           "notification_recipients": "Destinatari Notify selectabili",
-          "history_hours": "Fereastră de afișare a istoricului"
+          "history_hours": "Fereastră de afișare a istoricului",
+          "powertrain_override": "Propulsie (rezervă)"
         }
       }
     }
@@ -80,6 +81,9 @@
       },
       "last_charge_result": {
         "name": "Rezultatul ultimei încărcări locale"
+      },
+      "current_trip_consumption": {
+        "name": "Consum cursă curentă"
       }
     },
     "number": {

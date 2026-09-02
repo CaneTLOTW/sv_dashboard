@@ -44,7 +44,8 @@
           "wakeup": "Diagnóstico de ativação",
           "notifications": "Controlos de notificações e destinatários",
           "notification_recipients": "Destinatários Notify selecionáveis",
-          "history_hours": "Janela de apresentação do histórico"
+          "history_hours": "Janela de apresentação do histórico",
+          "powertrain_override": "Motorização (fallback)"
         }
       }
     }
@@ -80,6 +81,9 @@
       },
       "last_charge_result": {
         "name": "Resultado do último carregamento local"
+      },
+      "current_trip_consumption": {
+        "name": "Consumo da viagem atual"
       }
     },
     "number": {

@@ -58,6 +58,7 @@ test("vehicle overview resolves every household value through the config-entry m
   }
   assert.match(source, /metricEntity\(hass, attributes, "current_charge_power"\)/);
   assert.match(source, /metricEntity\(hass, attributes, "current_trip_energy"\)/);
+  assert.match(source, /metricEntity\(hass, attributes, "current_trip_consumption"\)/);
   assert.match(source, /metricEntity\(hass, attributes, "vehicle_info"\)/);
   assert.match(source, /attributes\.vehicle_tracker/);
   assert.match(source, /attributes\.vehicle_slug/);
@@ -69,7 +70,13 @@ test("battery bar keeps charging and driving semantics and adds trustworthy park
   assert.match(source, /if \(isDriving\)[\s\S]*literal\(strings\.driving\)/);
   assert.match(source, /const residual = states\[/);
   assert.match(source, /literal\(strings\.battery\)/);
-  assert.match(source, /triggers_update: \[primaryLevel, battery, batteryResidual, fuel, charging, engine, chargePower, tripEnergy\]/);
+  assert.match(source, /const fuelConsumptionEntity = mapped\.fuel_consumption_instant/);
+  assert.match(source, /const electric = states\[\$\{literal\(tripConsumption\)\}\]/);
+  assert.match(source, /const fuelNow = states\[\$\{literal\(fuelConsumptionEntity\)\}\]/);
+  assert.match(source, /kWh\/100 km/);
+  assert.match(source, /l\/100 km/);
+  assert.match(source, /values\.join\(' · '\)/);
+  assert.match(source, /triggers_update: \[primaryLevel, battery, batteryResidual, fuel, fuelConsumptionEntity, charging, engine, chargePower, tripEnergy, tripConsumption\]/);
 });
 
 test("preconditioning visual follows live state and bridges a delayed upstream status", () => {
@@ -132,7 +139,7 @@ test("card editor persists the selected config entry instead of a VIN", () => {
 
 
 test("vehicle overview localizes runtime and editor text through the shared catalog", () => {
-  assert.match(source, /import \{ languageFor, textFor \} from "\.\/i18n\.js\?v=0\.6\.0-beta\.4"/);
+  assert.match(source, /import \{ languageFor, textFor \} from "\.\/i18n\.js\?v=0\.6\.0-beta\.5"/);
   assert.match(source, /textFor\(hass, "vehicleOverview"\)/);
   assert.match(source, /languageFor\(this\._hass\)/);
   assert.match(source, /registrationStrings\.cardName/);

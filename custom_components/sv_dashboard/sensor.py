@@ -18,6 +18,7 @@ from homeassistant.util import dt as dt_util
 from .const import (
     DOMAIN,
     METRIC_CURRENT_CHARGE_POWER,
+    METRIC_CURRENT_TRIP_CONSUMPTION,
     METRIC_CURRENT_TRIP_ENERGY,
     METRIC_DISTANCE_SINCE_CHARGE,
     METRIC_LAST_CHARGE,
@@ -212,24 +213,25 @@ async def async_setup_entry(
 
     entities = [
         status,
-        Ec3ServerTripHistorySensor(coordinator, entry),
-        Ec3ServerGpsHistorySensor(coordinator, entry),
-        Ec3VehicleInfoSensor(coordinator, entry),
-        Ec3LastTripResultSensor(coordinator, entry),
+        SvServerTripHistorySensor(coordinator, entry),
+        SvServerGpsHistorySensor(coordinator, entry),
+        SvVehicleInfoSensor(coordinator, entry),
+        SvLastTripResultSensor(coordinator, entry),
     ]
     if electric:
         entities.extend([
-            Ec3TrailingConsumptionSensor(coordinator, entry),
-            Ec3CurrentTripEnergySensor(coordinator, entry),
+            SvTrailingConsumptionSensor(coordinator, entry),
+            SvCurrentTripEnergySensor(coordinator, entry),
+            SvCurrentTripConsumptionSensor(coordinator, entry),
         ])
     if charge_history:
         entities.extend([
-            Ec3ServerChargeHistorySensor(coordinator, entry),
-            Ec3DistanceSinceChargeSensor(coordinator, entry),
-            Ec3LastChargeResultSensor(coordinator, entry),
+            SvServerChargeHistorySensor(coordinator, entry),
+            SvDistanceSinceChargeSensor(coordinator, entry),
+            SvLastChargeResultSensor(coordinator, entry),
         ])
     if charging:
-        entities.append(Ec3CurrentChargePowerSensor(coordinator, entry))
+        entities.append(SvCurrentChargePowerSensor(coordinator, entry))
     for entity in entities[1:]:
         coordinator.metrics.register_entity(entity)
         if hasattr(coordinator, "server_history") and coordinator.server_history:
@@ -300,6 +302,8 @@ class SvDashboardStatusSensor(CoordinatorEntity, SensorEntity):
             "dashboard_url_path": self.coordinator.data.get("dashboard_url_path"),
             "vehicle_tracker": self.coordinator.data["vehicle_tracker"],
             "powertrain": self.coordinator.data.get("powertrain", "unknown"),
+            "auto_powertrain": self.coordinator.data.get("auto_powertrain", "unknown"),
+            "powertrain_source": self.coordinator.data.get("powertrain_source", "unknown"),
             "capabilities": self.coordinator.data.get("capabilities", {}),
             "entity_mapping": self.coordinator.data["entity_mapping"],
             "metric_entities": metric_entities,
@@ -334,7 +338,7 @@ class SvDashboardStatusSensor(CoordinatorEntity, SensorEntity):
         )
 
 
-class Ec3MetricSensor(SensorEntity):
+class SvMetricSensor(SensorEntity):
     """Base class for local metrics belonging to one dashboard entry."""
 
     _attr_has_entity_name = True
@@ -370,7 +374,7 @@ class Ec3MetricSensor(SensorEntity):
         }
 
 
-class Ec3ServerTripHistorySensor(Ec3MetricSensor):
+class SvServerTripHistorySensor(SvMetricSensor):
     """Count and compact attributes for canonical Stellantis trips."""
 
     _attr_name = "Server trip history"
@@ -419,7 +423,7 @@ class Ec3ServerTripHistorySensor(Ec3MetricSensor):
         return data
 
 
-class Ec3ServerGpsHistorySensor(Ec3MetricSensor):
+class SvServerGpsHistorySensor(SvMetricSensor):
     """Expose server-trip positions as a GeoJSON map overlay."""
 
     _attr_name = "Server GPS history"
@@ -466,7 +470,7 @@ class Ec3ServerGpsHistorySensor(Ec3MetricSensor):
         return data
 
 
-class Ec3ServerChargeHistorySensor(Ec3MetricSensor):
+class SvServerChargeHistorySensor(SvMetricSensor):
     """Count and compact attributes for deterministic charge windows."""
 
     _attr_name = "Server charge history"
@@ -597,7 +601,7 @@ def _relative_age(value: Any) -> str:
     return f"vor {hours // 24} Tagen"
 
 
-class Ec3VehicleInfoSensor(Ec3MetricSensor):
+class SvVehicleInfoSensor(SvMetricSensor):
     """Expose backend-supplied vehicle metadata without VIN inference."""
 
     _attr_name = "Vehicle information"
@@ -654,7 +658,7 @@ class Ec3VehicleInfoSensor(Ec3MetricSensor):
         return data
 
 
-class Ec3TrailingConsumptionSensor(Ec3MetricSensor):
+class SvTrailingConsumptionSensor(SvMetricSensor):
     _attr_name = "Trailing consumption (500 km)"
     _attr_translation_key = "trailing_consumption_500km"
     _attr_icon = "mdi:car-electric"
@@ -683,7 +687,7 @@ class Ec3TrailingConsumptionSensor(Ec3MetricSensor):
         return data
 
 
-class Ec3DistanceSinceChargeSensor(Ec3MetricSensor):
+class SvDistanceSinceChargeSensor(SvMetricSensor):
     _attr_name = "Distance since last charge"
     _attr_translation_key = "distance_since_charge"
     _attr_icon = "mdi:map-marker-distance"
@@ -712,7 +716,7 @@ class Ec3DistanceSinceChargeSensor(Ec3MetricSensor):
         return data
 
 
-class Ec3CurrentTripEnergySensor(Ec3MetricSensor):
+class SvCurrentTripEnergySensor(SvMetricSensor):
     _attr_name = "Current trip energy"
     _attr_translation_key = "current_trip_energy"
     _attr_icon = "mdi:battery-minus"
@@ -732,7 +736,28 @@ class Ec3CurrentTripEnergySensor(Ec3MetricSensor):
         return self.metrics.current_trip_energy()
 
 
-class Ec3CurrentChargePowerSensor(Ec3MetricSensor):
+class SvCurrentTripConsumptionSensor(SvMetricSensor):
+    _attr_name = "Current trip consumption"
+    _attr_translation_key = "current_trip_consumption"
+    _attr_icon = "mdi:chart-line"
+    _attr_native_unit_of_measurement = (
+        f"{UnitOfEnergy.KILO_WATT_HOUR}/100 {UnitOfLength.KILOMETERS}"
+    )
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator, entry, METRIC_CURRENT_TRIP_CONSUMPTION)
+
+    @property
+    def available(self) -> bool:
+        return self.metrics.data.get("active_trip") is not None
+
+    @property
+    def native_value(self) -> float | None:
+        return self.metrics.current_trip_consumption()
+
+
+class SvCurrentChargePowerSensor(SvMetricSensor):
     """Battery-side instantaneous estimate from successive SOC reports."""
 
     _attr_name = "Current charge power"
@@ -754,7 +779,7 @@ class Ec3CurrentChargePowerSensor(Ec3MetricSensor):
         return self.metrics.current_charge_power()
 
 
-class Ec3LastTripResultSensor(Ec3MetricSensor):
+class SvLastTripResultSensor(SvMetricSensor):
     _attr_name = "Last local trip result"
     _attr_translation_key = "last_trip_result"
     _attr_icon = "mdi:map-marker-check"
@@ -784,7 +809,7 @@ class Ec3LastTripResultSensor(Ec3MetricSensor):
         return data
 
 
-class Ec3LastChargeResultSensor(Ec3MetricSensor):
+class SvLastChargeResultSensor(SvMetricSensor):
     """One durable, local result row for each completed charge."""
 
     _attr_name = "Last local charge result"

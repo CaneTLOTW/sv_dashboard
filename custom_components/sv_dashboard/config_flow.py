@@ -13,11 +13,20 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import selector
 from homeassistant.util import slugify
 
-from .capabilities import capability_map, mapping_from_registry_entries, powertrain_from_mapping
+from .capabilities import (
+    KNOWN_POWERTRAINS,
+    POWERTRAIN_UNKNOWN,
+    capability_map,
+    mapping_from_registry_entries,
+    normalize_powertrain,
+    powertrain_from_mapping,
+)
 from .compatibility import async_check_upstream_compatibility
 from .const import (
     CONF_BATTERY_CAPACITY_KWH,
+    CONF_POWERTRAIN_OVERRIDE,
     CONF_VEHICLE_DEVICE_ID,
+    CONF_VEHICLE_VIN,
     CONF_VEHICLE_SLUG,
     DEFAULT_OPTIONS,
     DOMAIN,
@@ -32,6 +41,18 @@ from .const import (
     REQUIRED_DASHBOARD_CARDS,
     UPSTREAM_DOMAIN,
 )
+
+
+def _vehicle_vin_for_device(hass, device_id: str) -> str | None:
+    device = dr.async_get(hass).async_get(device_id)
+    if device is None:
+        return None
+    for identifier in device.identifiers:
+        if len(identifier) >= 2 and identifier[0] == UPSTREAM_DOMAIN:
+            vin = str(identifier[1]).strip()
+            if vin:
+                return vin
+    return None
 
 
 def _upstream_vehicle_entries(hass, device_id: str):
@@ -69,7 +90,7 @@ def _battery_capacity_selector() -> selector.NumberSelector:
 class SvDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Set up a dashboard entry for exactly one upstream vehicle."""
 
-    VERSION = 1
+    VERSION = 2
 
     async def async_step_user(self, user_input=None):
         """Select one vehicle; request traction capacity only when relevant."""
@@ -91,7 +112,8 @@ class SvDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             elif not self._has_required_upstream_entities(device_id):
                 errors[CONF_VEHICLE_DEVICE_ID] = "upstream_not_ready"
             else:
-                await self.async_set_unique_id(f"{DOMAIN}_{device_id}")
+                vin = _vehicle_vin_for_device(self.hass, device_id)
+                await self.async_set_unique_id(f"{DOMAIN}_{vin or device_id}")
                 self._abort_if_unique_id_configured()
 
                 requested_slug = str(user_input.get(CONF_VEHICLE_SLUG, "") or "").strip()
@@ -116,6 +138,8 @@ class SvDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             CONF_VEHICLE_DEVICE_ID: device_id,
                             CONF_VEHICLE_SLUG: vehicle_slug,
                         }
+                        if vin:
+                            data[CONF_VEHICLE_VIN] = vin
                         if needs_capacity:
                             capacity = user_input.get(CONF_BATTERY_CAPACITY_KWH)
                             if capacity is not None:
@@ -243,6 +267,13 @@ class SvDashboardOptionsFlow(config_entries.OptionsFlow):
 
     async def async_step_init(self, user_input=None):
         """Configure title, capacity fallback and portable modules."""
+        device_id = self.config_entry.data[CONF_VEHICLE_DEVICE_ID]
+        mapping = mapping_from_registry_entries(_upstream_vehicle_entries(self.hass, device_id))
+        auto_powertrain = powertrain_from_mapping(self.hass, mapping)
+        configured_override = normalize_powertrain(
+            self.config_entry.data.get(CONF_POWERTRAIN_OVERRIDE)
+        )
+
         if user_input is not None:
             normalized = dict(user_input)
             normalized[OPTION_DASHBOARD_NAME] = str(
@@ -253,7 +284,17 @@ class SvDashboardOptionsFlow(config_entries.OptionsFlow):
             # toggle. Keep one canonical value in ConfigEntry.data while still
             # allowing an existing entry to maintain or clear it from Options.
             capacity = normalized.pop(CONF_BATTERY_CAPACITY_KWH, None)
+            powertrain_override = normalized.pop(CONF_POWERTRAIN_OVERRIDE, None)
             entry_data = dict(self.config_entry.data)
+            if auto_powertrain == POWERTRAIN_UNKNOWN:
+                normalized_override = normalize_powertrain(powertrain_override)
+                if normalized_override in KNOWN_POWERTRAINS:
+                    entry_data[CONF_POWERTRAIN_OVERRIDE] = normalized_override
+                else:
+                    entry_data.pop(CONF_POWERTRAIN_OVERRIDE, None)
+            else:
+                # Automatic detection always wins and stale fallbacks disappear.
+                entry_data.pop(CONF_POWERTRAIN_OVERRIDE, None)
             if capacity is None:
                 entry_data.pop(CONF_BATTERY_CAPACITY_KWH, None)
             else:
@@ -294,9 +335,24 @@ class SvDashboardOptionsFlow(config_entries.OptionsFlow):
                 default=options[OPTION_DASHBOARD_NAME],
             ): str,
         }
-        capabilities = _vehicle_capabilities_for_device(
-            self.hass, self.config_entry.data[CONF_VEHICLE_DEVICE_ID]
+        if auto_powertrain == POWERTRAIN_UNKNOWN:
+            override_key = (
+                vol.Optional(CONF_POWERTRAIN_OVERRIDE, default=configured_override)
+                if configured_override in KNOWN_POWERTRAINS
+                else vol.Optional(CONF_POWERTRAIN_OVERRIDE)
+            )
+            fields[override_key] = selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=sorted(KNOWN_POWERTRAINS),
+                    mode=selector.SelectSelectorMode.DROPDOWN,
+                )
+            )
+        effective_powertrain = (
+            auto_powertrain
+            if auto_powertrain != POWERTRAIN_UNKNOWN
+            else configured_override
         )
+        capabilities = capability_map(effective_powertrain, mapping)
         if capabilities.get("battery_capacity", False):
             fields[capacity_key] = _battery_capacity_selector()
         fields.update(

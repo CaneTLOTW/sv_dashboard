@@ -20,6 +20,7 @@ from .const import (
     DEFAULT_OPTIONS,
     DOMAIN,
     METRIC_CURRENT_CHARGE_POWER,
+    METRIC_CURRENT_TRIP_CONSUMPTION,
     METRIC_CURRENT_TRIP_ENERGY,
     METRIC_DISTANCE_SINCE_CHARGE,
     METRIC_LAST_CHARGE,
@@ -126,6 +127,9 @@ class VehicleMetricsManager:
             self.mapping.get("battery_capacity"),
             self.mapping.get("mileage"),
             self.mapping.get("last_trip"),
+            self.mapping.get("fuel"),
+            self.mapping.get("fuel_autonomy"),
+            self.mapping.get("fuel_consumption_total"),
         ]
         watched = [entity_id for entity_id in watched if entity_id]
         if watched:
@@ -200,6 +204,15 @@ class VehicleMetricsManager:
             self.hass.async_create_task(self.async_capture_pending_trip_mileage(new_state.state))
         elif entity_id == self.mapping.get("last_trip"):
             self.hass.async_create_task(self.async_reconcile_pending_trip(new_state))
+        elif self.data.get("active_trip") and entity_id in {
+            self.mapping.get("battery"),
+            self.mapping.get("mileage"),
+            self.mapping.get("fuel"),
+            self.mapping.get("fuel_autonomy"),
+            self.mapping.get("fuel_consumption_total"),
+        }:
+            for entity in self._entities:
+                entity.async_write_ha_state()
 
     async def async_start_trip(self) -> None:
         """Persist an ignition-on reference once per journey."""
@@ -214,6 +227,9 @@ class VehicleMetricsManager:
             "start_time": dt_util.utcnow().isoformat(),
             "start_mileage": mileage,
             "start_soc": self._number("battery"),
+            "start_fuel": self._number("fuel"),
+            "start_fuel_range": self._number("fuel_autonomy"),
+            "start_fuel_total": self._number("fuel_consumption_total"),
             "capacity_kwh": capacity,
             "capacity_source": capacity_source,
         }
@@ -230,6 +246,9 @@ class VehicleMetricsManager:
         mileage = self._number("mileage")
         active["end_time"] = now.isoformat()
         active["end_soc"] = self._number("battery")
+        active["end_fuel"] = self._number("fuel")
+        active["end_fuel_range"] = self._number("fuel_autonomy")
+        active["end_fuel_total"] = self._number("fuel_consumption_total")
         active["end_mileage"] = (
             mileage
             if mileage is not None and start_mileage is not None and mileage > start_mileage
@@ -300,6 +319,46 @@ class VehicleMetricsManager:
                 if energy_kwh is not None and distance_km > 0
                 else None
             )
+            fuel_level_start = self._as_float(candidate.get("start_fuel"))
+            fuel_level_end = self._as_float(candidate.get("end_fuel"))
+            fuel_range_start = self._as_float(candidate.get("start_fuel_range"))
+            fuel_range_end = self._as_float(candidate.get("end_fuel_range"))
+            fuel_total_start = self._as_float(candidate.get("start_fuel_total"))
+            fuel_total_end = self._as_float(candidate.get("end_fuel_total"))
+            fuel_consumption_l = (
+                round(fuel_total_end - fuel_total_start, 3)
+                if fuel_total_start is not None
+                and fuel_total_end is not None
+                and fuel_total_end >= fuel_total_start
+                else None
+            )
+            fuel_consumption_l_100km = (
+                round(fuel_consumption_l / distance_km * 100, 2)
+                if fuel_consumption_l is not None and distance_km > 0
+                else None
+            )
+            electric_used = bool(
+                (energy_kwh is not None and energy_kwh > 0)
+                or (
+                    start_soc is not None
+                    and end_soc is not None
+                    and end_soc < start_soc
+                )
+            )
+            fuel_used = bool(
+                (fuel_consumption_l is not None and fuel_consumption_l > 0)
+                or (
+                    fuel_level_start is not None
+                    and fuel_level_end is not None
+                    and fuel_level_end < fuel_level_start
+                )
+            )
+            trip_type = (
+                "hybrid" if electric_used and fuel_used
+                else "ice" if fuel_used
+                else "ev" if electric_used
+                else "unknown"
+            )
             completed.append({
                 "id": end_time.isoformat(),
                 "start_time": start_time.isoformat(),
@@ -312,6 +371,13 @@ class VehicleMetricsManager:
                 "average_speed": round(distance_km / (duration_seconds / 3600), 1),
                 "soc_start": start_soc,
                 "soc_end": end_soc,
+                "fuel_level_start": fuel_level_start,
+                "fuel_level_end": fuel_level_end,
+                "fuel_range_start_km": fuel_range_start,
+                "fuel_range_end_km": fuel_range_end,
+                "fuel_consumption_l": fuel_consumption_l,
+                "fuel_consumption_l_100km": fuel_consumption_l_100km,
+                "trip_type": trip_type,
                 "capacity_kwh": round(capacity, 2) if capacity is not None else None,
                 "capacity_source": candidate.get("capacity_source"),
                 "energy_kwh": energy_kwh,
@@ -545,6 +611,21 @@ class VehicleMetricsManager:
         if start_soc is None or current_soc is None or capacity is None:
             return None
         return round(max(0, start_soc - current_soc) * capacity / 100, 3)
+
+    def current_trip_consumption(self) -> float | None:
+        """Return live battery-side trip consumption only with usable distance."""
+        energy = self.current_trip_energy()
+        active = self.data.get("active_trip")
+        if energy is None or not isinstance(active, dict):
+            return None
+        start_mileage = self._as_float(active.get("start_mileage"))
+        mileage = self._number("mileage")
+        if start_mileage is None or mileage is None:
+            return None
+        distance = mileage - start_mileage
+        if distance <= 0.1:
+            return None
+        return round(energy / distance * 100, 2)
 
     def current_charge_power(self) -> float | None:
         return self._as_float(self.data.get("current_charge_power_kw"))
@@ -856,6 +937,7 @@ METRIC_INFO = {
     METRIC_TRAILING_CONSUMPTION: "trailing_consumption",
     METRIC_DISTANCE_SINCE_CHARGE: "distance_since_charge",
     METRIC_CURRENT_TRIP_ENERGY: "current_trip_energy",
+    METRIC_CURRENT_TRIP_CONSUMPTION: "current_trip_consumption",
     METRIC_LAST_TRIP: "last_trip",
     METRIC_CURRENT_CHARGE_POWER: "current_charge_power",
     METRIC_LAST_CHARGE: "last_charge",

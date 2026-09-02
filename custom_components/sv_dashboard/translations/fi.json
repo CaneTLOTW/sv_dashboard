@@ -44,7 +44,8 @@
           "wakeup": "Herätysdiagnostiikka",
           "notifications": "Ilmoitukset ja vastaanottajat",
           "notification_recipients": "Valittavat Notify-vastaanottajat",
-          "history_hours": "Historian näyttöaika"
+          "history_hours": "Historian näyttöaika",
+          "powertrain_override": "Voimalinja (varmistus)"
         }
       }
     }
@@ -80,6 +81,9 @@
       },
       "last_charge_result": {
         "name": "Viimeisimmän paikallisen latauksen tulos"
+      },
+      "current_trip_consumption": {
+        "name": "Nykyisen matkan kulutus"
       }
     },
     "number": {

@@ -44,7 +44,8 @@
           "wakeup": "Wake-up-diagnostik",
           "notifications": "Aviseringar och mottagare",
           "notification_recipients": "Valbara Notify-mottagare",
-          "history_hours": "Visningsfönster för historik"
+          "history_hours": "Visningsfönster för historik",
+          "powertrain_override": "Drivlina (reserv)"
         }
       }
     }
@@ -80,6 +81,9 @@
       },
       "last_charge_result": {
         "name": "Resultat för senaste lokala laddning"
+      },
+      "current_trip_consumption": {
+        "name": "Förbrukning aktuell resa"
       }
     },
     "number": {

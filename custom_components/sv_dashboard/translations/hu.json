@@ -44,7 +44,8 @@
           "wakeup": "Ébresztési diagnosztika",
           "notifications": "Értesítések és címzettek",
           "notification_recipients": "Választható Notify-címzettek",
-          "history_hours": "Előzmények megjelenítési időablaka"
+          "history_hours": "Előzmények megjelenítési időablaka",
+          "powertrain_override": "Hajtás (tartalék)"
         }
       }
     }
@@ -80,6 +81,9 @@
       },
       "last_charge_result": {
         "name": "Utolsó helyi töltés eredménye"
+      },
+      "current_trip_consumption": {
+        "name": "Aktuális út fogyasztása"
       }
     },
     "number": {
