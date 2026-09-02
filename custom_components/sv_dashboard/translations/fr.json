@@ -91,7 +91,7 @@
         "name": "Alerte d’autonomie faible"
       },
       "range_reset_km": {
-        "name": "Réarmement de l’alerte d’autonomie"
+        "name": "Réarmement de l’alerte d’autonomie faible"
       },
       "home_soc_warning": {
         "name": "Alerte SOC à domicile"
@@ -152,7 +152,7 @@
         "name": "Test de disponibilité avec réveil"
       },
       "notify_recipient": {
-        "name": "Destinataire Notify : {recipient}"
+        "name": "Notifier le destinataire : {recipient}"
       }
     },
     "button": {
