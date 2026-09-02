@@ -5,9 +5,9 @@
  * use this small package-owned catalog and honour the browser/UI language (or
  * an explicit card ``language`` option) without relying on global HA state.
  */
-import { EXTRA_FRONTEND_TEXT as WESTERN_TEXT } from "./i18n-extra-west.js?v=0.6.0-beta.1";
-import { EXTRA_FRONTEND_TEXT as NORTHERN_TEXT } from "./i18n-extra-north.js?v=0.6.0-beta.1";
-import { EXTRA_FRONTEND_TEXT as EASTERN_TEXT } from "./i18n-extra-east.js?v=0.6.0-beta.1";
+import { EXTRA_FRONTEND_TEXT as WESTERN_TEXT } from "./i18n-extra-west.js?v=0.6.0-beta.3";
+import { EXTRA_FRONTEND_TEXT as NORTHERN_TEXT } from "./i18n-extra-north.js?v=0.6.0-beta.3";
+import { EXTRA_FRONTEND_TEXT as EASTERN_TEXT } from "./i18n-extra-east.js?v=0.6.0-beta.3";
 
 export const FRONTEND_TEXT = {
   tripHistory: {
@@ -97,7 +97,7 @@ export const FRONTEND_TEXT = {
   },
   vehicleOverview: {
     de: {
-      heading: "Mobilität", chargingUntil: "bis {time}", charging: "Wird geladen", driving: "In Fahrt", battery: "Batterie",
+      heading: "Mobilität", chargingUntil: "bis {time}", charging: "Wird geladen", driving: "In Fahrt", battery: "Batterie", fuel: "Kraftstoff",
       multipleVehicles: "SV Dashboard: mehrere Fahrzeuge gefunden. Bitte im Karteneditor ein Fahrzeug auswählen.",
       configuredUnavailable: "SV Dashboard: das konfigurierte Fahrzeug ist nicht verfügbar.", noUniqueVehicle: "SV Dashboard: kein eindeutig zugeordnetes Fahrzeug gefunden.",
       noInstance: "Keine SV Dashboard-Instanz verfügbar.", vehicleAuto: "Fahrzeug: automatisch · {vehicle}", vehicle: "Fahrzeug", selectVehicle: "Fahrzeug auswählen …",
@@ -105,7 +105,7 @@ export const FRONTEND_TEXT = {
       cardName: "SV Fahrzeugübersicht", cardDescription: "Kompakte SV Live-Karte für die Home-Assistant-Startseite",
     },
     en: {
-      heading: "Mobility", chargingUntil: "until {time}", charging: "Charging", driving: "Driving", battery: "Battery",
+      heading: "Mobility", chargingUntil: "until {time}", charging: "Charging", driving: "Driving", battery: "Battery", fuel: "Fuel",
       multipleVehicles: "SV Dashboard: multiple vehicles found. Select a vehicle in the card editor.",
       configuredUnavailable: "SV Dashboard: the configured vehicle is unavailable.", noUniqueVehicle: "SV Dashboard: no uniquely assigned vehicle was found.",
       noInstance: "No SV Dashboard instance is available.", vehicleAuto: "Vehicle: automatic · {vehicle}", vehicle: "Vehicle", selectVehicle: "Select vehicle …",
@@ -113,7 +113,7 @@ export const FRONTEND_TEXT = {
       cardName: "SV vehicle overview", cardDescription: "Compact SV live card for the Home Assistant home page",
     },
     fr: {
-      heading: "Mobilité", chargingUntil: "jusqu’à {time}", charging: "En charge", driving: "En trajet", battery: "Batterie",
+      heading: "Mobilité", chargingUntil: "jusqu’à {time}", charging: "En charge", driving: "En trajet", battery: "Batterie", fuel: "Carburant",
       multipleVehicles: "SV Dashboard : plusieurs véhicules ont été trouvés. Sélectionnez un véhicule dans l’éditeur de carte.",
       configuredUnavailable: "SV Dashboard : le véhicule configuré n’est pas disponible.", noUniqueVehicle: "SV Dashboard : aucun véhicule attribué de manière unique n’a été trouvé.",
       noInstance: "Aucune instance SV Dashboard n’est disponible.", vehicleAuto: "Véhicule : automatique · {vehicle}", vehicle: "Véhicule", selectVehicle: "Sélectionner un véhicule…",
@@ -127,7 +127,7 @@ export const FRONTEND_TEXT = {
       setup: "Setup required", noVehicle: "No SV Dashboard vehicle is configured yet.",
       configure: "Set up SV Dashboard in Settings → Devices & services, then reopen this dashboard.",
       dependencies: "Required dashboard cards are missing", install: "Install these HACS dependencies, restart Home Assistant, then refresh this page:",
-      status: "Connection and setup status", vehicle: "Vehicle", overview: "Overview", live: "Live",
+      status: "Connection and setup status", vehicle: "Vehicle", overview: "Overview", live: "Live", fuel: "Fuel", fuelRange: "Fuel range", fuelConsumption: "Fuel consumption",
       consumptionUsage: "Consumption & usage", quickActions: "Quick actions", chargingRange: "Charging & range", longTermStatistics: "Long-term statistics", longTermStatisticsIntro: "These charts use Home Assistant long-term statistics. Older hourly values remain available as long as the source entity provides a supported state class.", sohCapacityHistory: "SOH capacity", sohResistanceHistory: "SOH resistance", mileageHistory: "Odometer", drivenDistanceHistory: "Distance driven per month", consumptionHistory: "Average consumption (500 km)",
       chargeLimit: "Charging limit", chargeStart: "Charging start", highVoltageBattery: "High-voltage battery", lastCharge: "Last charge",
       batteryHealthCapacity: "SOH capacity", batteryHealthResistance: "SOH resistance", position: "Position", vehicleDetails: "Vehicle",
@@ -159,7 +159,7 @@ export const FRONTEND_TEXT = {
       setup: "Einrichtung erforderlich", noVehicle: "Es ist noch kein SV Dashboard-Fahrzeug eingerichtet.",
       configure: "Richte SV Dashboard unter Einstellungen → Geräte & Dienste ein und öffne dieses Dashboard danach erneut.",
       dependencies: "Erforderliche Dashboard-Karten fehlen", install: "Installiere diese HACS-Abhängigkeiten, starte Home Assistant neu und lade diese Seite anschließend neu:",
-      status: "Verbindungs- und Einrichtungsstatus", vehicle: "KFZ", overview: "Übersicht", live: "Live",
+      status: "Verbindungs- und Einrichtungsstatus", vehicle: "KFZ", overview: "Übersicht", live: "Live", fuel: "Kraftstoff", fuelRange: "Kraftstoffreichweite", fuelConsumption: "Kraftstoffverbrauch",
       consumptionUsage: "Verbrauch & Nutzung", quickActions: "Schnellaktionen", chargingRange: "Laden & Reichweite", longTermStatistics: "Langzeitstatistik", longTermStatisticsIntro: "Diese Diagramme verwenden die Home-Assistant-Langzeitstatistik. Ältere Stundenwerte bleiben verfügbar, solange die Quell-Entity eine unterstützte state_class besitzt.", sohCapacityHistory: "SOH Kapazität", sohResistanceHistory: "SOH Widerstand", mileageHistory: "Kilometerstand", drivenDistanceHistory: "Gefahrene Strecke pro Monat", consumptionHistory: "Ø Verbrauch (500 km)",
       chargeLimit: "Ladelimit", chargeStart: "Ladebeginn", highVoltageBattery: "Hochvoltbatterie", lastCharge: "Letzte Ladung",
       batteryHealthCapacity: "SOH Kapazität", batteryHealthResistance: "SOH Widerstand", position: "Position", vehicleDetails: "Fahrzeug",
@@ -191,7 +191,7 @@ export const FRONTEND_TEXT = {
       setup: "Configuration requise", noVehicle: "Aucun véhicule SV Dashboard n’est encore configuré.",
       configure: "Configurez SV Dashboard dans Paramètres → Appareils et services, puis rouvrez ce tableau de bord.",
       dependencies: "Des cartes requises sont manquantes", install: "Installez ces dépendances HACS, redémarrez Home Assistant puis actualisez cette page :",
-      status: "État de la connexion et de la configuration", vehicle: "Véhicule", overview: "Vue d’ensemble", live: "Live",
+      status: "État de la connexion et de la configuration", vehicle: "Véhicule", overview: "Vue d’ensemble", live: "En direct", fuel: "Carburant", fuelRange: "Autonomie carburant", fuelConsumption: "Consommation carburant",
       consumptionUsage: "Consommation et utilisation", quickActions: "Actions rapides", chargingRange: "Recharge et autonomie", longTermStatistics: "Statistiques à long terme", longTermStatisticsIntro: "Ces graphiques utilisent les statistiques à long terme de Home Assistant. Les anciennes valeurs horaires restent disponibles tant que l’entité source fournit une state_class prise en charge.", sohCapacityHistory: "Capacité SOH", sohResistanceHistory: "Résistance SOH", mileageHistory: "Compteur kilométrique", drivenDistanceHistory: "Distance parcourue par mois", consumptionHistory: "Consommation moyenne (500 km)",
       chargeLimit: "Limite de charge", chargeStart: "Début de recharge", highVoltageBattery: "Batterie haute tension", lastCharge: "Dernière recharge",
       batteryHealthCapacity: "Capacité SOH", batteryHealthResistance: "Résistance SOH", position: "Position", vehicleDetails: "Véhicule",

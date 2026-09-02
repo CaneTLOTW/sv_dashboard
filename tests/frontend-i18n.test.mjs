@@ -26,10 +26,7 @@ const LANGUAGES = [
 ];
 const EXTRA_LANGUAGES = LANGUAGES.filter((language) => !["de", "en", "fr"].includes(language));
 const NAMESPACES = ["tripHistory", "chargeHistory", "vehicleOverview", "dashboard"];
-const CAPABILITY_EXCEPTIONS = {
-  vehicleOverview: new Set(["fuel"]),
-  dashboard: new Set(["fuel", "fuelRange", "fuelConsumption"]),
-};
+const CAPABILITY_EXCEPTIONS = {};
 const baseCatalogs = Object.assign({}, WESTERN_TEXT, NORTHERN_TEXT, EASTERN_TEXT);
 const advancedCatalogs = Object.assign({}, WESTERN_ADVANCED, NORTHERN_ADVANCED, EASTERN_ADVANCED);
 
@@ -97,7 +94,8 @@ test("15 extra languages explicitly provide every ordinary EN key before runtime
   }
 });
 
-test("capability labels remain centrally injected for every language", () => {
+test("capability labels are sourced from the language catalogs for every language", () => {
+  assert.doesNotMatch(runtimeSource, /CAPABILITY_LABELS/);
   for (const language of LANGUAGES) {
     assert.ok(FRONTEND_TEXT.vehicleOverview[language].fuel?.trim(), `missing ${language} vehicleOverview.fuel`);
     for (const key of ["fuel", "fuelRange", "fuelConsumption"]) {

@@ -1,6 +1,6 @@
 import { LitElement, html, css, nothing } from "https://unpkg.com/lit?module";
 import { buildChargeCurve, buildChargeSessions, buildLocalChargeSessions, chargeSessionId, findChargeSession, mergeChargeSessions } from "./charge-history-core.js?v=0.5.49";
-import { localeFor, textFor } from "./i18n.js?v=0.6.0-beta.1";
+import { localeFor, textFor } from "./i18n.js?v=0.6.0-beta.3";
 
 const SELECTION_QUERY_PARAM = "sv_charge";
 
