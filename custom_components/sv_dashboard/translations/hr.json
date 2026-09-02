@@ -44,7 +44,8 @@
           "wakeup": "Dijagnostika buđenja",
           "notifications": "Obavijesti i primatelji",
           "notification_recipients": "Odabirivi Notify primatelji",
-          "history_hours": "Vremenski raspon prikaza povijesti"
+          "history_hours": "Vremenski raspon prikaza povijesti",
+          "powertrain_override": "Pogon (rezerva)"
         }
       }
     }
@@ -80,6 +81,9 @@
       },
       "last_charge_result": {
         "name": "Rezultat zadnjeg lokalnog punjenja"
+      },
+      "current_trip_consumption": {
+        "name": "Potrošnja trenutačne vožnje"
       }
     },
     "number": {

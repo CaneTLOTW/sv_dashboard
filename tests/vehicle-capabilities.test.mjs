@@ -61,19 +61,20 @@ test("electric metrics are disabled by capability, not by guessed model", () => 
 });
 
 test("package-owned entity platforms only load powertrain-relevant entities", () => {
-  assert.match(sensorPlatform, /Ec3ServerTripHistorySensor\(coordinator, entry\)/);
-  assert.match(sensorPlatform, /Ec3ServerGpsHistorySensor\(coordinator, entry\)/);
-  assert.match(sensorPlatform, /Ec3VehicleInfoSensor\(coordinator, entry\)/);
-  assert.match(sensorPlatform, /Ec3LastTripResultSensor\(coordinator, entry\)/);
+  assert.match(sensorPlatform, /SvServerTripHistorySensor\(coordinator, entry\)/);
+  assert.match(sensorPlatform, /SvServerGpsHistorySensor\(coordinator, entry\)/);
+  assert.match(sensorPlatform, /SvVehicleInfoSensor\(coordinator, entry\)/);
+  assert.match(sensorPlatform, /SvLastTripResultSensor\(coordinator, entry\)/);
   assert.match(sensorPlatform, /if electric:/);
-  assert.match(sensorPlatform, /Ec3TrailingConsumptionSensor/);
-  assert.match(sensorPlatform, /Ec3CurrentTripEnergySensor/);
+  assert.match(sensorPlatform, /SvTrailingConsumptionSensor/);
+  assert.match(sensorPlatform, /SvCurrentTripEnergySensor/);
+  assert.match(sensorPlatform, /SvCurrentTripConsumptionSensor/);
   assert.match(sensorPlatform, /if charge_history:/);
-  assert.match(sensorPlatform, /Ec3ServerChargeHistorySensor/);
-  assert.match(sensorPlatform, /Ec3DistanceSinceChargeSensor/);
-  assert.match(sensorPlatform, /Ec3LastChargeResultSensor/);
+  assert.match(sensorPlatform, /SvServerChargeHistorySensor/);
+  assert.match(sensorPlatform, /SvDistanceSinceChargeSensor/);
+  assert.match(sensorPlatform, /SvLastChargeResultSensor/);
   assert.match(sensorPlatform, /if charging:/);
-  assert.match(sensorPlatform, /Ec3CurrentChargePowerSensor/);
+  assert.match(sensorPlatform, /SvCurrentChargePowerSensor/);
 
   assert.match(numberPlatform, /"service_battery_warning"/);
   assert.match(numberPlatform, /"stale_home_hours"/);

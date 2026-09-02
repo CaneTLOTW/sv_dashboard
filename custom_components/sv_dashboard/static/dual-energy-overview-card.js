@@ -1,30 +1,9 @@
-import { LitElement, html, css, nothing } from "https://unpkg.com/lit?module";
-import { languageFor } from "./i18n.js?v=0.6.0-beta.4";
+import { LitElement, html, css, nothing } from "./vendor-lit.js?v=0.6.0-beta.5";
+import { localeFor, textFor } from "./i18n.js?v=0.6.0-beta.5";
 
 const STATUS_DOMAIN = "sv_dashboard";
 const CARD_TAG = "sv-dashboard-dual-energy-overview-card";
 const EDITOR_TAG = "sv-dashboard-dual-energy-overview-card-editor";
-
-const TEXT = {
-  de: { cardName: "SV Dual-Energy-Fahrzeugübersicht", cardDescription: "Breite Fahrzeugkarte für Batterie und Kraftstoff", battery: "Batterie", fuel: "Tank", electricRange: "E-Reichweite", fuelRange: "Tankreichweite", charging: "Lädt", driving: "In Fahrt", plugged: "Eingesteckt", vehicle: "Fahrzeug", selectVehicle: "Fahrzeug auswählen …", noInstance: "Keine SV Dashboard-Instanz verfügbar.", multipleVehicles: "Mehrere Fahrzeuge gefunden. Bitte im Karteneditor ein Fahrzeug auswählen.", unavailable: "Das konfigurierte Fahrzeug ist nicht verfügbar.", auto: "Fahrzeug: automatisch · {vehicle}" },
-  en: { cardName: "SV dual-energy vehicle overview", cardDescription: "Wide vehicle card for battery and fuel", battery: "Battery", fuel: "Fuel", electricRange: "EV range", fuelRange: "Fuel range", charging: "Charging", driving: "Driving", plugged: "Plugged in", vehicle: "Vehicle", selectVehicle: "Select vehicle …", noInstance: "No SV Dashboard instance is available.", multipleVehicles: "Multiple vehicles found. Select a vehicle in the card editor.", unavailable: "The configured vehicle is unavailable.", auto: "Vehicle: automatic · {vehicle}" },
-  fr: { cardName: "Vue véhicule SV double énergie", cardDescription: "Carte véhicule large pour batterie et carburant", battery: "Batterie", fuel: "Carburant", electricRange: "Autonomie électrique", fuelRange: "Autonomie carburant", charging: "En charge", driving: "En trajet", plugged: "Branché", vehicle: "Véhicule", selectVehicle: "Sélectionner un véhicule…", noInstance: "Aucune instance SV Dashboard n’est disponible.", multipleVehicles: "Plusieurs véhicules ont été trouvés. Sélectionnez un véhicule dans l’éditeur de carte.", unavailable: "Le véhicule configuré n’est pas disponible.", auto: "Véhicule : automatique · {vehicle}" },
-  it: { cardName: "Panoramica veicolo SV doppia energia", cardDescription: "Scheda veicolo ampia per batteria e carburante", battery: "Batteria", fuel: "Carburante", electricRange: "Autonomia elettrica", fuelRange: "Autonomia carburante", charging: "In carica", driving: "In marcia", plugged: "Collegato", vehicle: "Veicolo", selectVehicle: "Seleziona veicolo…", noInstance: "Nessuna istanza SV Dashboard disponibile.", multipleVehicles: "Sono stati trovati più veicoli. Selezionane uno nell’editor della scheda.", unavailable: "Il veicolo configurato non è disponibile.", auto: "Veicolo: automatico · {vehicle}" },
-  es: { cardName: "Vista de vehículo SV de doble energía", cardDescription: "Tarjeta ancha para batería y combustible", battery: "Batería", fuel: "Combustible", electricRange: "Autonomía eléctrica", fuelRange: "Autonomía combustible", charging: "Cargando", driving: "En marcha", plugged: "Conectado", vehicle: "Vehículo", selectVehicle: "Seleccionar vehículo…", noInstance: "No hay ninguna instancia de SV Dashboard disponible.", multipleVehicles: "Se encontraron varios vehículos. Selecciona uno en el editor de la tarjeta.", unavailable: "El vehículo configurado no está disponible.", auto: "Vehículo: automático · {vehicle}" },
-  pt: { cardName: "Visão do veículo SV de energia dupla", cardDescription: "Cartão largo para bateria e combustível", battery: "Bateria", fuel: "Combustível", electricRange: "Autonomia elétrica", fuelRange: "Autonomia combustível", charging: "A carregar", driving: "Em andamento", plugged: "Ligado", vehicle: "Veículo", selectVehicle: "Selecionar veículo…", noInstance: "Nenhuma instância do SV Dashboard disponível.", multipleVehicles: "Foram encontrados vários veículos. Selecione um no editor do cartão.", unavailable: "O veículo configurado não está disponível.", auto: "Veículo: automático · {vehicle}" },
-  nl: { cardName: "SV voertuigoverzicht met dubbele energie", cardDescription: "Brede voertuigkaart voor accu en brandstof", battery: "Accu", fuel: "Brandstof", electricRange: "Elektrisch bereik", fuelRange: "Brandstofbereik", charging: "Laden", driving: "Rijdt", plugged: "Aangesloten", vehicle: "Voertuig", selectVehicle: "Voertuig selecteren…", noInstance: "Geen SV Dashboard-instantie beschikbaar.", multipleVehicles: "Meerdere voertuigen gevonden. Selecteer een voertuig in de kaarteditor.", unavailable: "Het geconfigureerde voertuig is niet beschikbaar.", auto: "Voertuig: automatisch · {vehicle}" },
-  da: { cardName: "SV køretøjsoversigt med dobbelt energi", cardDescription: "Bredt køretøjskort til batteri og brændstof", battery: "Batteri", fuel: "Brændstof", electricRange: "El-rækkevidde", fuelRange: "Brændstofrækkevidde", charging: "Oplader", driving: "Kører", plugged: "Tilsluttet", vehicle: "Køretøj", selectVehicle: "Vælg køretøj…", noInstance: "Ingen SV Dashboard-instans er tilgængelig.", multipleVehicles: "Flere køretøjer fundet. Vælg et køretøj i korteditoren.", unavailable: "Det konfigurerede køretøj er ikke tilgængeligt.", auto: "Køretøj: automatisk · {vehicle}" },
-  nb: { cardName: "SV kjøretøyoversikt med dobbel energi", cardDescription: "Bredt kjøretøykort for batteri og drivstoff", battery: "Batteri", fuel: "Drivstoff", electricRange: "El-rekkevidde", fuelRange: "Drivstoffrekkevidde", charging: "Lader", driving: "Kjører", plugged: "Tilkoblet", vehicle: "Kjøretøy", selectVehicle: "Velg kjøretøy…", noInstance: "Ingen SV Dashboard-instans er tilgjengelig.", multipleVehicles: "Flere kjøretøy funnet. Velg et kjøretøy i korteditoren.", unavailable: "Det konfigurerte kjøretøyet er ikke tilgjengelig.", auto: "Kjøretøy: automatisk · {vehicle}" },
-  sv: { cardName: "SV fordonsöversikt med dubbel energi", cardDescription: "Brett fordonskort för batteri och bränsle", battery: "Batteri", fuel: "Bränsle", electricRange: "Elräckvidd", fuelRange: "Bränsleräckvidd", charging: "Laddar", driving: "Kör", plugged: "Ansluten", vehicle: "Fordon", selectVehicle: "Välj fordon…", noInstance: "Ingen SV Dashboard-instans är tillgänglig.", multipleVehicles: "Flera fordon hittades. Välj ett fordon i kortredigeraren.", unavailable: "Det konfigurerade fordonet är inte tillgängligt.", auto: "Fordon: automatiskt · {vehicle}" },
-  fi: { cardName: "SV-ajoneuvon kaksoisenergia-näkymä", cardDescription: "Leveä ajoneuvokortti akulle ja polttoaineelle", battery: "Akku", fuel: "Polttoaine", electricRange: "Sähköinen toimintasäde", fuelRange: "Polttoaineen toimintasäde", charging: "Lataa", driving: "Ajossa", plugged: "Kytketty", vehicle: "Ajoneuvo", selectVehicle: "Valitse ajoneuvo…", noInstance: "SV Dashboard -instanssia ei ole käytettävissä.", multipleVehicles: "Useita ajoneuvoja löytyi. Valitse ajoneuvo korttieditorissa.", unavailable: "Määritetty ajoneuvo ei ole käytettävissä.", auto: "Ajoneuvo: automaattinen · {vehicle}" },
-  pl: { cardName: "Widok pojazdu SV z dwoma źródłami energii", cardDescription: "Szeroka karta pojazdu dla akumulatora i paliwa", battery: "Akumulator", fuel: "Paliwo", electricRange: "Zasięg elektryczny", fuelRange: "Zasięg paliwa", charging: "Ładowanie", driving: "W ruchu", plugged: "Podłączony", vehicle: "Pojazd", selectVehicle: "Wybierz pojazd…", noInstance: "Brak dostępnej instancji SV Dashboard.", multipleVehicles: "Znaleziono wiele pojazdów. Wybierz pojazd w edytorze karty.", unavailable: "Skonfigurowany pojazd jest niedostępny.", auto: "Pojazd: automatycznie · {vehicle}" },
-  cs: { cardName: "Přehled vozidla SV se dvěma zdroji energie", cardDescription: "Široká karta vozidla pro baterii a palivo", battery: "Baterie", fuel: "Palivo", electricRange: "Elektrický dojezd", fuelRange: "Dojezd na palivo", charging: "Nabíjení", driving: "V jízdě", plugged: "Připojeno", vehicle: "Vozidlo", selectVehicle: "Vybrat vozidlo…", noInstance: "Není dostupná žádná instance SV Dashboard.", multipleVehicles: "Bylo nalezeno více vozidel. Vyberte vozidlo v editoru karty.", unavailable: "Nakonfigurované vozidlo není dostupné.", auto: "Vozidlo: automaticky · {vehicle}" },
-  sk: { cardName: "Prehľad vozidla SV s dvoma zdrojmi energie", cardDescription: "Široká karta vozidla pre batériu a palivo", battery: "Batéria", fuel: "Palivo", electricRange: "Elektrický dojazd", fuelRange: "Dojazd na palivo", charging: "Nabíja", driving: "V jazde", plugged: "Pripojené", vehicle: "Vozidlo", selectVehicle: "Vybrať vozidlo…", noInstance: "Nie je dostupná žiadna inštancia SV Dashboard.", multipleVehicles: "Bolo nájdených viac vozidiel. Vyberte vozidlo v editore karty.", unavailable: "Nakonfigurované vozidlo nie je dostupné.", auto: "Vozidlo: automaticky · {vehicle}" },
-  hu: { cardName: "SV kettős energiájú járműáttekintés", cardDescription: "Széles járműkártya akkumulátorhoz és üzemanyaghoz", battery: "Akkumulátor", fuel: "Üzemanyag", electricRange: "Elektromos hatótáv", fuelRange: "Üzemanyag-hatótáv", charging: "Töltés", driving: "Menetben", plugged: "Csatlakoztatva", vehicle: "Jármű", selectVehicle: "Jármű kiválasztása…", noInstance: "Nincs elérhető SV Dashboard-példány.", multipleVehicles: "Több jármű található. Válasszon járművet a kártyaszerkesztőben.", unavailable: "A beállított jármű nem érhető el.", auto: "Jármű: automatikus · {vehicle}" },
-  ro: { cardName: "Prezentare vehicul SV cu energie dublă", cardDescription: "Card lat pentru baterie și combustibil", battery: "Baterie", fuel: "Combustibil", electricRange: "Autonomie electrică", fuelRange: "Autonomie combustibil", charging: "Se încarcă", driving: "În mers", plugged: "Conectat", vehicle: "Vehicul", selectVehicle: "Selectați vehiculul…", noInstance: "Nu este disponibilă nicio instanță SV Dashboard.", multipleVehicles: "Au fost găsite mai multe vehicule. Selectați un vehicul în editorul cardului.", unavailable: "Vehiculul configurat nu este disponibil.", auto: "Vehicul: automat · {vehicle}" },
-  sl: { cardName: "SV pregled vozila z dvojno energijo", cardDescription: "Široka kartica vozila za baterijo in gorivo", battery: "Baterija", fuel: "Gorivo", electricRange: "Električni doseg", fuelRange: "Doseg z gorivom", charging: "Polnjenje", driving: "V vožnji", plugged: "Priključeno", vehicle: "Vozilo", selectVehicle: "Izberite vozilo…", noInstance: "Nobena instanca SV Dashboard ni na voljo.", multipleVehicles: "Najdenih je več vozil. Izberite vozilo v urejevalniku kartice.", unavailable: "Konfigurirano vozilo ni na voljo.", auto: "Vozilo: samodejno · {vehicle}" },
-  hr: { cardName: "SV pregled vozila s dvostrukom energijom", cardDescription: "Široka kartica vozila za bateriju i gorivo", battery: "Baterija", fuel: "Gorivo", electricRange: "Električni doseg", fuelRange: "Doseg goriva", charging: "Punjenje", driving: "U vožnji", plugged: "Priključeno", vehicle: "Vozilo", selectVehicle: "Odaberite vozilo…", noInstance: "Nema dostupne instance SV Dashboarda.", multipleVehicles: "Pronađeno je više vozila. Odaberite vozilo u uređivaču kartice.", unavailable: "Konfigurirano vozilo nije dostupno.", auto: "Vozilo: automatski · {vehicle}" },
-};
 
 const statusCandidates = (hass, entryId) => Object.entries(hass?.states || {}).filter(([entityId, state]) => {
   const attributes = state?.attributes || {};
@@ -107,10 +86,10 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
   static getStubConfig() { return {}; }
   getCardSize() { return 5; }
 
-  _text() { const language = languageFor(this._hass || {}); return TEXT[language] || TEXT.en; }
+  _text() { return textFor(this._hass || {}, "dualEnergyOverview"); }
   _selected() { if (!this._hass) return undefined; const candidates = statusCandidates(this._hass, this._config.entry_id); return candidates.length === 1 ? candidates[0] : undefined; }
   _showMore(entityId) { if (!entityId) return; this.dispatchEvent(new CustomEvent("hass-more-info", { bubbles: true, composed: true, detail: { entityId } })); }
-  _formatValue(entityId, digits = 0) { const value = numeric(this._hass?.states?.[entityId]); if (value === null) return "—"; return new Intl.NumberFormat(languageFor(this._hass), { maximumFractionDigits: digits, minimumFractionDigits: digits }).format(value); }
+  _formatValue(entityId, digits = 0) { const value = numeric(this._hass?.states?.[entityId]); if (value === null) return "—"; return new Intl.NumberFormat(localeFor(this._hass), { maximumFractionDigits: digits, minimumFractionDigits: digits }).format(value); }
 
   _status(attributes, mapped) {
     const text = this._text();
@@ -119,16 +98,18 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
     const engine = isOn(state(mapped.engine)?.state);
     const plugged = isOn(state(mapped.battery_plugged)?.state);
     const chargePower = metricEntity(this._hass, attributes, "current_charge_power");
-    const tripEnergy = metricEntity(this._hass, attributes, "current_trip_energy");
+    const tripConsumption = metricEntity(this._hass, attributes, "current_trip_consumption");
     if (charging) {
       const power = numeric(state(chargePower));
       return { icon: "mdi:battery-charging", label: text.charging, value: power === null ? "" : `${this._formatValue(chargePower, 1)} kW` };
     }
     if (engine) {
+      const values = [];
+      const electricConsumption = numeric(state(tripConsumption));
       const fuelConsumption = numeric(state(mapped.fuel_consumption_instant));
-      if (fuelConsumption !== null) return { icon: "mdi:car", label: text.driving, value: `${this._formatValue(mapped.fuel_consumption_instant, 1)} l/100 km` };
-      const energy = numeric(state(tripEnergy));
-      return { icon: "mdi:car", label: text.driving, value: energy === null ? "" : `${this._formatValue(tripEnergy, 1)} kWh` };
+      if (electricConsumption !== null) values.push(`${this._formatValue(tripConsumption, 1)} kWh/100 km`);
+      if (fuelConsumption !== null) values.push(`${this._formatValue(mapped.fuel_consumption_instant, 1)} l/100 km`);
+      return { icon: "mdi:car", label: text.driving, value: values.join(" · ") };
     }
     if (plugged) return { icon: "mdi:ev-plug-type2", label: text.plugged, value: "" };
     return null;
@@ -186,7 +167,7 @@ class SvDashboardDualEnergyOverviewCardEditor extends HTMLElement {
   setConfig(config) { this._config = config || {}; this._render(); }
   set hass(hass) { this._hass = hass; this._render(); }
   connectedCallback() { this._render(); }
-  _text() { const language = languageFor(this._hass || {}); return TEXT[language] || TEXT.en; }
+  _text() { return textFor(this._hass || {}, "dualEnergyOverview"); }
   _emit(entryId) { const next = { ...this._config }; if (entryId) next.entry_id = entryId; else delete next.entry_id; this.dispatchEvent(new CustomEvent("config-changed", { bubbles: true, composed: true, detail: { config: next } })); }
   _render() {
     if (!this.isConnected || !this._hass) return;
@@ -203,6 +184,5 @@ class SvDashboardDualEnergyOverviewCardEditor extends HTMLElement {
 if (!customElements.get(CARD_TAG)) customElements.define(CARD_TAG, SvDashboardDualEnergyOverviewCard);
 if (!customElements.get(EDITOR_TAG)) customElements.define(EDITOR_TAG, SvDashboardDualEnergyOverviewCardEditor);
 window.customCards = window.customCards || [];
-const registrationLanguage = languageFor({ locale: { language: typeof navigator !== "undefined" ? navigator.language : "en" } });
-const registrationText = TEXT[registrationLanguage] || TEXT.en;
+const registrationText = textFor({ locale: { language: typeof navigator !== "undefined" ? navigator.language : "en" } }, "dualEnergyOverview");
 if (!window.customCards.some((card) => card.type === CARD_TAG)) window.customCards.push({ type: CARD_TAG, name: registrationText.cardName, description: registrationText.cardDescription, preview: true });

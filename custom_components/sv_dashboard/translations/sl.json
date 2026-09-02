@@ -44,7 +44,8 @@
           "wakeup": "Diagnostika prebujanja",
           "notifications": "Obvestila in prejemniki",
           "notification_recipients": "Izbirni prejemniki Notify",
-          "history_hours": "Časovno okno prikaza zgodovine"
+          "history_hours": "Časovno okno prikaza zgodovine",
+          "powertrain_override": "Pogon (rezerva)"
         }
       }
     }
@@ -80,6 +81,9 @@
       },
       "last_charge_result": {
         "name": "Rezultat zadnjega lokalnega polnjenja"
+      },
+      "current_trip_consumption": {
+        "name": "Poraba trenutne vožnje"
       }
     },
     "number": {

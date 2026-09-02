@@ -44,7 +44,8 @@
           "wakeup": "Diagnostica risveglio",
           "notifications": "Controlli notifiche e destinatari",
           "notification_recipients": "Destinatari Notify selezionabili",
-          "history_hours": "Intervallo di visualizzazione cronologia"
+          "history_hours": "Intervallo di visualizzazione cronologia",
+          "powertrain_override": "Motorizzazione (fallback)"
         }
       }
     }
@@ -80,6 +81,9 @@
       },
       "last_charge_result": {
         "name": "Risultato ultima ricarica locale"
+      },
+      "current_trip_consumption": {
+        "name": "Consumo del viaggio in corso"
       }
     },
     "number": {

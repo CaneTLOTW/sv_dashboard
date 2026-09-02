@@ -4,6 +4,15 @@ All notable user-facing changes to SV Dashboard are recorded here.
 
 SV Dashboard uses semantic package versions. `develop` is the integration/acceptance branch; `main` represents the last explicitly accepted publishable state.
 
+## 0.6.0-beta.5 candidate hardening
+
+- Removed the browser-time `unpkg.com` dependency; Lit is pinned and bundled locally with its license notice.
+- Added stable VIN-backed ConfigEntry identity/recovery and a powertrain fallback override that is available only when automatic detection remains unknown.
+- Added live `kWh/100 km` trip consumption, Hybrid/Fuel-aware local fallback history and fuel telemetry in trip notifications.
+- Centralized the new Hybrid/Fuel card strings into the shared 18-language frontend catalogs.
+- Hardened refuelling detection against single-sample fuel-level spikes and made charge-power formatting locale-aware.
+- Renamed remaining internal `Ec3...` implementation classes to neutral `Sv...` names without changing public entity identity.
+
 ## Unreleased — 0.6.0-beta.1 migration line
 
 ### Migration

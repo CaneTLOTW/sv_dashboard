@@ -38,3 +38,7 @@ Server-side notifications, push messages and Logbook messages use `custom_compon
 - English defines canonical semantics; changes must remain structurally complete in all 18 languages.
 
 CI checks Home Assistant key coverage, placeholder parity, frontend key coverage, backend message coverage and locale fallback behavior.
+
+## Hybrid and fuel cards
+
+Hybrid/fuel-specific custom-card strings are namespaces of the canonical frontend catalog in `static/i18n-core.js` and are consumed through `static/i18n.js`. They follow the same 18-language key and placeholder parity gates as the core frontend namespaces; card files must not carry private `TEXT` matrices.

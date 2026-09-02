@@ -14,7 +14,9 @@ from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.storage import Store
 
 from .const import (
+    CONF_VEHICLE_DEVICE_ID,
     CONF_VEHICLE_SLUG,
+    CONF_VEHICLE_VIN,
     DOMAIN,
     FRONTEND_RESOURCE_URLS,
     FRONTEND_URL,
@@ -24,7 +26,11 @@ from .const import (
 )
 from .coordinator import SvDashboardCoordinator
 from .dashboard import async_ensure_dashboard, async_remove_dashboard_marker
-from .entity_identity import async_migrate_package_entity_ids
+from .entity_identity import (
+    async_migrate_package_entity_ids,
+    async_repair_vehicle_reference,
+    vehicle_vin,
+)
 from .metrics import VehicleMetricsManager
 from .notifications import VehicleNotificationManager
 from .server_history import ServerHistoryManager
@@ -114,10 +120,45 @@ async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
     return True
 
 
+async def async_migrate_entry(hass: HomeAssistant, entry: SvDashboardConfigEntry) -> bool:
+    """Migrate beta config-entry identity from HA device id to stable VIN."""
+    if entry.version > 2:
+        return False
+    async_repair_vehicle_reference(hass, entry)
+    data = dict(entry.data)
+    vin = vehicle_vin(hass, entry)
+    if vin:
+        data[CONF_VEHICLE_VIN] = vin
+    identity = vin or data.get(CONF_VEHICLE_DEVICE_ID) or entry.entry_id
+    desired_unique_id = f"{DOMAIN}_{identity}"
+    conflict = next(
+        (
+            candidate
+            for candidate in hass.config_entries.async_entries(DOMAIN)
+            if candidate.entry_id != entry.entry_id
+            and candidate.unique_id == desired_unique_id
+        ),
+        None,
+    )
+    kwargs = {"data": data, "version": 2}
+    if conflict is None:
+        kwargs["unique_id"] = desired_unique_id
+    else:
+        _LOGGER.warning(
+            "Keeping existing SV config-entry unique id because %s is already owned by %s",
+            desired_unique_id,
+            conflict.entry_id,
+        )
+    hass.config_entries.async_update_entry(entry, **kwargs)
+    return True
+
+
 async def async_setup_entry(
     hass: HomeAssistant, entry: SvDashboardConfigEntry
 ) -> bool:
     """Set up one selected upstream Stellantis vehicle."""
+    async_repair_vehicle_reference(hass, entry)
+
     # Normalize only package-owned registry rows before platform setup. This
     # gives existing test installs the same VIN + technical-key identity that a
     # fresh install receives, without touching any Stellantis Vehicles entity.

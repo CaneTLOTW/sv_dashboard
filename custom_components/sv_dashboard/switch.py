@@ -49,12 +49,12 @@ async def async_setup_entry(
     if capabilities.get("charging", False):
         allowed_switches.update({SWITCH_CHARGE_REPORTS, SWITCH_WAKEUP_CHARGING})
     entities = [
-        Ec3NotificationSwitch(coordinator, entry, key, _BASE_DETAILS[key])
+        SvNotificationSwitch(coordinator, entry, key, _BASE_DETAILS[key])
         for key in BASE_SWITCHES
         if key in allowed_switches
     ]
     entities.extend(
-        Ec3NotificationSwitch(
+        SvNotificationSwitch(
             coordinator,
             entry,
             manager.recipient_switch_key(recipient),
@@ -69,7 +69,7 @@ async def async_setup_entry(
     await manager.async_refresh_entities()
 
 
-class Ec3NotificationSwitch(SwitchEntity):
+class SvNotificationSwitch(SwitchEntity):
     """One persisted explicit-consent switch."""
 
     # Entity translations are the canonical control names. ``has_entity_name``

@@ -25,7 +25,7 @@ const LANGUAGES = [
   "de", "en", "fr", "it", "es", "pt", "nl", "da", "nb", "sv", "fi", "pl", "cs", "sk", "hu", "ro", "sl", "hr",
 ];
 const EXTRA_LANGUAGES = LANGUAGES.filter((language) => !["de", "en", "fr"].includes(language));
-const NAMESPACES = ["tripHistory", "chargeHistory", "vehicleOverview", "dashboard"];
+const NAMESPACES = ["tripHistory", "chargeHistory", "vehicleOverview", "dashboard", "dualEnergyOverview", "fuelHistory"];
 const CAPABILITY_EXCEPTIONS = {};
 const baseCatalogs = Object.assign({}, WESTERN_TEXT, NORTHERN_TEXT, EASTERN_TEXT);
 const advancedCatalogs = Object.assign({}, WESTERN_ADVANCED, NORTHERN_ADVANCED, EASTERN_ADVANCED);
@@ -40,9 +40,9 @@ function canonicalKeys(namespace) {
 
 test("runtime wires all advanced catalogs with the release cache key", () => {
   for (const region of ["west", "north", "east"]) {
-    assert.match(runtimeSource, new RegExp(`i18n-advanced-${region}\\.js\\?v=0\\.6\\.0-beta\\.4`));
+    assert.match(runtimeSource, new RegExp(`i18n-advanced-${region}\\.js\\?v=0\\.6\\.0-beta\\.5`));
   }
-  assert.match(runtimeSource, /i18n-core\.js\?v=0\.6\.0-beta\.4/);
+  assert.match(runtimeSource, /i18n-core\.js\?v=0\.6\.0-beta\.5/);
 });
 
 test("locale resolver accepts regional variants and safe fallbacks", () => {
@@ -76,9 +76,11 @@ test("all 18 runtime catalogs have exact EN key parity, non-empty values and pla
   }
 });
 
-test("15 extra languages explicitly provide every ordinary EN key before runtime fallback", () => {
+test("15 extra languages explicitly provide every overlay-owned EN key before runtime fallback", () => {
+  const coreOwnedNamespaces = new Set(["dualEnergyOverview", "fuelHistory"]);
   for (const language of EXTRA_LANGUAGES) {
     for (const namespace of NAMESPACES) {
+      if (coreOwnedNamespaces.has(namespace)) continue;
       const provided = {
         ...(baseCatalogs[language]?.[namespace] || {}),
         ...(advancedCatalogs[language]?.[namespace] || {}),

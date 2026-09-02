@@ -44,7 +44,8 @@
           "wakeup": "Wake-up-diagnostik",
           "notifications": "Notifikationer og modtagere",
           "notification_recipients": "Valgbare Notify-modtagere",
-          "history_hours": "Visningsvindue for historik"
+          "history_hours": "Visningsvindue for historik",
+          "powertrain_override": "Drivlinje (reserve)"
         }
       }
     }
@@ -80,6 +81,9 @@
       },
       "last_charge_result": {
         "name": "Resultat for seneste lokale opladning"
+      },
+      "current_trip_consumption": {
+        "name": "Forbrug på aktuel tur"
       }
     },
     "number": {

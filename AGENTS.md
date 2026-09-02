@@ -28,6 +28,7 @@ Full rationale: [Branch and deployment workflow](docs/BRANCH_AND_DEPLOYMENT_WORK
 - Before acceptance, fold proven behavior into the canonical owning source, remove the temporary path, bump frontend cache/version when required and repeat affected tests.
 - Do not accumulate post-generation Strategy wrappers, `customElements.define` interception, runtime monkey patches or multiple separately registered Lovelace resources merely because they worked during diagnosis.
 - Prefer one package-owned frontend entry resource; internal ES module order/readiness is owned by that entry module.
+- Browser runtime dependencies must be pinned and shipped locally with SV Dashboard; do not add CDN/runtime imports such as unpkg to package JavaScript. Preserve required third-party license notices.
 - A third-party compatibility shim must be narrow, necessary, canonical, documented and regression-tested.
 - An Issue cannot become `Validated` while accepted behavior still depends on a disposable diagnostic patch.
 

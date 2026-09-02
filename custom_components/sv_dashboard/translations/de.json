@@ -44,7 +44,8 @@
           "wakeup": "Wake-up-Diagnose",
           "notifications": "Benachrichtigungen und Empfängersteuerung",
           "notification_recipients": "Auswählbare Notify-Empfänger",
-          "history_hours": "Anzeigezeitraum Historie"
+          "history_hours": "Anzeigezeitraum Historie",
+          "powertrain_override": "Antriebsart (Fallback)"
         }
       }
     }
@@ -80,6 +81,9 @@
       },
       "last_charge_result": {
         "name": "Letzter lokaler Ladevorgang"
+      },
+      "current_trip_consumption": {
+        "name": "Aktueller Fahrverbrauch"
       }
     },
     "number": {

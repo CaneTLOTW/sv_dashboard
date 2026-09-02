@@ -11,26 +11,81 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.util import slugify
 
-from .const import CONF_VEHICLE_DEVICE_ID, DOMAIN, UPSTREAM_DOMAIN
+from .const import (
+    CONF_VEHICLE_DEVICE_ID,
+    CONF_VEHICLE_VIN,
+    DOMAIN,
+    UPSTREAM_DOMAIN,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
 ENTITY_ID_PREFIX = "sv"
 
 
-def vehicle_vin(hass: HomeAssistant, entry: ConfigEntry) -> str | None:
-    """Return the VIN from the selected upstream Stellantis device identifier."""
-    device_id = entry.data.get(CONF_VEHICLE_DEVICE_ID)
-    device = dr.async_get(hass).async_get(device_id) if device_id else None
+def _device_vin(device: Any) -> str | None:
     if device is None:
         return None
-
     for identifier in device.identifiers:
         if len(identifier) >= 2 and identifier[0] == UPSTREAM_DOMAIN:
             vin = str(identifier[1]).strip()
             if vin:
                 return vin
     return None
+
+
+def _device_for_vin(hass: HomeAssistant, vin: str | None):
+    if not vin:
+        return None
+    registry = dr.async_get(hass)
+    for device in registry.devices.values():
+        if _device_vin(device) == vin:
+            return device
+    return None
+
+
+def vehicle_vin(hass: HomeAssistant, entry: ConfigEntry) -> str | None:
+    """Return the stable upstream VIN, with stored identity as recovery fallback."""
+    device_id = entry.data.get(CONF_VEHICLE_DEVICE_ID)
+    device = dr.async_get(hass).async_get(device_id) if device_id else None
+    live_vin = _device_vin(device)
+    stored_vin = str(entry.data.get(CONF_VEHICLE_VIN) or "").strip() or None
+    if live_vin:
+        return live_vin
+    if stored_vin:
+        recovered = _device_for_vin(hass, stored_vin)
+        return _device_vin(recovered) or stored_vin
+    return None
+
+
+def async_repair_vehicle_reference(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Repair a stale HA device pointer from the stable VIN without touching upstream."""
+    data = dict(entry.data)
+    stored_vin = str(data.get(CONF_VEHICLE_VIN) or "").strip() or None
+    device_id = data.get(CONF_VEHICLE_DEVICE_ID)
+    registry = dr.async_get(hass)
+    device = registry.async_get(device_id) if device_id else None
+    live_vin = _device_vin(device)
+
+    if stored_vin and live_vin != stored_vin:
+        recovered = _device_for_vin(hass, stored_vin)
+        if recovered is not None:
+            device = recovered
+            live_vin = _device_vin(recovered)
+
+    if device is None and stored_vin:
+        device = _device_for_vin(hass, stored_vin)
+        live_vin = _device_vin(device)
+
+    changed = False
+    if device is not None and data.get(CONF_VEHICLE_DEVICE_ID) != device.id:
+        data[CONF_VEHICLE_DEVICE_ID] = device.id
+        changed = True
+    if live_vin and data.get(CONF_VEHICLE_VIN) != live_vin:
+        data[CONF_VEHICLE_VIN] = live_vin
+        changed = True
+    if changed:
+        hass.config_entries.async_update_entry(entry, data=data)
 
 
 def _vehicle_identity_base(hass: HomeAssistant, entry: ConfigEntry) -> str:

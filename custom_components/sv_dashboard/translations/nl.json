@@ -44,7 +44,8 @@
           "wakeup": "Wake-updiagnose",
           "notifications": "Meldingen en ontvangers beheren",
           "notification_recipients": "Selecteerbare Notify-ontvangers",
-          "history_hours": "Weergavevenster historie"
+          "history_hours": "Weergavevenster historie",
+          "powertrain_override": "Aandrijving (fallback)"
         }
       }
     }
@@ -80,6 +81,9 @@
       },
       "last_charge_result": {
         "name": "Resultaat laatste lokale laadbeurt"
+      },
+      "current_trip_consumption": {
+        "name": "Verbruik huidige rit"
       }
     },
     "number": {

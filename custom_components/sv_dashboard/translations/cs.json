@@ -44,7 +44,8 @@
           "wakeup": "Diagnostika probouzení",
           "notifications": "Oznámení a příjemci",
           "notification_recipients": "Volitelní příjemci Notify",
-          "history_hours": "Rozsah zobrazené historie"
+          "history_hours": "Rozsah zobrazené historie",
+          "powertrain_override": "Pohon (záloha)"
         }
       }
     }
@@ -80,6 +81,9 @@
       },
       "last_charge_result": {
         "name": "Výsledek posledního místního nabíjení"
+      },
+      "current_trip_consumption": {
+        "name": "Spotřeba aktuální jízdy"
       }
     },
     "number": {

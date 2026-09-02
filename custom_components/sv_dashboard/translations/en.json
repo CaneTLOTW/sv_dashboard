@@ -44,7 +44,8 @@
           "wakeup": "Wake-up diagnostics",
           "notifications": "Notification and recipient controls",
           "notification_recipients": "Selectable Notify recipients",
-          "history_hours": "History display window"
+          "history_hours": "History display window",
+          "powertrain_override": "Powertrain (fallback)"
         }
       }
     }
@@ -80,6 +81,9 @@
       },
       "last_charge_result": {
         "name": "Last local charge result"
+      },
+      "current_trip_consumption": {
+        "name": "Current trip consumption"
       }
     },
     "number": {

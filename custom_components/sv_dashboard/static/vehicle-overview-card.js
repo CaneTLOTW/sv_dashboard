@@ -10,7 +10,7 @@
  * changes presentation (no heading/self-navigation, optional info button);
  * entity resolution, picture lifecycle and overlay rendering stay shared.
  */
-import { languageFor, textFor } from "./i18n.js?v=0.6.0-beta.4";
+import { languageFor, textFor } from "./i18n.js?v=0.6.0-beta.5";
 
 const STATUS_DOMAIN = "sv_dashboard";
 const CARD_TAG = "sv-dashboard-vehicle-overview-card";
@@ -80,6 +80,7 @@ function buildConfig(hass, config, statusState) {
   const autonomy = mapped.autonomy;
   const fuel = mapped.fuel;
   const fuelAutonomy = mapped.fuel_autonomy;
+  const fuelConsumptionEntity = mapped.fuel_consumption_instant;
   const supportsElectric = capabilities.electric_energy ?? Boolean(battery);
   const supportsFuel = capabilities.fuel ?? Boolean(fuel);
   const primaryLevel = supportsElectric && battery ? battery : supportsFuel ? fuel : battery || fuel;
@@ -94,6 +95,7 @@ function buildConfig(hass, config, statusState) {
   const preconditioningStop = mapped.preconditioning_stop;
   const chargePower = metricEntity(hass, attributes, "current_charge_power") || mapped.battery_charging_rate;
   const tripEnergy = metricEntity(hass, attributes, "current_trip_energy");
+  const tripConsumption = metricEntity(hass, attributes, "current_trip_consumption");
   const vehicleInfo = metricEntity(hass, attributes, "vehicle_info");
   const navigationPath = liveVariant ? undefined : dashboardPath(attributes, config.navigation_path);
   const chargingState = supportsElectric && charging ? hass.states?.[charging]?.state === "on" : false;
@@ -111,6 +113,7 @@ function buildConfig(hass, config, statusState) {
     autonomy,
     fuel,
     fuelAutonomy,
+    fuelConsumptionEntity,
     temperature,
     charging,
     chargingEnd,
@@ -121,6 +124,7 @@ function buildConfig(hass, config, statusState) {
     preconditioningStop,
     chargePower,
     tripEnergy,
+    tripConsumption,
     tracker,
     controls.manual_wakeup,
     vehicleInfo,
@@ -395,7 +399,7 @@ function buildConfig(hass, config, statusState) {
           show_state: true,
           show_icon: false,
           tap_action: { action: "more-info" },
-          triggers_update: [primaryLevel, battery, batteryResidual, fuel, charging, engine, chargePower, tripEnergy].filter(Boolean),
+          triggers_update: [primaryLevel, battery, batteryResidual, fuel, fuelConsumptionEntity, charging, engine, chargePower, tripEnergy, tripConsumption].filter(Boolean),
           name: `[[[
             const isCharging = states[${literal(charging)}]?.state === 'on';
             const isDriving = states[${literal(engine)}]?.state === 'on';
@@ -407,11 +411,16 @@ function buildConfig(hass, config, statusState) {
               return ${literal(strings.charging)};
             }
             if (isDriving) {
-              const energy = states[${literal(tripEnergy)}];
-              if (energy && !['unknown','unavailable','none',''].includes(energy.state) && Number.isFinite(Number(energy.state))) {
-                return ${literal(strings.driving)} + ' · ' + Number(energy.state).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' kWh';
+              const values = [];
+              const electric = states[${literal(tripConsumption)}];
+              const fuelNow = states[${literal(fuelConsumptionEntity)}];
+              if (electric && !['unknown','unavailable','none',''].includes(String(electric.state).toLowerCase()) && Number.isFinite(Number(electric.state))) {
+                values.push(Number(electric.state).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' kWh/100 km');
               }
-              return ${literal(strings.driving)};
+              if (fuelNow && !['unknown','unavailable','none',''].includes(String(fuelNow.state).toLowerCase()) && Number.isFinite(Number(fuelNow.state))) {
+                values.push(Number(fuelNow.state).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' l/100 km');
+              }
+              return ${literal(strings.driving)} + (values.length ? ' · ' + values.join(' · ') : '');
             }
             if (${supportsElectric ? "true" : "false"}) {
               const residual = states[${literal(batteryResidual)}];

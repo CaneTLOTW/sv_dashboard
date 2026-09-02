@@ -44,7 +44,8 @@
           "wakeup": "Diagnostyka wybudzania",
           "notifications": "Powiadomienia i odbiorcy",
           "notification_recipients": "Wybieralni odbiorcy Notify",
-          "history_hours": "Zakres wyświetlanej historii"
+          "history_hours": "Zakres wyświetlanej historii",
+          "powertrain_override": "Układ napędowy (awaryjnie)"
         }
       }
     }
@@ -80,6 +81,9 @@
       },
       "last_charge_result": {
         "name": "Wynik ostatniego lokalnego ładowania"
+      },
+      "current_trip_consumption": {
+        "name": "Zużycie bieżącej trasy"
       }
     },
     "number": {
