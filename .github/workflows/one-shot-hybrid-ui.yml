@@ -1,0 +1,212 @@
+name: One-shot hybrid UI implementation
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - .github/workflows/one-shot-hybrid-ui.yml
+
+permissions:
+  contents: write
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: develop
+          fetch-depth: 0
+      - name: Apply hybrid UI and history changes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              if old not in text:
+                  raise SystemExit(f"pattern not found in {path}: {old[:120]!r}")
+              if text.count(old) != 1:
+                  raise SystemExit(f"pattern not unique in {path}: {text.count(old)} occurrences")
+              p.write_text(text.replace(old, new, 1))
+
+          # Version/cache bump for this runtime-test candidate.
+          for p in Path("custom_components/sv_dashboard/static").glob("*.js"):
+              text = p.read_text()
+              if "0.6.0-beta.3" in text:
+                  p.write_text(text.replace("0.6.0-beta.3", "0.6.0-beta.4"))
+          replace_once("custom_components/sv_dashboard/const.py", 'FRONTEND_VERSION = "0.6.0-beta.3"', 'FRONTEND_VERSION = "0.6.0-beta.4"')
+          replace_once("custom_components/sv_dashboard/manifest.json", '"version": "0.6.0-beta.3"', '"version": "0.6.0-beta.4"')
+
+          # Load both new standalone cards from the single package resource.
+          replace_once(
+              "custom_components/sv_dashboard/static/frontend.js",
+              '  import("./vehicle-overview-card.js?v=0.6.0-beta.4"),\n',
+              '  import("./vehicle-overview-card.js?v=0.6.0-beta.4"),\n  import("./dual-energy-overview-card.js?v=0.6.0-beta.4"),\n  import("./fuel-history-card.js?v=0.6.0-beta.4"),\n',
+          )
+
+          # Canonical server trips: preserve Electric and Fuel independently.
+          replace_once(
+              "custom_components/sv_dashboard/server_history.py",
+              '''def _energy_entry(values: Any) -> dict[str, Any] | None:\n    if not isinstance(values, list):\n        return None\n    return next(\n        (item for item in values if isinstance(item, dict) and item.get("type") == "Electric"),\n        None,\n    )\n''',
+              '''def _energy_entry(values: Any, energy_type: str = "Electric") -> dict[str, Any] | None:\n    """Return one typed energy entry without conflating powertrains."""\n    if not isinstance(values, list):\n        return None\n    return next(\n        (\n            item\n            for item in values\n            if isinstance(item, dict) and item.get("type") == energy_type\n        ),\n        None,\n    )\n''',
+          )
+          replace_once(
+              "custom_components/sv_dashboard/server_history.py",
+              '''    start_soc, end_soc = _trip_soc(raw, "startEnergies"), _trip_soc(raw, "endEnergies")\n    capacity = _capacity(capacity_kwh)\n\n    electric_consumption = _energy_entry(raw.get("energyConsumptions"))\n''',
+              '''    start_soc, end_soc = _trip_soc(raw, "startEnergies"), _trip_soc(raw, "endEnergies")\n    start_fuel = _energy_entry(raw.get("startEnergies"), "Fuel")\n    end_fuel = _energy_entry(raw.get("endEnergies"), "Fuel")\n    fuel_level_start = _number(start_fuel.get("level")) if start_fuel else None\n    fuel_level_end = _number(end_fuel.get("level")) if end_fuel else None\n    fuel_range_start_km = _number(start_fuel.get("autonomy")) if start_fuel else None\n    fuel_range_end_km = _number(end_fuel.get("autonomy")) if end_fuel else None\n    capacity = _capacity(capacity_kwh)\n\n    electric_consumption = _energy_entry(raw.get("energyConsumptions"))\n''',
+          )
+          replace_once(
+              "custom_components/sv_dashboard/server_history.py",
+              '''    if energy_kwh is None:\n        energy_source = "not_reliable_short_or_no_soc_change"\n\n    kinetic = raw.get("kinetic") if isinstance(raw.get("kinetic"), dict) else {}\n''',
+              '''    if energy_kwh is None:\n        energy_source = "not_reliable_short_or_no_soc_change"\n\n    fuel_consumption = _energy_entry(raw.get("energyConsumptions"), "Fuel")\n    raw_fuel_consumption = (\n        _number(fuel_consumption.get("consumption")) if fuel_consumption else None\n    )\n    raw_fuel_average = (\n        _number(fuel_consumption.get("avgConsumption")) if fuel_consumption else None\n    )\n    # Stellantis Vehicles exposes the same API values as liters and l/100 km\n    # after dividing the raw Fuel values by 100. Preserve a real zero: on a\n    # PHEV it is useful evidence that a trip was electric-only.\n    fuel_consumption_l = (\n        round(raw_fuel_consumption / 100, 3)\n        if raw_fuel_consumption is not None and raw_fuel_consumption >= 0\n        else None\n    )\n    fuel_consumption_l_100km = (\n        round(raw_fuel_average / 100, 2)\n        if raw_fuel_average is not None and raw_fuel_average >= 0\n        else None\n    )\n    if (\n        fuel_consumption_l_100km is None\n        and fuel_consumption_l is not None\n        and distance is not None\n        and distance > 0\n    ):\n        fuel_consumption_l_100km = round(fuel_consumption_l / distance * 100, 2)\n\n    electric_used = bool(\n        (energy_kwh is not None and energy_kwh > 0)\n        or (\n            start_soc is not None\n            and end_soc is not None\n            and end_soc < start_soc\n        )\n    )\n    fuel_used = fuel_consumption_l is not None and fuel_consumption_l > 0\n    trip_type = (\n        "hybrid"\n        if electric_used and fuel_used\n        else "ice"\n        if fuel_used\n        else "ev"\n        if electric_used\n        else "unknown"\n    )\n\n    kinetic = raw.get("kinetic") if isinstance(raw.get("kinetic"), dict) else {}\n''',
+          )
+          replace_once(
+              "custom_components/sv_dashboard/server_history.py",
+              '''        "soc_start": start_soc,\n        "soc_end": end_soc,\n        "capacity_kwh": capacity,\n''',
+              '''        "soc_start": start_soc,\n        "soc_end": end_soc,\n        "fuel_level_start": fuel_level_start,\n        "fuel_level_end": fuel_level_end,\n        "fuel_range_start_km": fuel_range_start_km,\n        "fuel_range_end_km": fuel_range_end_km,\n        "fuel_consumption_l": fuel_consumption_l,\n        "fuel_consumption_l_100km": fuel_consumption_l_100km,\n        "trip_type": trip_type,\n        "capacity_kwh": capacity,\n''',
+          )
+
+          # Publish the new canonical fields to the compact server-history UI contract.
+          replace_once(
+              "custom_components/sv_dashboard/sensor.py",
+              '''            "soc_start",\n            "soc_end",\n            "energy_kwh",\n''',
+              '''            "soc_start",\n            "soc_end",\n            "fuel_level_start",\n            "fuel_level_end",\n            "fuel_range_start_km",\n            "fuel_range_end_km",\n            "fuel_consumption_l",\n            "fuel_consumption_l_100km",\n            "trip_type",\n            "energy_kwh",\n''',
+          )
+          replace_once(
+              "custom_components/sv_dashboard/sensor.py",
+              '''    "soc_start",\n    "soc_end",\n    "energy_kwh",\n''',
+              '''    "soc_start",\n    "soc_end",\n    "fuel_level_start",\n    "fuel_level_end",\n    "fuel_range_start_km",\n    "fuel_range_end_km",\n    "fuel_consumption_l",\n    "fuel_consumption_l_100km",\n    "trip_type",\n    "energy_kwh",\n''',
+          )
+
+          # Trip history: one component, capability/data-driven extra fuel columns.
+          replace_once(
+              "custom_components/sv_dashboard/static/trip-history-card.js",
+              '''        .quality-warning { flex: 1 0 100%; color: var(--warning-color, var(--primary-text-color)); font-weight: 600; }\n''',
+              '''        .quality-warning { flex: 1 0 100%; color: var(--warning-color, var(--primary-text-color)); font-weight: 600; }\n        .trip-type { display:inline-flex; align-items:center; min-height:20px; padding:0 7px; border-radius:999px; background:color-mix(in srgb, var(--primary-color) 10%, transparent); font-size:11px; font-weight:600; }\n''',
+          )
+          replace_once(
+              "custom_components/sv_dashboard/static/trip-history-card.js",
+              '''            if (this._onlyConsumption && (!Number.isFinite(Number(trip.energy_kwh)) || Number(trip.energy_kwh) <= 0)) return false;\n''',
+              '''            if (this._onlyConsumption) {\n                const electric = trip.energy_kwh !== null && trip.energy_kwh !== undefined && Number(trip.energy_kwh) > 0;\n                const fuel = trip.fuel_consumption_l !== null && trip.fuel_consumption_l !== undefined && Number(trip.fuel_consumption_l) > 0;\n                if (!electric && !fuel) return false;\n            }\n''',
+          )
+          replace_once(
+              "custom_components/sv_dashboard/static/trip-history-card.js",
+              '''    _text() {\n        return textFor(this._i18nContext(), "tripHistory");\n    }\n''',
+              '''    _text() {\n        return textFor(this._i18nContext(), "tripHistory");\n    }\n\n    _dashboardText() {\n        return textFor(this._i18nContext(), "dashboard");\n    }\n''',
+          )
+          replace_once(
+              "custom_components/sv_dashboard/static/trip-history-card.js",
+              '''        const text = this._text();\n        const trips = this._trips ?? [];\n        const hasMoreTrips = (this._allTrips?.length ?? 0) > trips.length;\n        const hasMaxSpeed = trips.some((trip) => trip.attributes?.max_speed);\n        const hasEnergy = trips.some((trip) => trip.attributes?.energy_kwh !== undefined);\n        const columnCount = 4 + (hasEnergy ? 2 : 0) + (hasMaxSpeed ? 1 : 0);\n''',
+              '''        const text = this._text();\n        const dashboardText = this._dashboardText();\n        const trips = this._trips ?? [];\n        const hasMoreTrips = (this._allTrips?.length ?? 0) > trips.length;\n        const hasMaxSpeed = trips.some((trip) => trip.attributes?.max_speed);\n        const hasEnergy = trips.some((trip) => trip.attributes?.energy_kwh !== undefined && trip.attributes?.energy_kwh !== null);\n        const hasFuel = trips.some((trip) => trip.attributes?.fuel_consumption_l_100km !== undefined && trip.attributes?.fuel_consumption_l_100km !== null);\n        const hasTripType = trips.some((trip) => trip.attributes?.trip_type && trip.attributes.trip_type !== "unknown");\n        const columnCount = 4 + (hasEnergy ? 2 : 0) + (hasFuel ? 1 : 0) + (hasTripType ? 1 : 0) + (hasMaxSpeed ? 1 : 0);\n''',
+          )
+          replace_once(
+              "custom_components/sv_dashboard/static/trip-history-card.js",
+              '''                            <table class="trip-table"><thead><tr><th>${text.date}</th><th>${text.duration}</th><th>${text.distance}</th><th>${text.average}</th>${hasEnergy ? html`<th>${text.energy}</th><th>${text.consumption}</th>` : nothing}${hasMaxSpeed ? html`<th>${text.maximum}</th>` : nothing}</tr></thead>\n''',
+              '''                            <table class="trip-table"><thead><tr><th>${text.date}</th><th>${text.duration}</th><th>${text.distance}</th><th>${text.average}</th>${hasEnergy ? html`<th>${text.energy}</th><th>${text.consumption}</th>` : nothing}${hasFuel ? html`<th>l/100 km</th>` : nothing}${hasTripType ? html`<th>${dashboardText.powertrain}</th>` : nothing}${hasMaxSpeed ? html`<th>${text.maximum}</th>` : nothing}</tr></thead>\n''',
+          )
+          replace_once(
+              "custom_components/sv_dashboard/static/trip-history-card.js",
+              '''                                ${hasEnergy ? html`<td>${this._value(trip.attributes?.energy_kwh)}</td><td>${invalid ? "—" : this._value(trip.attributes?.energy_per_100_km)}</td>` : nothing}\n                                ${hasMaxSpeed ? html`<td>${invalid ? "—" : this._value(trip.attributes?.max_speed)}</td>` : nothing}\n''',
+              '''                                ${hasEnergy ? html`<td>${this._value(trip.attributes?.energy_kwh)}</td><td>${invalid ? "—" : this._value(trip.attributes?.energy_per_100_km)}</td>` : nothing}\n                                ${hasFuel ? html`<td>${invalid ? "—" : this._value(trip.attributes?.fuel_consumption_l_100km)}</td>` : nothing}\n                                ${hasTripType ? html`<td><span class="trip-type">${({ ev: "EV", hybrid: "Hybrid", ice: "ICE" })[trip.attributes?.trip_type] || "—"}</span></td>` : nothing}\n                                ${hasMaxSpeed ? html`<td>${invalid ? "—" : this._value(trip.attributes?.max_speed)}</td>` : nothing}\n''',
+          )
+          replace_once(
+              "custom_components/sv_dashboard/static/trip-history-card.js",
+              '''                                        <span><strong>${text.socStart}:</strong> ${this._value(trip.attributes?.soc_start)} %</span>\n                                        <span><strong>${text.socEnd}:</strong> ${this._value(trip.attributes?.soc_end)} %</span>\n''',
+              '''                                        ${(trip.attributes?.soc_start !== null && trip.attributes?.soc_start !== undefined) || (trip.attributes?.soc_end !== null && trip.attributes?.soc_end !== undefined) ? html`<span><strong>${text.socStart} / ${text.socEnd}:</strong> ${this._value(trip.attributes?.soc_start)} % → ${this._value(trip.attributes?.soc_end)} %</span>` : nothing}\n                                        ${(trip.attributes?.fuel_level_start !== null && trip.attributes?.fuel_level_start !== undefined) || (trip.attributes?.fuel_level_end !== null && trip.attributes?.fuel_level_end !== undefined) ? html`<span><strong>${dashboardText.fuel}:</strong> ${this._value(trip.attributes?.fuel_level_start)} % → ${this._value(trip.attributes?.fuel_level_end)} %</span>` : nothing}\n                                        ${(trip.attributes?.fuel_range_start_km !== null && trip.attributes?.fuel_range_start_km !== undefined) || (trip.attributes?.fuel_range_end_km !== null && trip.attributes?.fuel_range_end_km !== undefined) ? html`<span><strong>${dashboardText.fuelRange}:</strong> ${this._value(trip.attributes?.fuel_range_start_km)} km → ${this._value(trip.attributes?.fuel_range_end_km)} km</span>` : nothing}\n                                        ${trip.attributes?.fuel_consumption_l !== null && trip.attributes?.fuel_consumption_l !== undefined ? html`<span><strong>${dashboardText.fuelConsumption}:</strong> ${this._value(trip.attributes?.fuel_consumption_l)} l · ${this._value(trip.attributes?.fuel_consumption_l_100km)} l/100 km</span>` : nothing}\n''',
+          )
+
+          # Generated dashboard: fuel history is additive and only automatic on fuel-capable vehicles.
+          replace_once(
+              "custom_components/sv_dashboard/static/sv_dashboard.js",
+              '''        modules.trips && lastTripDisplayEntity ? { type: "custom:sv-dashboard-trip-history-card", entity: lastTripDisplayEntity, server_entity: serverTripEntity, trip_entities: [nativeLastTrip].filter(Boolean), energy_entities: supportsElectric ? [lastTripResult].filter(Boolean) : [], title: strings.tripHistory, language: language(hass), compact_filters: true, filter_days: 30, hide_short_trips: true, show_zero_events: false, hours_to_show: historyHours, max_trips: 50, grid_options: { columns: "full" } } : null,\n        modules.charging && supportsChargeHistory ? { type: "custom:sv-dashboard-charge-history-card",''',
+              '''        modules.trips && lastTripDisplayEntity ? { type: "custom:sv-dashboard-trip-history-card", entity: lastTripDisplayEntity, server_entity: serverTripEntity, trip_entities: [nativeLastTrip].filter(Boolean), energy_entities: supportsElectric ? [lastTripResult].filter(Boolean) : [], title: strings.tripHistory, language: language(hass), compact_filters: true, filter_days: 30, hide_short_trips: true, show_zero_events: false, hours_to_show: historyHours, max_trips: 50, grid_options: { columns: "full" } } : null,\n        modules.trips && supportsFuel ? { type: "custom:sv-dashboard-fuel-history-card", entry_id: attributes.entry_id, fuel_entity: entity("fuel"), hours_to_show: historyHours, max_events: 50, grid_options: { columns: "full" } } : null,\n        modules.charging && supportsChargeHistory ? { type: "custom:sv-dashboard-charge-history-card",''',
+          )
+          replace_once(
+              "custom_components/sv_dashboard/static/sv_dashboard.js",
+              '''            { type: "custom:sv-dashboard-trip-history-card", entity: lastTripDisplayEntity, server_entity: serverTripEntity, trip_entities: [nativeLastTrip].filter(Boolean), energy_entities: supportsElectric ? [lastTripResult].filter(Boolean) : [], title: strings.tripHistory, language: language(hass), hours_to_show: historyHours, expanded_window: true, initial_visible_trips: 100, max_trips: 0, grid_options: { columns: "full", rows: 10 } },\n''',
+              '''            { type: "custom:sv-dashboard-trip-history-card", entity: lastTripDisplayEntity, server_entity: serverTripEntity, trip_entities: [nativeLastTrip].filter(Boolean), energy_entities: supportsElectric ? [lastTripResult].filter(Boolean) : [], title: strings.tripHistory, language: language(hass), hours_to_show: historyHours, expanded_window: true, initial_visible_trips: 100, max_trips: 0, grid_options: { columns: "full", rows: 10 } },\n            supportsFuel ? { type: "custom:sv-dashboard-fuel-history-card", entry_id: attributes.entry_id, fuel_entity: entity("fuel"), hours_to_show: historyHours, max_events: 100, grid_options: { columns: "full", rows: 5 } } : null,\n''',
+          )
+
+          # Fuel-history queries only when the level actually changes, and do not
+          # misuse cumulative consumption as a refuel amount.
+          p = Path("custom_components/sv_dashboard/static/fuel-history-card.js")
+          text = p.read_text()
+          text = text.replace("hours_to_show: 8760", "hours_to_show: 2160")
+          text = text.replace("Number(this._config.hours_to_show) || 8760", "Number(this._config.hours_to_show) || 2160")
+          text = text.replace("this._hass.states?.[fuel]?.last_updated", "this._hass.states?.[fuel]?.last_changed")
+          text = text.replace("refill ? this._hass.states?.[refill]?.last_updated : \"\"", "refill ? this._hass.states?.[refill]?.last_changed : \"\"")
+          text = text.replace("significant_changes_only: false", "significant_changes_only: true")
+          p.write_text(text)
+
+          # Source-contract regression test for this feature block.
+          Path("tests/hybrid-fuel-ui.test.mjs").write_text(r'''import assert from "node:assert/strict";
+          import fs from "node:fs";
+          import test from "node:test";
+
+          const history = fs.readFileSync(new URL("../custom_components/sv_dashboard/server_history.py", import.meta.url), "utf8");
+          const sensor = fs.readFileSync(new URL("../custom_components/sv_dashboard/sensor.py", import.meta.url), "utf8");
+          const trip = fs.readFileSync(new URL("../custom_components/sv_dashboard/static/trip-history-card.js", import.meta.url), "utf8");
+          const fuelHistory = fs.readFileSync(new URL("../custom_components/sv_dashboard/static/fuel-history-card.js", import.meta.url), "utf8");
+          const dualHero = fs.readFileSync(new URL("../custom_components/sv_dashboard/static/dual-energy-overview-card.js", import.meta.url), "utf8");
+          const frontend = fs.readFileSync(new URL("../custom_components/sv_dashboard/static/frontend.js", import.meta.url), "utf8");
+          const strategy = fs.readFileSync(new URL("../custom_components/sv_dashboard/static/sv_dashboard.js", import.meta.url), "utf8");
+
+          test("canonical trips preserve independent fuel telemetry", () => {
+            assert.match(history, /_energy_entry\(raw\.get\("energyConsumptions"\), "Fuel"\)/);
+            for (const key of ["fuel_level_start", "fuel_level_end", "fuel_range_start_km", "fuel_range_end_km", "fuel_consumption_l", "fuel_consumption_l_100km", "trip_type"]) {
+              assert.match(history, new RegExp(`"${key}"`));
+              assert.match(sensor, new RegExp(`"${key}"`));
+            }
+            assert.match(history, /raw_fuel_consumption \/ 100/);
+            assert.match(history, /fuel_consumption_l is not None and fuel_consumption_l > 0/);
+          });
+
+          test("trip history expands rather than forks for hybrid data", () => {
+            assert.match(trip, /const hasFuel = trips\.some/);
+            assert.match(trip, /l\/100 km/);
+            assert.match(trip, /trip-type/);
+            assert.match(trip, /dashboardText\.fuelRange/);
+            assert.match(trip, /dashboardText\.fuelConsumption/);
+            assert.match(trip, /ev: "EV", hybrid: "Hybrid", ice: "ICE"/);
+          });
+
+          test("dual-energy hero is standalone, responsive and tolerant of missing fuel", () => {
+            assert.match(dualHero, /sv-dashboard-dual-energy-overview-card/);
+            assert.match(dualHero, /grid-template-areas: "battery vehicle fuel"/);
+            assert.match(dualHero, /@media \(max-width: 680px\)/);
+            assert.match(dualHero, /@media \(max-width: 410px\)/);
+            assert.match(dualHero, /mapped\.fuel/);
+            assert.match(dualHero, /mapped\.fuel_autonomy/);
+            assert.match(dualHero, /return null;/);
+            assert.doesNotMatch(dualHero, /Parkt|aktualisiert vor|Hybrid badge/);
+          });
+
+          test("fuel history detects refills without treating cumulative consumption as liters added", () => {
+            assert.match(fuelHistory, /increase < minimum/);
+            assert.match(fuelHistory, /fuel_refill_amount/);
+            assert.doesNotMatch(fuelHistory, /fuel_consumption_total/);
+            assert.match(fuelHistory, /liters === null \? "—"/);
+          });
+
+          test("single frontend resource loads both new cards and generated dashboard gates fuel history", () => {
+            assert.match(frontend, /dual-energy-overview-card\.js\?v=0\.6\.0-beta\.4/);
+            assert.match(frontend, /fuel-history-card\.js\?v=0\.6\.0-beta\.4/);
+            assert.match(strategy, /modules\.trips && supportsFuel \? \{ type: "custom:sv-dashboard-fuel-history-card"/);
+          });
+          ''')
+          PY
+      - name: Run source and frontend regression tests
+        run: |
+          python -m compileall -q custom_components/sv_dashboard
+          for file in custom_components/sv_dashboard/static/*.js; do node --check "$file"; done
+          node --test tests/*.test.mjs
+      - name: Commit implementation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add custom_components/sv_dashboard tests/hybrid-fuel-ui.test.mjs
+          git commit -m "feat: add hybrid dual-energy and fuel history UI"
+          git push origin HEAD:develop
