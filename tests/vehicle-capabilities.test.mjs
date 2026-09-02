@@ -44,7 +44,7 @@ test("thermic notification UI omits electric SOC and charge-specific settings", 
 
 test("trip history only renders electric energy columns when actual energy exists", () => {
   assert.match(strategy, /energy_entities: supportsElectric \? \[lastTripResult\]\.filter\(Boolean\) : \[\]/);
-  assert.match(tripHistory, /const hasEnergy = trips\.some\(\(trip\) => trip\.attributes\?\.energy_kwh !== undefined\)/);
+  assert.match(tripHistory, /const hasEnergy = trips\.some\(\(trip\) => trip\.attributes\?\.energy_kwh !== undefined && trip\.attributes\?\.energy_kwh !== null\)/);
   assert.match(tripHistory, /hasEnergy \? html`<th>\$\{text\.energy\}<\/th><th>\$\{text\.consumption\}<\/th>` : nothing/);
 });
 

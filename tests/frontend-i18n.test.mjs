@@ -40,7 +40,7 @@ function canonicalKeys(namespace) {
 
 test("runtime wires all advanced catalogs with the release cache key", () => {
   for (const region of ["west", "north", "east"]) {
-    assert.match(runtimeSource, new RegExp(`i18n-advanced-${region}\\.js\\?v=0\\.6\\.0-beta\\.3`));
+    assert.match(runtimeSource, new RegExp(`i18n-advanced-${region}\\.js\\?v=0\\.6\\.0-beta\\.4`));
   }
   assert.match(runtimeSource, /i18n-core\.js\?v=0\.6\.0-beta\.4/);
 });
