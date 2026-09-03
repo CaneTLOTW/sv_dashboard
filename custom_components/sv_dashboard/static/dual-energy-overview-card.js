@@ -1,5 +1,5 @@
-import { LitElement, html, css, nothing } from "./vendor-lit.js?v=0.6.0-beta.5";
-import { localeFor, textFor } from "./i18n.js?v=0.6.0-beta.5";
+import { LitElement, html, css, nothing } from "./vendor-lit.js?v=0.6.0-beta.6";
+import { localeFor, textFor } from "./i18n.js?v=0.6.0-beta.6";
 
 const STATUS_DOMAIN = "sv_dashboard";
 const CARD_TAG = "sv-dashboard-dual-energy-overview-card";
@@ -26,14 +26,15 @@ const metricEntity = (hass, attributes, key) => attributes?.metric_entities?.[ke
 const isOn = (state) => ["on", "true", "inprogress", "running"].includes(String(state ?? "").toLowerCase());
 const usable = (state) => state && !["unknown", "unavailable", "none", ""].includes(String(state.state ?? "").toLowerCase());
 const numeric = (state) => usable(state) && Number.isFinite(Number(state.state)) ? Number(state.state) : null;
+const clampPercent = (value) => value === null ? null : Math.max(0, Math.min(100, value));
 
 class SvDashboardDualEnergyOverviewCard extends LitElement {
   static properties = { _hass: { state: true }, _config: { state: true } };
 
   static styles = css`
     :host { display: block; }
-    ha-card { overflow: hidden; border-radius: var(--ha-card-border-radius, 16px); }
-    .hero { min-height: 282px; display: grid; grid-template-columns: minmax(145px, 1fr) minmax(260px, 2.1fr) minmax(145px, 1fr); grid-template-areas: "battery vehicle fuel"; align-items: center; gap: 18px; padding: 22px 28px 18px; background: radial-gradient(circle at 50% 48%, color-mix(in srgb, var(--primary-color) 5%, transparent), transparent 42%), var(--ha-card-background, var(--card-background-color)); }
+    ha-card { container-type: inline-size; overflow: hidden; border-radius: var(--ha-card-border-radius, 16px); }
+    .hero { min-height: 320px; display: grid; grid-template-columns: minmax(150px, 1fr) minmax(320px, 2.45fr) minmax(150px, 1fr); grid-template-areas: "battery vehicle fuel"; align-items: center; gap: 20px; padding: 22px 28px 20px; background: radial-gradient(circle at 50% 48%, color-mix(in srgb, var(--primary-color) 5%, transparent), transparent 42%), var(--ha-card-background, var(--card-background-color)); }
     .energy { min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; cursor: pointer; padding: 8px; border-radius: 16px; transition: background .15s ease; }
     .energy:hover { background: color-mix(in srgb, var(--primary-color) 6%, transparent); }
     .energy.battery { grid-area: battery; --accent: var(--success-color, #2eaf5d); }
@@ -41,37 +42,44 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
     .icon { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--accent) 11%, transparent); color: var(--accent); margin-bottom: 10px; }
     .icon ha-icon { --mdc-icon-size: 25px; }
     .label { color: var(--primary-text-color); font-size: 15px; font-weight: 600; }
-    .level { margin-top: 5px; color: var(--accent); font-size: clamp(34px, 4vw, 50px); font-weight: 600; letter-spacing: -.02em; line-height: 1.05; }
+    .level { margin-top: 5px; color: var(--accent); font-size: clamp(36px, 4.2cqw, 52px); font-weight: 600; letter-spacing: -.02em; line-height: 1.05; }
     .level small { font-size: .58em; font-weight: 500; }
-    .divider { width: min(130px, 90%); height: 1px; background: var(--divider-color); margin: 14px 0 10px; }
+    .fill { width: min(138px, 92%); height: 7px; margin: 11px 0 4px; overflow: hidden; border-radius: 999px; background: color-mix(in srgb, var(--secondary-text-color) 16%, transparent); }
+    .fill-value { height: 100%; border-radius: inherit; background: var(--accent); transition: width .2s ease; }
+    .fill.unavailable .fill-value { width: 0 !important; }
+    .divider { width: min(138px, 92%); height: 1px; background: var(--divider-color); margin: 10px 0 10px; }
     .range-label { color: var(--secondary-text-color); font-size: 13px; }
     .range { color: var(--primary-text-color); font-size: 24px; font-weight: 600; margin-top: 3px; }
     .range small { font-size: .6em; font-weight: 500; }
     .vehicle { grid-area: vehicle; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; align-self: stretch; }
-    .picture { width: 100%; min-height: 180px; display: grid; place-items: center; overflow: hidden; }
-    .picture img { display: block; width: min(100%, 520px); max-height: 205px; object-fit: contain; filter: drop-shadow(0 8px 10px rgba(0,0,0,.16)); }
+    .picture { width: 100%; min-height: 220px; display: grid; place-items: center; overflow: hidden; }
+    .picture img { display: block; width: min(100%, 640px); max-height: 260px; object-fit: contain; filter: drop-shadow(0 9px 12px rgba(0,0,0,.18)); }
     .picture .placeholder { color: var(--secondary-text-color); }
-    .status { min-height: 38px; margin-top: 5px; display: flex; justify-content: center; align-items: center; }
+    .status { min-height: 38px; margin-top: 3px; display: flex; justify-content: center; align-items: center; }
     .status-pill { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 34px; padding: 0 17px; border-radius: 999px; background: color-mix(in srgb, var(--primary-color) 8%, var(--card-background-color)); box-shadow: 0 2px 8px rgba(0,0,0,.08); color: var(--primary-text-color); font-size: 14px; font-weight: 600; white-space: nowrap; }
     .status-pill ha-icon { color: var(--primary-color); --mdc-icon-size: 19px; }
     .status-value { color: var(--success-color, #2eaf5d); font-weight: 600; }
     .message { padding: 16px; color: var(--secondary-text-color); }
-    @media (max-width: 680px) {
-      .hero { grid-template-columns: 1fr 1fr; grid-template-areas: "vehicle vehicle" "battery fuel"; min-height: 0; padding: 14px 14px 18px; gap: 8px 12px; }
-      .picture { min-height: 145px; }
-      .picture img { max-height: 170px; }
+    @container (max-width: 760px) {
+      .hero { grid-template-columns: 1fr 1fr; grid-template-areas: "vehicle vehicle" "battery fuel"; min-height: 0; padding: 14px 16px 18px; gap: 8px 14px; }
+      .picture { min-height: 180px; }
+      .picture img { width: min(100%, 520px); max-height: 215px; }
       .energy { padding: 8px 4px; }
-      .icon { width: 38px; height: 38px; margin-bottom: 6px; }
-      .level { font-size: 34px; }
+      .icon { width: 40px; height: 40px; margin-bottom: 6px; }
+      .level { font-size: 36px; }
       .range { font-size: 21px; }
-      .divider { margin: 10px 0 8px; }
+      .fill { margin-top: 8px; }
+      .divider { margin: 8px 0; }
     }
-    @media (max-width: 410px) {
+    @container (max-width: 430px) {
       .hero { grid-template-columns: 1fr; grid-template-areas: "vehicle" "battery" "fuel"; }
-      .energy { width: 100%; box-sizing: border-box; display: grid; grid-template-columns: 40px 1fr 1fr; grid-template-areas: "icon label rangeLabel" "icon level range"; text-align: left; align-items: center; column-gap: 10px; }
+      .picture { min-height: 150px; }
+      .picture img { max-height: 180px; }
+      .energy { width: 100%; box-sizing: border-box; display: grid; grid-template-columns: 40px 1fr 1fr; grid-template-areas: "icon label rangeLabel" "icon level range" "fill fill fill"; text-align: left; align-items: center; column-gap: 10px; }
       .energy .icon { grid-area: icon; margin: 0; }
       .energy .label { grid-area: label; }
       .energy .level { grid-area: level; font-size: 28px; margin: 0; }
+      .energy .fill { grid-area: fill; width: 100%; margin: 8px 0 2px; }
       .energy .divider { display: none; }
       .energy .range-label { grid-area: rangeLabel; text-align: right; }
       .energy .range { grid-area: range; text-align: right; font-size: 20px; margin: 0; }
@@ -85,11 +93,13 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
   static getConfigElement() { return document.createElement(EDITOR_TAG); }
   static getStubConfig() { return {}; }
   getCardSize() { return 5; }
+  getGridOptions() { return { columns: 12, rows: 5, min_columns: 6, min_rows: 4 }; }
 
   _text() { return textFor(this._hass || {}, "dualEnergyOverview"); }
   _selected() { if (!this._hass) return undefined; const candidates = statusCandidates(this._hass, this._config.entry_id); return candidates.length === 1 ? candidates[0] : undefined; }
   _showMore(entityId) { if (!entityId) return; this.dispatchEvent(new CustomEvent("hass-more-info", { bubbles: true, composed: true, detail: { entityId } })); }
   _formatValue(entityId, digits = 0) { const value = numeric(this._hass?.states?.[entityId]); if (value === null) return "—"; return new Intl.NumberFormat(localeFor(this._hass), { maximumFractionDigits: digits, minimumFractionDigits: digits }).format(value); }
+  _percent(entityId) { return clampPercent(numeric(this._hass?.states?.[entityId])); }
 
   _status(attributes, mapped) {
     const text = this._text();
@@ -134,6 +144,8 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
     const electricRange = this._formatValue(mapped.autonomy, 0);
     const fuel = this._formatValue(mapped.fuel, 0);
     const fuelRange = this._formatValue(mapped.fuel_autonomy, 0);
+    const batteryPercent = this._percent(mapped.battery);
+    const fuelPercent = this._percent(mapped.fuel);
     return html`
       <ha-card>
         <div class="hero">
@@ -141,18 +153,20 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
             <div class="icon"><ha-icon icon="mdi:lightning-bolt"></ha-icon></div>
             <div class="label">${text.battery}</div>
             <div class="level">${battery}<small>${battery === "—" ? "" : " %"}</small></div>
+            <div class="fill ${batteryPercent === null ? "unavailable" : ""}" aria-hidden="true"><div class="fill-value" style=${`width:${batteryPercent ?? 0}%`}></div></div>
             <div class="divider"></div>
             <div class="range-label">${text.electricRange}</div>
             <div class="range">${electricRange}<small>${electricRange === "—" ? "" : " km"}</small></div>
           </div>
           <div class="vehicle">
-            <div class="picture">${picture ? html`<img src=${picture} alt="" />` : html`<ha-icon class="placeholder" icon="mdi:car" style="--mdc-icon-size:92px"></ha-icon>`}</div>
+            <div class="picture">${picture ? html`<img src=${picture} alt="" />` : html`<ha-icon class="placeholder" icon="mdi:car" style="--mdc-icon-size:110px"></ha-icon>`}</div>
             <div class="status">${statusLine ? html`<div class="status-pill"><ha-icon icon=${statusLine.icon}></ha-icon><span>${statusLine.label}</span>${statusLine.value ? html`<span>·</span><span class="status-value">${statusLine.value}</span>` : nothing}</div>` : nothing}</div>
           </div>
           <div class="energy fuel" @click=${() => this._showMore(mapped.fuel)}>
             <div class="icon"><ha-icon icon="mdi:gas-station"></ha-icon></div>
             <div class="label">${text.fuel}</div>
             <div class="level">${fuel}<small>${fuel === "—" ? "" : " %"}</small></div>
+            <div class="fill ${fuelPercent === null ? "unavailable" : ""}" aria-hidden="true"><div class="fill-value" style=${`width:${fuelPercent ?? 0}%`}></div></div>
             <div class="divider"></div>
             <div class="range-label">${text.fuelRange}</div>
             <div class="range">${fuelRange}<small>${fuelRange === "—" ? "" : " km"}</small></div>

@@ -15,7 +15,7 @@ test("frontend runtime is self-contained and pinned", () => {
     assert.doesNotMatch(source, /unpkg\.com/);
   }
   for (const name of ["trip-history-card.js", "charge-history-card.js", "dual-energy-overview-card.js", "fuel-history-card.js"]) {
-    assert.match(fs.readFileSync(new URL(name, staticDir), "utf8"), /vendor-lit\.js\?v=0\.6\.0-beta\.5|vendor-lit\.js\?v=0\.6\.0-beta\.5/);
+    assert.match(fs.readFileSync(new URL(name, staticDir), "utf8"), /vendor-lit\.js\?v=0\.6\.0-beta\.6|vendor-lit\.js\?v=0\.6\.0-beta\.6/);
   }
 });
 
