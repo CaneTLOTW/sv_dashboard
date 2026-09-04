@@ -27,6 +27,10 @@ const isOn = (state) => ["on", "true", "inprogress", "running"].includes(String(
 const usable = (state) => state && !["unknown", "unavailable", "none", ""].includes(String(state.state ?? "").toLowerCase());
 const numeric = (state) => usable(state) && Number.isFinite(Number(state.state)) ? Number(state.state) : null;
 const clampPercent = (value) => value === null ? null : Math.max(0, Math.min(100, value));
+const timestamp = (state) => {
+  const value = Date.parse(state?.last_updated || state?.last_changed || "");
+  return Number.isFinite(value) ? value : null;
+};
 
 class SvDashboardDualEnergyOverviewCard extends LitElement {
   static properties = { _hass: { state: true }, _config: { state: true } };
@@ -34,55 +38,111 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
   static styles = css`
     :host { display: block; }
     ha-card { container-type: inline-size; overflow: hidden; border-radius: var(--ha-card-border-radius, 16px); }
-    .hero { min-height: 320px; display: grid; grid-template-columns: minmax(150px, 1fr) minmax(320px, 2.45fr) minmax(150px, 1fr); grid-template-areas: "battery vehicle fuel"; align-items: center; gap: 20px; padding: 22px 28px 20px; background: radial-gradient(circle at 50% 48%, color-mix(in srgb, var(--primary-color) 5%, transparent), transparent 42%), var(--ha-card-background, var(--card-background-color)); }
-    .energy { min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; cursor: pointer; padding: 8px; border-radius: 16px; transition: background .15s ease; }
+    .hero {
+      position: relative;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-areas: "vehicle vehicle" "battery fuel";
+      align-items: start;
+      gap: 2px 30px;
+      padding: 18px 30px 24px;
+      background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--primary-color) 5%, transparent), transparent 43%), var(--ha-card-background, var(--card-background-color));
+    }
+    .vehicle { grid-area: vehicle; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: 2px; }
+    .picture { width: 100%; min-height: 248px; display: grid; place-items: center; overflow: hidden; }
+    .picture img { display: block; width: min(100%, 760px); max-height: 310px; object-fit: contain; transform: scale(1.18); transform-origin: center; filter: drop-shadow(0 10px 14px rgba(0,0,0,.18)); }
+    .picture .placeholder { color: var(--secondary-text-color); }
+    .top-control { position: absolute; z-index: 5; top: 18px; }
+    .climate-control {
+      left: 18px;
+      width: 48px;
+      height: 48px;
+      border: 1px solid var(--divider-color);
+      border-radius: 50%;
+      background: color-mix(in srgb, var(--card-background-color) 92%, transparent);
+      color: var(--primary-text-color);
+      display: grid;
+      grid-template-rows: 27px 13px;
+      place-items: center;
+      padding: 4px 0 3px;
+      font: inherit;
+      cursor: pointer;
+      box-shadow: 0 2px 9px rgba(0,0,0,.10);
+    }
+    .climate-control ha-icon { --mdc-icon-size: 22px; color: var(--primary-color); }
+    .climate-control span { font-size: 10px; font-weight: 700; line-height: 1; }
+    .climate-control.active { background: color-mix(in srgb, var(--primary-color) 13%, var(--card-background-color)); border-color: color-mix(in srgb, var(--primary-color) 32%, var(--divider-color)); }
+    .temperature-badge {
+      right: 18px;
+      min-height: 36px;
+      padding: 0 12px;
+      border: 1px solid var(--divider-color);
+      border-radius: 13px;
+      background: color-mix(in srgb, var(--card-background-color) 92%, transparent);
+      color: var(--primary-text-color);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      box-shadow: 0 2px 9px rgba(0,0,0,.07);
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .temperature-badge ha-icon { --mdc-icon-size: 18px; color: var(--secondary-text-color); }
+    .status { min-height: 8px; margin-top: -2px; display: flex; justify-content: center; align-items: center; }
+    .status:not(:empty) { min-height: 34px; margin-bottom: 5px; }
+    .status-pill { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 32px; padding: 0 15px; border-radius: 999px; background: color-mix(in srgb, var(--primary-color) 9%, var(--card-background-color)); box-shadow: 0 2px 8px rgba(0,0,0,.07); color: var(--primary-text-color); font-size: 13px; font-weight: 600; white-space: nowrap; }
+    .status-pill ha-icon { color: var(--primary-color); --mdc-icon-size: 18px; }
+    .energy { min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; text-align: center; cursor: pointer; padding: 8px 8px 4px; border-radius: 16px; transition: background .15s ease; }
     .energy:hover { background: color-mix(in srgb, var(--primary-color) 6%, transparent); }
     .energy.battery { grid-area: battery; --accent: var(--success-color, #2eaf5d); }
-    .energy.fuel { grid-area: fuel; --accent: var(--warning-color, #ef6c00); }
-    .icon { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--accent) 11%, transparent); color: var(--accent); margin-bottom: 10px; }
+    .energy.battery.active { --accent: var(--primary-color, #2196f3); }
+    .energy.fuel { grid-area: fuel; --accent: var(--warning-color, #ef8b00); }
+    .icon { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--accent) 11%, transparent); color: var(--accent); margin-bottom: 8px; }
     .icon ha-icon { --mdc-icon-size: 25px; }
-    .label { color: var(--primary-text-color); font-size: 15px; font-weight: 600; }
-    .level { margin-top: 5px; color: var(--accent); font-size: clamp(36px, 4.2cqw, 52px); font-weight: 600; letter-spacing: -.02em; line-height: 1.05; }
+    .label { color: var(--primary-text-color); font-size: 15px; font-weight: 650; }
+    .level { margin-top: 5px; color: var(--accent); font-size: clamp(38px, 6.4cqw, 54px); font-weight: 650; letter-spacing: -.02em; line-height: 1.04; }
     .level small { font-size: .58em; font-weight: 500; }
-    .fill { width: min(138px, 92%); height: 7px; margin: 11px 0 4px; overflow: hidden; border-radius: 999px; background: color-mix(in srgb, var(--secondary-text-color) 16%, transparent); }
+    .fill { width: min(170px, 94%); height: 7px; margin: 11px 0 4px; overflow: visible; border-radius: 999px; background: color-mix(in srgb, var(--secondary-text-color) 16%, transparent); }
     .fill-value { height: 100%; border-radius: inherit; background: var(--accent); transition: width .2s ease; }
     .fill.unavailable .fill-value { width: 0 !important; }
-    .divider { width: min(138px, 92%); height: 1px; background: var(--divider-color); margin: 10px 0 10px; }
-    .range-label { color: var(--secondary-text-color); font-size: 13px; }
-    .range { color: var(--primary-text-color); font-size: 24px; font-weight: 600; margin-top: 3px; }
-    .range small { font-size: .6em; font-weight: 500; }
-    .vehicle { grid-area: vehicle; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; align-self: stretch; }
-    .picture { width: 100%; min-height: 220px; display: grid; place-items: center; overflow: hidden; }
-    .picture img { display: block; width: min(100%, 640px); max-height: 260px; object-fit: contain; filter: drop-shadow(0 9px 12px rgba(0,0,0,.18)); }
-    .picture .placeholder { color: var(--secondary-text-color); }
-    .status { min-height: 38px; margin-top: 3px; display: flex; justify-content: center; align-items: center; }
-    .status-pill { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 34px; padding: 0 17px; border-radius: 999px; background: color-mix(in srgb, var(--primary-color) 8%, var(--card-background-color)); box-shadow: 0 2px 8px rgba(0,0,0,.08); color: var(--primary-text-color); font-size: 14px; font-weight: 600; white-space: nowrap; }
-    .status-pill ha-icon { color: var(--primary-color); --mdc-icon-size: 19px; }
-    .status-value { color: var(--success-color, #2eaf5d); font-weight: 600; }
+    .battery.charging .fill-value { animation: svHeroChargePulse 1.5s ease-in-out infinite; }
+    .divider { width: min(170px, 94%); height: 1px; background: var(--divider-color); margin: 10px 0 10px; }
+    .detail-label { color: var(--secondary-text-color); font-size: 13px; }
+    .detail-value { color: var(--primary-text-color); font-size: 24px; font-weight: 650; margin-top: 3px; white-space: nowrap; }
+    .detail-value small { font-size: .6em; font-weight: 500; }
     .message { padding: 16px; color: var(--secondary-text-color); }
+    @keyframes svHeroChargePulse {
+      0%, 100% { filter: brightness(1); box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary-color) 12%, transparent); }
+      50% { filter: brightness(1.18); box-shadow: 0 0 15px 4px color-mix(in srgb, var(--primary-color) 52%, transparent); }
+    }
     @container (max-width: 760px) {
-      .hero { grid-template-columns: 1fr 1fr; grid-template-areas: "vehicle vehicle" "battery fuel"; min-height: 0; padding: 14px 16px 18px; gap: 8px 14px; }
-      .picture { min-height: 180px; }
-      .picture img { width: min(100%, 520px); max-height: 215px; }
-      .energy { padding: 8px 4px; }
+      .hero { padding: 14px 16px 18px; gap: 0 14px; }
+      .picture { min-height: 220px; }
+      .picture img { width: min(108%, 620px); max-height: 270px; transform: scale(1.28); }
+      .top-control { top: 12px; }
+      .climate-control { left: 12px; width: 44px; height: 44px; }
+      .temperature-badge { right: 12px; min-height: 34px; padding: 0 10px; }
+      .energy { padding: 7px 4px 3px; }
       .icon { width: 40px; height: 40px; margin-bottom: 6px; }
-      .level { font-size: 36px; }
-      .range { font-size: 21px; }
+      .level { font-size: 38px; }
+      .detail-value { font-size: 21px; }
       .fill { margin-top: 8px; }
       .divider { margin: 8px 0; }
     }
     @container (max-width: 430px) {
       .hero { grid-template-columns: 1fr; grid-template-areas: "vehicle" "battery" "fuel"; }
-      .picture { min-height: 150px; }
-      .picture img { max-height: 180px; }
-      .energy { width: 100%; box-sizing: border-box; display: grid; grid-template-columns: 40px 1fr 1fr; grid-template-areas: "icon label rangeLabel" "icon level range" "fill fill fill"; text-align: left; align-items: center; column-gap: 10px; }
+      .picture { min-height: 175px; }
+      .picture img { max-height: 205px; transform: scale(1.15); }
+      .energy { width: 100%; box-sizing: border-box; display: grid; grid-template-columns: 40px 1fr 1fr; grid-template-areas: "icon label detailLabel" "icon level detailValue" "fill fill fill"; text-align: left; align-items: center; column-gap: 10px; }
       .energy .icon { grid-area: icon; margin: 0; }
       .energy .label { grid-area: label; }
-      .energy .level { grid-area: level; font-size: 28px; margin: 0; }
+      .energy .level { grid-area: level; font-size: 29px; margin: 0; }
       .energy .fill { grid-area: fill; width: 100%; margin: 8px 0 2px; }
       .energy .divider { display: none; }
-      .energy .range-label { grid-area: rangeLabel; text-align: right; }
-      .energy .range { grid-area: range; text-align: right; font-size: 20px; margin: 0; }
+      .energy .detail-label { grid-area: detailLabel; text-align: right; }
+      .energy .detail-value { grid-area: detailValue; text-align: right; font-size: 19px; margin: 0; }
     }
   `;
 
@@ -101,28 +161,48 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
   _formatValue(entityId, digits = 0) { const value = numeric(this._hass?.states?.[entityId]); if (value === null) return "—"; return new Intl.NumberFormat(localeFor(this._hass), { maximumFractionDigits: digits, minimumFractionDigits: digits }).format(value); }
   _percent(entityId) { return clampPercent(numeric(this._hass?.states?.[entityId])); }
 
-  _status(attributes, mapped) {
-    const text = this._text();
+  _mode(attributes, mapped) {
     const state = (id) => this._hass?.states?.[id];
     const charging = isOn(state(mapped.battery_charging)?.state);
-    const engine = isOn(state(mapped.engine)?.state);
+    const driving = isOn(state(mapped.engine)?.state);
     const plugged = isOn(state(mapped.battery_plugged)?.state);
-    const chargePower = metricEntity(this._hass, attributes, "current_charge_power");
-    const tripConsumption = metricEntity(this._hass, attributes, "current_trip_consumption");
-    if (charging) {
-      const power = numeric(state(chargePower));
-      return { icon: "mdi:battery-charging", label: text.charging, value: power === null ? "" : `${this._formatValue(chargePower, 1)} kW` };
-    }
-    if (engine) {
-      const values = [];
-      const electricConsumption = numeric(state(tripConsumption));
-      const fuelConsumption = numeric(state(mapped.fuel_consumption_instant));
-      if (electricConsumption !== null) values.push(`${this._formatValue(tripConsumption, 1)} kWh/100 km`);
-      if (fuelConsumption !== null) values.push(`${this._formatValue(mapped.fuel_consumption_instant, 1)} l/100 km`);
-      return { icon: "mdi:car", label: text.driving, value: values.join(" · ") };
-    }
-    if (plugged) return { icon: "mdi:ev-plug-type2", label: text.plugged, value: "" };
+    return {
+      name: charging ? "charging" : driving ? "driving" : plugged ? "plugged" : "idle",
+      charging,
+      driving,
+      plugged,
+      chargePower: metricEntity(this._hass, attributes, "current_charge_power"),
+      tripEnergy: metricEntity(this._hass, attributes, "current_trip_energy"),
+    };
+  }
+
+  _status(mode) {
+    const text = this._text();
+    if (mode.charging) return { icon: "mdi:battery-charging", label: mode.plugged ? `${text.charging} · ${text.plugged}` : text.charging };
+    if (mode.driving) return { icon: "mdi:car", label: text.driving };
+    if (mode.plugged) return { icon: "mdi:ev-plug-type2", label: text.plugged };
     return null;
+  }
+
+  _fuelConsumptionEntity(mapped, mode) {
+    if (!mode.driving || !mapped.fuel_consumption_instant) return null;
+    const fuelState = this._hass?.states?.[mapped.fuel_consumption_instant];
+    const engineState = this._hass?.states?.[mapped.engine];
+    if (numeric(fuelState) === null) return null;
+    const updated = timestamp(fuelState);
+    const started = timestamp({ last_updated: engineState?.last_changed, last_changed: engineState?.last_changed });
+    if (started !== null && (updated === null || updated < started)) return null;
+    if (updated !== null && Date.now() - updated > 30 * 60 * 1000) return null;
+    return mapped.fuel_consumption_instant;
+  }
+
+  _toggleClimate(mapped) {
+    const start = mapped.preconditioning_start;
+    const stop = mapped.preconditioning_stop;
+    const active = isOn(this._hass?.states?.[mapped.preconditioning]?.state);
+    const target = active && stop ? stop : start;
+    if (!target || !this._hass?.callService) return;
+    this._hass.callService("button", "press", { entity_id: target });
   }
 
   render() {
@@ -134,43 +214,82 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
       const message = all.length > 1 && !this._config.entry_id ? text.multipleVehicles : this._config.entry_id ? text.unavailable : text.noInstance;
       return html`<ha-card><div class="message">${message}</div></ha-card>`;
     }
+
     const [, status] = selected;
     const attributes = status.attributes || {};
     const mapped = attributes.entity_mapping || {};
     const tracker = attributes.vehicle_tracker;
     const picture = tracker ? this._hass.states?.[tracker]?.attributes?.entity_picture : undefined;
-    const statusLine = this._status(attributes, mapped);
+    const mode = this._mode(attributes, mapped);
+    const statusLine = this._status(mode);
+
     const battery = this._formatValue(mapped.battery, 0);
     const electricRange = this._formatValue(mapped.autonomy, 0);
     const fuel = this._formatValue(mapped.fuel, 0);
     const fuelRange = this._formatValue(mapped.fuel_autonomy, 0);
     const batteryPercent = this._percent(mapped.battery);
     const fuelPercent = this._percent(mapped.fuel);
+
+    let batteryDetailLabel = text.electricRange;
+    let batteryDetailValue = electricRange;
+    let batteryDetailUnit = electricRange === "—" ? "" : " km";
+    if (mode.charging) {
+      batteryDetailLabel = text.chargePower;
+      batteryDetailValue = this._formatValue(mode.chargePower, 1);
+      batteryDetailUnit = batteryDetailValue === "—" ? "" : " kW";
+    } else if (mode.driving) {
+      batteryDetailLabel = text.tripEnergy;
+      batteryDetailValue = this._formatValue(mode.tripEnergy, 1);
+      batteryDetailUnit = batteryDetailValue === "—" ? "" : " kWh";
+    }
+
+    const fuelConsumptionEntity = this._fuelConsumptionEntity(mapped, mode);
+    const fuelDetailLabel = fuelConsumptionEntity ? text.fuelConsumption : text.fuelRange;
+    const fuelDetailValue = fuelConsumptionEntity ? this._formatValue(fuelConsumptionEntity, 1) : fuelRange;
+    const fuelDetailUnit = fuelDetailValue === "—" ? "" : fuelConsumptionEntity ? " l/100 km" : " km";
+
+    const temperature = this._formatValue(mapped.temperature, 0);
+    const temperatureUnit = this._hass.states?.[mapped.temperature]?.attributes?.unit_of_measurement || "°C";
+    const climateActive = isOn(this._hass.states?.[mapped.preconditioning]?.state);
+    const temperatureNumber = numeric(this._hass.states?.[mapped.temperature]);
+    const climateIcon = climateActive && temperatureNumber !== null && temperatureNumber <= 20 ? "mdi:radiator" : "mdi:air-conditioner";
+
     return html`
       <ha-card>
         <div class="hero">
-          <div class="energy battery" @click=${() => this._showMore(mapped.battery)}>
-            <div class="icon"><ha-icon icon="mdi:lightning-bolt"></ha-icon></div>
-            <div class="label">${text.battery}</div>
-            <div class="level">${battery}<small>${battery === "—" ? "" : " %"}</small></div>
-            <div class="fill ${batteryPercent === null ? "unavailable" : ""}" aria-hidden="true"><div class="fill-value" style=${`width:${batteryPercent ?? 0}%`}></div></div>
-            <div class="divider"></div>
-            <div class="range-label">${text.electricRange}</div>
-            <div class="range">${electricRange}<small>${electricRange === "—" ? "" : " km"}</small></div>
-          </div>
-          <div class="vehicle">
-            <div class="picture">${picture ? html`<img src=${picture} alt="" />` : html`<ha-icon class="placeholder" icon="mdi:car" style="--mdc-icon-size:110px"></ha-icon>`}</div>
-            <div class="status">${statusLine ? html`<div class="status-pill"><ha-icon icon=${statusLine.icon}></ha-icon><span>${statusLine.label}</span>${statusLine.value ? html`<span>·</span><span class="status-value">${statusLine.value}</span>` : nothing}</div>` : nothing}</div>
-          </div>
-          <div class="energy fuel" @click=${() => this._showMore(mapped.fuel)}>
-            <div class="icon"><ha-icon icon="mdi:gas-station"></ha-icon></div>
-            <div class="label">${text.fuel}</div>
-            <div class="level">${fuel}<small>${fuel === "—" ? "" : " %"}</small></div>
-            <div class="fill ${fuelPercent === null ? "unavailable" : ""}" aria-hidden="true"><div class="fill-value" style=${`width:${fuelPercent ?? 0}%`}></div></div>
-            <div class="divider"></div>
-            <div class="range-label">${text.fuelRange}</div>
-            <div class="range">${fuelRange}<small>${fuelRange === "—" ? "" : " km"}</small></div>
-          </div>
+${mapped.preconditioning_start ? html`
+  <button class="top-control climate-control ${climateActive ? "active" : ""}" type="button" aria-label="AC" title="AC" @click=${(event) => { event.stopPropagation(); this._toggleClimate(mapped); }}>
+    <ha-icon icon=${climateIcon}></ha-icon><span>AC</span>
+  </button>` : nothing}
+${mapped.temperature ? html`
+  <button class="top-control temperature-badge" type="button" @click=${(event) => { event.stopPropagation(); this._showMore(mapped.temperature); }}>
+    <ha-icon icon="mdi:thermometer"></ha-icon><span>${temperature}${temperature === "—" ? "" : ` ${temperatureUnit}`}</span>
+  </button>` : nothing}
+
+<div class="vehicle">
+  <div class="picture">${picture ? html`<img src=${picture} alt="" />` : html`<ha-icon class="placeholder" icon="mdi:car" style="--mdc-icon-size:110px"></ha-icon>`}</div>
+  <div class="status">${statusLine ? html`<div class="status-pill"><ha-icon icon=${statusLine.icon}></ha-icon><span>${statusLine.label}</span></div>` : nothing}</div>
+</div>
+
+<div class="energy battery ${mode.charging || mode.driving ? "active" : ""} ${mode.charging ? "charging" : ""}" @click=${() => this._showMore(mapped.battery)}>
+  <div class="icon"><ha-icon icon="mdi:lightning-bolt"></ha-icon></div>
+  <div class="label">${text.battery}</div>
+  <div class="level">${battery}<small>${battery === "—" ? "" : " %"}</small></div>
+  <div class="fill ${batteryPercent === null ? "unavailable" : ""}" aria-hidden="true"><div class="fill-value" style=${`width:${batteryPercent ?? 0}%`}></div></div>
+  <div class="divider"></div>
+  <div class="detail-label">${batteryDetailLabel}</div>
+  <div class="detail-value">${batteryDetailValue}<small>${batteryDetailUnit}</small></div>
+</div>
+
+<div class="energy fuel" @click=${() => this._showMore(mapped.fuel)}>
+  <div class="icon"><ha-icon icon="mdi:gas-station"></ha-icon></div>
+  <div class="label">${text.fuel}</div>
+  <div class="level">${fuel}<small>${fuel === "—" ? "" : " %"}</small></div>
+  <div class="fill ${fuelPercent === null ? "unavailable" : ""}" aria-hidden="true"><div class="fill-value" style=${`width:${fuelPercent ?? 0}%`}></div></div>
+  <div class="divider"></div>
+  <div class="detail-label">${fuelDetailLabel}</div>
+  <div class="detail-value">${fuelDetailValue}<small>${fuelDetailUnit}</small></div>
+</div>
         </div>
       </ha-card>`;
   }
