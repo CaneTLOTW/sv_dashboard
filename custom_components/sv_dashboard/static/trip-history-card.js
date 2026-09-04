@@ -1,5 +1,5 @@
-import { LitElement, html, css, nothing } from "./vendor-lit.js?v=0.6.0-beta.6";
-import { localeFor, textFor } from "./i18n.js?v=0.6.0-beta.6";
+import { LitElement, html, css, nothing } from "./vendor-lit.js?v=0.6.0-beta.7";
+import { localeFor, textFor } from "./i18n.js?v=0.6.0-beta.7";
 
 /**
  * Standalone Lovelace card for the historic Stellantis "last trip" sensor.

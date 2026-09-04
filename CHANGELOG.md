@@ -4,6 +4,15 @@ All notable user-facing changes to SV Dashboard are recorded here.
 
 SV Dashboard uses semantic package versions. `develop` is the integration/acceptance branch; `main` represents the last explicitly accepted publishable state.
 
+## 0.6.0-beta.7 dynamic Dual-Energy hero
+
+- Enlarged the vehicle hero and reduced unused whitespace in the wide Battery/Fuel overview.
+- Added mapped preconditioning/AC control at the top-left and live vehicle temperature at the top-right.
+- Battery presentation is state-driven: green EV range while idle, blue current-trip energy in kWh while driving, and a blue pulsing charge-power view while charging.
+- The driving hero deliberately uses current-trip energy, not a synthesized kWh/100 km value.
+- Hybrid Fuel can show current upstream l/100 km while driving only when that value was refreshed during the current drive; otherwise Fuel range remains visible.
+- Preserved neutral missing-Fuel values for EV owner QA and extended all 18 frontend languages for the new hero labels.
+
 ## 0.6.0-beta.6 owner visual QA
 
 - Fixed dual-energy hero clipping when Home Assistant placed the card in a narrow grid cell.
