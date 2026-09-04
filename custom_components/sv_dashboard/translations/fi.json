@@ -52,6 +52,9 @@
   },
   "entity": {
     "sensor": {
+      "dashboard_status": {
+        "name": "Koontinäytön tila"
+      },
       "server_trip_history": {
         "name": "Palvelimen ajohistoria"
       },
