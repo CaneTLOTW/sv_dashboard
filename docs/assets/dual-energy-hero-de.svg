@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="560" viewBox="0 0 480 560" role="img" aria-labelledby="title desc">
+  <title id="title">SV Dashboard Dual-Energy Hero – Deutsch</title>
+  <desc id="desc">Dokumentationsdarstellung der nativen Dual-Energy-Fahrzeugübersicht mit Batterie und Kraftstoff.</desc>
+  <rect width="480" height="560" rx="18" fill="#f4f4f5"/>
+  <circle cx="32" cy="31" r="20" fill="#fff" stroke="#d9d9dc"/>
+  <path d="M27 21v20M20 28l14 6M34 28l-14 6" stroke="#4f7394" stroke-width="2" stroke-linecap="round"/>
+  <rect x="395" y="16" width="68" height="31" rx="12" fill="#fff" stroke="#d9d9dc"/>
+  <path d="M411 25v13M408 28h6" stroke="#6e6e73" stroke-width="1.8" stroke-linecap="round"/>
+  <text x="424" y="37" font-family="Arial,sans-serif" font-size="14" font-weight="600" fill="#222">16 °C</text>
+
+  <g transform="translate(58 82)">
+    <ellipse cx="184" cy="171" rx="166" ry="22" fill="#000" opacity=".08"/>
+    <path d="M40 140c11-31 30-53 62-72 28-17 61-29 98-31l82 1c17 1 33 8 47 20l27 24c10 9 16 20 18 33l4 26-16 7-24-4-11-26c-4-10-12-15-23-15H95c-12 0-21 6-25 17l-8 21-22-1z" fill="#507daa" stroke="#2d5e8d" stroke-width="3"/>
+    <path d="M118 64c26-13 54-20 84-20h77c15 0 28 6 40 17l18 17H98c6-5 13-10 20-14z" fill="#dce7f1" opacity=".92"/>
+    <circle cx="100" cy="143" r="25" fill="#27282a"/><circle cx="100" cy="143" r="12" fill="#bcc2c8"/>
+    <circle cx="316" cy="143" r="25" fill="#27282a"/><circle cx="316" cy="143" r="12" fill="#bcc2c8"/>
+    <rect x="224" y="90" width="47" height="30" rx="5" fill="#376c9d"/>
+    <circle cx="342" cy="97" r="7" fill="#f0f2f5" opacity=".9"/>
+  </g>
+
+  <g transform="translate(0 328)" font-family="Arial,sans-serif" text-anchor="middle">
+    <circle cx="126" cy="26" r="20" fill="#dfeee5"/><text x="126" y="34" font-size="25" fill="#3a9660">⚡</text>
+    <circle cx="354" cy="26" r="20" fill="#f9ead6"/><text x="354" y="34" font-size="23" fill="#df8b2f">⛽</text>
+    <text x="126" y="66" font-size="16" font-weight="600" fill="#333">Batterie</text>
+    <text x="354" y="66" font-size="16" font-weight="600" fill="#333">Kraftstoff</text>
+    <text x="126" y="108" font-size="39" font-weight="700" fill="#3a9660">82<tspan font-size="20" font-weight="500"> %</tspan></text>
+    <text x="354" y="108" font-size="39" font-weight="700" fill="#df8b2f">55<tspan font-size="20" font-weight="500"> %</tspan></text>
+    <rect x="41" y="129" width="170" height="7" rx="4" fill="#d7d7da"/><rect x="41" y="129" width="139" height="7" rx="4" fill="#48a66d"/>
+    <rect x="269" y="129" width="170" height="7" rx="4" fill="#d7d7da"/><rect x="269" y="129" width="94" height="7" rx="4" fill="#e69436"/>
+    <line x1="41" y1="155" x2="211" y2="155" stroke="#d0d0d3"/><line x1="269" y1="155" x2="439" y2="155" stroke="#d0d0d3"/>
+    <text x="126" y="183" font-size="13" fill="#777">E-Reichweite</text>
+    <text x="354" y="183" font-size="13" fill="#777">Kraftstoffreichweite</text>
+    <text x="126" y="214" font-size="22" font-weight="650" fill="#333">242 <tspan font-size="13">km</tspan></text>
+    <text x="354" y="214" font-size="22" font-weight="650" fill="#333">365 <tspan font-size="13">km</tspan></text>
+  </g>
+</svg>
