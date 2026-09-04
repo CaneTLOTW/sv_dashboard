@@ -19,6 +19,7 @@ const runtimeSource = read("../custom_components/sv_dashboard/static/i18n.js");
 const trip = read("../custom_components/sv_dashboard/static/trip-history-card.js");
 const charge = read("../custom_components/sv_dashboard/static/charge-history-card.js");
 const vehicle = read("../custom_components/sv_dashboard/static/vehicle-overview-card.js");
+const dualEnergy = read("../custom_components/sv_dashboard/static/dual-energy-overview-card.js");
 const strategy = read("../custom_components/sv_dashboard/static/sv_dashboard.js");
 
 const LANGUAGES = [
@@ -135,6 +136,20 @@ test("localized custom cards consume catalog keys instead of hard-coded German U
   assert.match(charge, /text\.reconstructedHint/);
   assert.match(vehicle, /textFor\(hass, "vehicleOverview"\)/);
   assert.doesNotMatch(vehicle, /Wird geladen|In Fahrt|mehrere Fahrzeuge gefunden|Fahrzeug auswählen/);
+});
+
+test("dual-energy hero follows the shared 18-language runtime contract", () => {
+  assert.match(dualEnergy, /_i18nContext\(\)/);
+  assert.match(dualEnergy, /textFor\(this\._i18nContext\(\), "dualEnergyOverview"\)/);
+  assert.match(dualEnergy, /textFor\(this\._i18nContext\(\), "dashboard"\)/);
+  assert.match(dualEnergy, /localeFor\(this\._i18nContext\(\)\)/);
+  assert.match(dualEnergy, /dashboardText\.climate/);
+  assert.match(dualEnergy, /const fallback = \(index\) => `\$\{text\.vehicle\} \$\{index \+ 1\}`/);
+  for (const key of ["battery", "fuel", "electricRange", "fuelRange", "tripEnergy", "chargePower", "fuelConsumption", "charging", "driving", "plugged"]) {
+    assert.match(dualEnergy, new RegExp(`text\\.${key}`), `dual energy card does not consume ${key}`);
+  }
+  assert.doesNotMatch(dualEnergy, /aria-label="AC"|title="AC"|`Vehicle \$\{index \+ 1\}`/);
+  assert.doesNotMatch(dualEnergy, /E-Reichweite|Tankreichweite|Ladeleistung|Kraftstoffverbrauch|In Fahrt|Eingesteckt/);
 });
 
 test("dashboard strategy uses catalog strings without binary German branches", () => {
