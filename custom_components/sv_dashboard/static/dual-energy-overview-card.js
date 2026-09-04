@@ -51,7 +51,7 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
     }
     .vehicle { grid-area: vehicle; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: 2px; }
     .picture { width: 100%; min-height: 248px; display: grid; place-items: center; overflow: hidden; }
-    .picture img { display: block; width: min(100%, 760px); max-height: 310px; object-fit: contain; transform: scale(1.18); transform-origin: center; filter: drop-shadow(0 10px 14px rgba(0,0,0,.18)); }
+    .picture img { display: block; width: min(100%, 760px); max-height: 310px; object-fit: contain; transform: scale(1.24); transform-origin: center; filter: drop-shadow(0 10px 14px rgba(0,0,0,.18)); }
     .picture .placeholder { color: var(--secondary-text-color); }
     .top-control { position: absolute; z-index: 5; top: 18px; }
     .climate-control {
@@ -63,15 +63,13 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
       background: color-mix(in srgb, var(--card-background-color) 92%, transparent);
       color: var(--primary-text-color);
       display: grid;
-      grid-template-rows: 27px 13px;
       place-items: center;
-      padding: 4px 0 3px;
+      padding: 0;
       font: inherit;
       cursor: pointer;
       box-shadow: 0 2px 9px rgba(0,0,0,.10);
     }
-    .climate-control ha-icon { --mdc-icon-size: 22px; color: var(--primary-color); }
-    .climate-control span { font-size: 10px; font-weight: 700; line-height: 1; }
+    .climate-control ha-icon { --mdc-icon-size: 24px; color: var(--primary-color); }
     .climate-control.active { background: color-mix(in srgb, var(--primary-color) 13%, var(--card-background-color)); border-color: color-mix(in srgb, var(--primary-color) 32%, var(--divider-color)); }
     .temperature-badge {
       right: 18px;
@@ -120,7 +118,7 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
     @container (max-width: 760px) {
       .hero { padding: 14px 16px 18px; gap: 0 14px; }
       .picture { min-height: 220px; }
-      .picture img { width: min(108%, 620px); max-height: 270px; transform: scale(1.28); }
+      .picture img { width: min(108%, 620px); max-height: 270px; transform: scale(1.38); }
       .top-control { top: 12px; }
       .climate-control { left: 12px; width: 44px; height: 44px; }
       .temperature-badge { right: 12px; min-height: 34px; padding: 0 10px; }
@@ -134,7 +132,7 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
     @container (max-width: 430px) {
       .hero { grid-template-columns: 1fr; grid-template-areas: "vehicle" "battery" "fuel"; }
       .picture { min-height: 175px; }
-      .picture img { max-height: 205px; transform: scale(1.15); }
+      .picture img { max-height: 205px; transform: scale(1.22); }
       .energy { width: 100%; box-sizing: border-box; display: grid; grid-template-columns: 40px 1fr 1fr; grid-template-areas: "icon label detailLabel" "icon level detailValue" "fill fill fill"; text-align: left; align-items: center; column-gap: 10px; }
       .energy .icon { grid-area: icon; margin: 0; }
       .energy .label { grid-area: label; }
@@ -259,7 +257,7 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
         <div class="hero">
 ${mapped.preconditioning_start ? html`
   <button class="top-control climate-control ${climateActive ? "active" : ""}" type="button" aria-label="AC" title="AC" @click=${(event) => { event.stopPropagation(); this._toggleClimate(mapped); }}>
-    <ha-icon icon=${climateIcon}></ha-icon><span>AC</span>
+    <ha-icon icon=${climateIcon}></ha-icon>
   </button>` : nothing}
 ${mapped.temperature ? html`
   <button class="top-control temperature-badge" type="button" @click=${(event) => { event.stopPropagation(); this._showMore(mapped.temperature); }}>
