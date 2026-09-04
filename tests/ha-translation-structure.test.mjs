@@ -46,6 +46,23 @@ test("all HA menu surfaces are represented in every catalog", () => {
   }
 });
 
+test("dashboard status has a localized HA entity name in all 18 catalogs", () => {
+  for (const language of languages) {
+    const name = load(`translations/${language}.json`).entity.sensor.dashboard_status?.name;
+    assert.equal(typeof name, "string", `missing ${language} dashboard status name`);
+    assert.ok(name.trim(), `empty ${language} dashboard status name`);
+  }
+  assert.equal(load("translations/fr.json").entity.sensor.dashboard_status.name, "Statut du tableau de bord");
+});
+
+test("French derived-entity wording is explicit about energy use and SV-local provenance", () => {
+  const sensor = load("translations/fr.json").entity.sensor;
+  assert.equal(sensor.current_trip_energy.name, "Énergie consommée sur le trajet en cours");
+  assert.equal(sensor.last_trip_result.name, "Dernier trajet enregistré par SV Dashboard");
+  assert.equal(sensor.last_charge_result.name, "Dernière recharge enregistrée par SV Dashboard");
+  assert.equal(sensor.trailing_consumption_500km.name, "Consommation moyenne (500 km)");
+});
+
 test("upstream readiness does not require a universal battery entity", () => {
   assert.equal(english.config.error.upstream_not_ready, "Finish Stellantis Vehicles setup and wait for mileage and tracker entities.");
   for (const language of languages) {
