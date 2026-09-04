@@ -7,6 +7,20 @@ const REQUIRED_ELEMENTS = [
 ];
 const DEPENDENCY_GRACE_MS = 10000;
 
+/*
+ * Only intentionally user-addable SV cards belong in Home Assistant's normal
+ * Add-card picker. The generated dashboard still uses the internal elements
+ * below directly, so their customElements registrations stay untouched.
+ */
+const INTERNAL_CARD_TYPES = new Set([
+  "sv-dashboard-trip-history-card",
+  "sv-dashboard-charge-history-card",
+  "sv-dashboard-charge-curve-card",
+  "sv-dashboard-charge-curve-browser-card",
+  "sv-dashboard-gps-date-card",
+  "sv-dashboard-gps-map-card",
+]);
+
 const waitForElement = async ([tag, name]) => {
   if (customElements.get(tag)) return { tag, name, ready: true };
   let timeoutId;
@@ -80,5 +94,8 @@ const packageModules = Promise.all([
 const dependencyReadiness = Promise.all(REQUIRED_ELEMENTS.map(waitForElement));
 
 await packageModules;
+window.customCards = (window.customCards || []).filter(
+  (card) => !INTERNAL_CARD_TYPES.has(card?.type),
+);
 window.__svDashboardDependencyReadiness = await dependencyReadiness;
 await import("./sv_dashboard.js?v=0.6.0-beta.7");
