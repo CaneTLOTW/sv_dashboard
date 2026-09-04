@@ -26,13 +26,19 @@ for (const catalog of [WESTERN_ADVANCED, NORTHERN_ADVANCED, EASTERN_ADVANCED]) {
   }
 }
 
-// Public Home Assistant card-picker names are intentionally owned by the
-// shared i18n layer. Keep the compact universal overview clearly distinct from
-// the wide Battery + Fuel / Dual-Energy overview in every supported language.
-const PUBLIC_CARD_NAMES = {
+// Public Home Assistant card-picker names and the small set of owner-reviewed
+// public-surface terminology corrections are intentionally applied in the
+// shared composition layer. Card modules therefore remain language-neutral and
+// consume one resolved 18-language runtime catalog.
+const PUBLIC_CARD_TEXT = {
   de: {
     compact: "SV Fahrzeugübersicht (kompakt)",
     dualEnergy: "SV Fahrzeugübersicht – Dual Energy",
+    dualEnergyTerms: {
+      fuel: "Kraftstoff",
+      fuelRange: "Kraftstoffreichweite",
+      tripEnergy: "Verbraucht",
+    },
   },
   en: {
     compact: "SV vehicle overview (compact)",
@@ -104,12 +110,15 @@ const PUBLIC_CARD_NAMES = {
   },
 };
 
-for (const [language, names] of Object.entries(PUBLIC_CARD_NAMES)) {
+for (const [language, surface] of Object.entries(PUBLIC_CARD_TEXT)) {
   if (FRONTEND_TEXT.vehicleOverview?.[language]) {
-    FRONTEND_TEXT.vehicleOverview[language].cardName = names.compact;
+    FRONTEND_TEXT.vehicleOverview[language].cardName = surface.compact;
   }
   if (FRONTEND_TEXT.dualEnergyOverview?.[language]) {
-    FRONTEND_TEXT.dualEnergyOverview[language].cardName = names.dualEnergy;
+    FRONTEND_TEXT.dualEnergyOverview[language].cardName = surface.dualEnergy;
+    if (surface.dualEnergyTerms) {
+      Object.assign(FRONTEND_TEXT.dualEnergyOverview[language], surface.dualEnergyTerms);
+    }
   }
 }
 
