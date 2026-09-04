@@ -95,6 +95,14 @@ test("public picker names distinguish compact and dual-energy overviews in all 1
   assert.equal(FRONTEND_TEXT.dualEnergyOverview.fr.cardName, "Vue d’ensemble du véhicule SV – Double énergie");
 });
 
+test("owner-reviewed German Dual-Energy wording is resolved by the shared i18n layer", () => {
+  const text = FRONTEND_TEXT.dualEnergyOverview.de;
+  assert.equal(text.fuel, "Kraftstoff");
+  assert.equal(text.fuelRange, "Kraftstoffreichweite");
+  assert.equal(text.tripEnergy, "Verbraucht");
+  assert.match(runtimeSource, /dualEnergyTerms/);
+});
+
 test("15 extra languages explicitly provide every overlay-owned EN key before runtime fallback", () => {
   const coreOwnedNamespaces = new Set(["dualEnergyOverview", "fuelHistory"]);
   for (const language of EXTRA_LANGUAGES) {
