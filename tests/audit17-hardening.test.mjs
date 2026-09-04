@@ -33,9 +33,11 @@ test("hybrid hardening contracts are present", () => {
   assert.match(coordinator, /fallback_override/);
   for (const key of ["start_fuel", "end_fuel", "fuel_consumption_l", "fuel_consumption_l_100km", "trip_type"]) assert.match(metrics, new RegExp(key));
   assert.match(metrics, /def current_trip_consumption/);
+  assert.match(metrics, /def current_trip_energy/);
   assert.match(notifications, /fuel_consumption_l_100km/);
-  assert.match(dual, /current_trip_consumption/);
-  assert.match(dual, /kWh\/100 km/);
+  assert.match(dual, /current_trip_energy/);
+  assert.doesNotMatch(dual, /current_trip_consumption/);
+  assert.match(dual, /fuel_consumption_instant/);
 });
 
 test("legacy Ec3 implementation class prefix is gone", () => {
