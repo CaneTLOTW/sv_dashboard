@@ -4,6 +4,16 @@ All notable user-facing changes to SV Dashboard are recorded here.
 
 SV Dashboard uses semantic package versions. `develop` is the integration/acceptance branch; `main` represents the last explicitly accepted publishable state.
 
+## 0.6.0-beta.9 native Hero interactions and i18n audit
+
+- Replaced the temporary YAML/button-card interaction prototype with native Lit controls inside the package-owned Dual-Energy Hero; no nested custom cards are introduced by the Hero itself.
+- Made vehicle temperature, battery/fuel percentages, and the currently displayed range/trip-energy/charge-power/fuel-consumption metric open Home Assistant's native More Info/history dialog.
+- Made the vehicle image navigate to the generated vehicle dashboard via the published `dashboard_url_path` while preserving the large owner-approved Hero presentation.
+- Kept Battery and Fuel on the native symmetric two-column grid rather than carrying prototype pixel-offset workarounds into product code.
+- Audited the card localisation path: automatic HA locale and optional explicit card language share the same context, the editor fallback no longer hard-codes English `Vehicle N`, and the climate control reuses the existing translated dashboard `climate` label instead of hard-coded `AC` accessibility text.
+- Strengthened frontend localisation regression coverage across the existing 18-language catalog contract and applied the two reviewed French terminology corrections from external tester PR #20.
+- Bumped the package/frontend resource to beta.9 and cache-busted only the changed Dual-Energy Hero module; unchanged package modules remain pinned to their existing beta.7 content URLs.
+
 ## 0.6.0-beta.8 owner Hero polish
 
 - Removed the redundant visible `AC` caption below the climate icon while keeping the existing mapped preconditioning control and accessibility label intact.
@@ -92,4 +102,4 @@ The migration source inherited the predecessor project's mature feature set, inc
 - restart-safe local history/notification state;
 - multi-entry config-entry mapping without household-specific VIN/entity IDs.
 
-Historical development detail remains available in the predecessor repository/Git history and closed issues. New work is tracked only in `CaneTLOTW/sv_dashboard`.
+Historical development detail remains available in the predecessor repository/Git history. New work is tracked only in `CaneTLOTW/sv_dashboard`.
