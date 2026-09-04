@@ -127,10 +127,44 @@ jobs:
           )
 
           # Version assertions and the #31 single-source wording assertion.
-          dashboard_test = read("tests/dashboard-naming.test.mjs").replace(
-              "0.6.0-beta.9", VERSION
+          dashboard_test_path = "tests/dashboard-naming.test.mjs"
+          dashboard_test = read(dashboard_test_path)
+          dashboard_test = dashboard_test.replace("0.6.0-beta.9", VERSION)
+          dashboard_test = dashboard_test.replace(r"0\.6\.0-beta\.9", r"0\.6\.0-beta\.10")
+          write(dashboard_test_path, dashboard_test)
+
+          frontend_arch_path = "tests/frontend-architecture.test.mjs"
+          frontend_arch = read(frontend_arch_path)
+          frontend_arch = frontend_arch.replace(r"0\.6\.0-beta\.9", r"0\.6\.0-beta\.10")
+          frontend_arch = frontend_arch.replace(
+              r"vehicle-overview-card\.js\?v=0\.6\.0-beta\.7",
+              r"vehicle-overview-card\.js\?v=0\.6\.0-beta\.10",
           )
-          write("tests/dashboard-naming.test.mjs", dashboard_test)
+          frontend_arch = frontend_arch.replace(
+              r"sv_dashboard\.js\?v=0\.6\.0-beta\.7",
+              r"sv_dashboard\.js\?v=0\.6\.0-beta\.10",
+          )
+          write(frontend_arch_path, frontend_arch)
+
+          hybrid_test_path = "tests/hybrid-fuel-ui.test.mjs"
+          hybrid_test = read(hybrid_test_path)
+          hybrid_test = hybrid_test.replace(
+              r"dual-energy-overview-card\.js\?v=0\.6\.0-beta\.9",
+              r"dual-energy-overview-card\.js\?v=0\.6\.0-beta\.10",
+          )
+          hybrid_test = hybrid_test.replace(
+              r"fuel-history-card\.js\?v=0\.6\.0-beta\.7",
+              r"fuel-history-card\.js\?v=0\.6\.0-beta\.10",
+          )
+          write(hybrid_test_path, hybrid_test)
+
+          vehicle_test_path = "tests/vehicle-overview-card.test.mjs"
+          vehicle_test = read(vehicle_test_path)
+          vehicle_test = vehicle_test.replace(
+              r"i18n\.js\?v=0\.6\.0-beta\.7",
+              r"i18n\.js\?v=0\.6\.0-beta\.10",
+          )
+          write(vehicle_test_path, vehicle_test)
 
           frontend_test_path = "tests/frontend-i18n.test.mjs"
           frontend_test = read(frontend_test_path)
