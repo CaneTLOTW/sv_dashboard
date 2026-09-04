@@ -15,5 +15,5 @@
   "integration_type": "hub",
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/CaneTLOTW/sv_dashboard/issues",
-  "version": "0.6.0-beta.6"
+  "version": "0.6.0-beta.7"
 }
