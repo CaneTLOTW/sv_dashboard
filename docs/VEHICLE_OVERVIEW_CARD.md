@@ -2,11 +2,13 @@
 
 ## Purpose
 
-`custom:sv-dashboard-vehicle-overview-card` is the reusable compact vehicle card shipped with SV Dashboard.
+`custom:sv-dashboard-vehicle-overview-card` is the reusable **compact universal** vehicle card shipped with SV Dashboard.
 
-The generated **Vehicle / LIVE** view uses the same canonical card implementation with `variant: live`. The start-page card and LIVE hero therefore share vehicle mapping, image handling and primary status semantics.
+It is intentionally separate from the wide `custom:sv-dashboard-dual-energy-overview-card`, which presents Battery + Fuel side by side for Hybrid/PHEV and other dual-capability use cases. Both cards are public Home Assistant card-picker entries with distinct localized names.
 
 ![Vehicle overview card](assets/vehicle-overview-card.png)
+
+For the wide Hybrid-oriented card, see [Dual-Energy vehicle overview card](DUAL_ENERGY_OVERVIEW_CARD.md).
 
 ## Minimal configuration
 
@@ -16,7 +18,7 @@ type: custom:sv-dashboard-vehicle-overview-card
 
 With one configured SV Dashboard vehicle this is sufficient.
 
-The card can present, depending on vehicle capabilities:
+The compact card can present, depending on vehicle capabilities:
 
 - vehicle image;
 - electric range/SOC or fuel/range state;
@@ -76,7 +78,9 @@ No fixed vehicle battery capacity is used.
 
 ### Combustion capability
 
-The hero uses fuel/range state when available and does not invent battery/SOC presentation.
+The compact card uses fuel/range state when available and does not invent battery/SOC presentation.
+
+For simultaneous Battery + Fuel presentation, use the Dual-Energy card instead of forcing both domains into the compact layout.
 
 ## Navigation and interaction
 
@@ -89,9 +93,17 @@ Depending on mapped capabilities:
 
 In `variant: live`, the info action opens the shared vehicle/maintenance dialog.
 
+## Localisation
+
+The compact card uses the shared 18-language frontend catalog and follows the Home Assistant UI language automatically. Its public picker name is deliberately distinct from the Dual-Energy card in every supported language.
+
+## Custom presentation
+
+The bundled compact and Dual-Energy cards are reference implementations, not restrictions on the underlying data. Advanced users can build another Lovelace/YAML presentation from the same mapped Stellantis and SV-owned entities and share YAML + screenshots as design input for a possible future package feature.
+
 ## System vs. Vehicle
 
-Administrative integration controls belong in the generated **System** view rather than the day-to-day Vehicle hero. This includes package/integration settings such as refresh behavior, battery-value correction where relevant and optional ABRP controls.
+Administrative integration controls belong in the generated **System** view rather than the day-to-day Vehicle presentation. This includes package/integration settings such as refresh behavior, battery-value correction where relevant and optional ABRP controls.
 
 ## Packaging
 
@@ -107,14 +119,14 @@ It does not require its own Lovelace resource registration.
 
 Before promoting a runtime candidate verify:
 
-1. the card appears as **Vehicle overview** in the card picker/localized UI;
-2. minimal YAML works with one SV config entry;
-3. `entry_id` selects the correct vehicle with multiple entries;
-4. `entity_picture` appears without manual reload even when delayed;
-5. capability-specific range/energy/fuel/status values update correctly;
-6. displayed status opens More Info for the correct mapped entity;
-7. mapped preconditioning controls work where supported;
-8. navigation opens the correct generated Vehicle view;
-9. LIVE view and reusable card share the same canonical implementation;
+1. the card appears with the localized **compact** vehicle-overview name in the Home Assistant card picker;
+2. the Dual-Energy overview appears as a separate public card;
+3. minimal YAML works with one SV config entry;
+4. `entry_id` selects the correct vehicle with multiple entries;
+5. `entity_picture` appears without manual reload even when delayed;
+6. capability-specific range/energy/fuel/status values update correctly;
+7. displayed status opens More Info for the correct mapped entity;
+8. mapped preconditioning controls work where supported;
+9. navigation opens the correct generated Vehicle view;
 10. no VIN/fixed household entity IDs or model-specific product naming exists in active card code;
 11. the card remains part of the single SV Dashboard frontend resource model.
