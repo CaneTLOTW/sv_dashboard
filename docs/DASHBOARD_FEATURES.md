@@ -1,12 +1,18 @@
 # Dashboard features
 
-SV Dashboard is organized by task. Exact views and controls depend on the capabilities exposed by the selected Stellantis vehicle.
+SV Dashboard is organized by task. Exact views, cards and controls depend on the capabilities exposed by the selected Stellantis vehicle.
 
 ## Screenshots
 
-The existing screenshots were captured from a real Home Assistant installation and anonymized. They remain valid as UI examples during the SV migration.
+The legacy dashboard screenshots were captured from a real Home Assistant installation and anonymized. The new Dual-Energy examples below are documentation renderings based on the owner beta.9 runtime screenshots and approved terminology; they contain no private vehicle/location data.
 
 ![Compact vehicle overview card](assets/vehicle-overview-card.png)
+
+![Dual-Energy Hero – German](assets/dual-energy-hero-de.svg)
+
+![Dual-Energy Hero – English](assets/dual-energy-hero-en.svg)
+
+![Dual-Energy Hero – French](assets/dual-energy-hero-fr.svg)
 
 ![Vehicle LIVE view](assets/vehicle-live.png)
 
@@ -26,7 +32,11 @@ The existing screenshots were captured from a real Home Assistant installation a
 
 ![Integration and entities](assets/integration-entities.png)
 
-## Compact vehicle overview card
+## Public vehicle cards
+
+SV Dashboard exposes two different vehicle overview cards in Home Assistant's normal card picker.
+
+### Compact vehicle overview
 
 `custom:sv-dashboard-vehicle-overview-card` is the reusable compact presentation for another Home Assistant dashboard.
 
@@ -36,17 +46,27 @@ type: custom:sv-dashboard-vehicle-overview-card
 
 With multiple SV Dashboard entries, bind the card to a specific config entry with `entry_id`.
 
-The generated LIVE hero uses the same canonical card implementation (`variant: live`).
-
 See [Vehicle overview card](VEHICLE_OVERVIEW_CARD.md).
+
+### Dual-Energy vehicle overview
+
+`custom:sv-dashboard-dual-energy-overview-card` is the wide native battery + fuel Hero, intended especially for Hybrid/PHEV vehicles but capability-driven rather than model-driven.
+
+```yaml
+type: custom:sv-dashboard-dual-energy-overview-card
+```
+
+The production Hero is native Lit code. It does not embed the temporary `custom:button-card` prototype that was used during beta design work.
+
+See [Dual-Energy vehicle overview card](DUAL_ENERGY_OVERVIEW_CARD.md).
 
 ## Vehicle / LIVE
 
 Vehicle / LIVE is the day-to-day cockpit. Depending on the selected vehicle it can show:
 
 - vehicle picture;
-- electric range/SOC or fuel state/range;
-- contextual temperature/charging information;
+- electric SOC/range and/or fuel level/range;
+- contextual temperature and charging/driving state;
 - remote-connection state;
 - preconditioning/remote quick actions where available;
 - mileage;
@@ -57,7 +77,35 @@ Vehicle / LIVE is the day-to-day cockpit. Depending on the selected vehicle it c
 - latest trip and charge;
 - vehicle/maintenance information.
 
-Unsupported electric/fuel sections remain hidden rather than showing invented values.
+Unsupported electric/fuel sections remain hidden or neutral rather than showing invented values.
+
+### Native Hero interactions
+
+The native Dual-Energy Hero uses normal Home Assistant interactions:
+
+- vehicle image → generated SV vehicle view;
+- vehicle temperature → native More Info/history;
+- battery/fuel percentage → native More Info/history for the mapped entity;
+- detail value → native More Info/history for the metric currently displayed;
+- preconditioning → mapped upstream start/stop action where supported.
+
+### Hybrid / Dual-Energy state contract
+
+The two energy domains remain deliberately independent.
+
+| State | Battery side | Fuel side |
+| --- | --- | --- |
+| Parked / idle | SOC + electric range | fuel level + fuel range |
+| Driving | SOC + current-trip energy used in **kWh** | fuel level + fresh upstream `l/100 km` when trustworthy, otherwise fuel range |
+| Charging | SOC + current charge power | fuel level/range remains available |
+
+`current_trip_energy` is an **absolute current-trip kWh value**, not a Hero `kWh/100 km` value. Normalized electric consumption remains available elsewhere where the underlying metric supports it.
+
+Fuel consumption is intentionally conservative: a stale value from an earlier drive must not be presented as current Hybrid consumption.
+
+## Fuel history
+
+Fuel-capable vehicles can expose fuel history/consumption presentation when the upstream data is sufficient. Refuelling detection remains conservative; SV Dashboard does not invent litres from ambiguous level changes.
 
 ## Charging
 
@@ -72,7 +120,7 @@ It can include:
 - average charging power when defensibly derivable;
 - reconstructed SOC/time curves.
 
-Derived power/energy values are estimates, not wallbox meter data.
+Derived power/energy values are **battery-side estimates**, not wallbox/EVSE/grid meter data. They must not be mixed silently with an external measured energy source because charging losses and tariff accounting would otherwise become ambiguous.
 
 ## Statistics
 
@@ -94,11 +142,10 @@ Trips uses canonical Stellantis server history with:
 - filters;
 - short/zero-distance handling;
 - plausibility checks;
-- continuity repair only when strong evidence exists.
+- continuity repair only when strong evidence exists;
+- electric and fuel columns only when the selected vehicle actually provides the corresponding data.
 
 Raw upstream values remain retained for diagnostics when a derived boundary is repaired.
-
-Electric trip-energy columns appear only when electric data exists.
 
 ## GPS
 
@@ -147,12 +194,14 @@ System contains integration/runtime administration rather than everyday vehicle 
 - battery-value correction where applicable;
 - ABRP controls/status where configured.
 
+The package-owned **Dashboard status** sensor is part of the same Home Assistant translation contract as the other SV entities; it must not remain a hard-coded English exception.
+
 ## Capability gating
 
 SV Dashboard is not model-hardcoded.
 
 - **Electric:** electric SOC/range/charging/battery analytics where available.
-- **Hybrid:** electric and fuel features independently where available.
+- **Hybrid / PHEV:** electric and fuel features can coexist and are gated independently.
 - **Thermic / combustion:** fuel features without electric-only charging/battery analytics.
 - **Hydrogen / unknown:** only actual mapped capabilities are shown.
 
@@ -161,6 +210,18 @@ See [Vehicle capability matrix](VEHICLE_CAPABILITY_MATRIX.en.md).
 ## Multi-vehicle behavior
 
 Each `sv_dashboard` config entry owns its selected upstream device, generated dashboard and package state. The frontend uses the explicit config-entry ID rather than localized entity IDs or dashboard ordering.
+
+## Localisation
+
+Config flow, options, package-owned Home Assistant entities, frontend cards and backend notifications/logbook messages follow the same supported 18-language matrix. The Dual-Energy Hero and editor use the shared frontend i18n layer; card files do not maintain private German/English text branches.
+
+DE / EN / FR runtime switching of the native Hero has been visually checked, including long French Hybrid labels. See [Localisation](LOCALISATION.en.md).
+
+## Custom Lovelace/YAML prototypes
+
+Advanced users can build a different presentation from the same mapped Stellantis entities and package-owned SV metric entities. A useful proposal includes the YAML/custom-card configuration, screenshots and the vehicle state being demonstrated.
+
+Such a prototype can become concrete design input for a future package feature. It does not automatically make every third-party custom card a required SV Dashboard dependency.
 
 ## Data quality and privacy
 
