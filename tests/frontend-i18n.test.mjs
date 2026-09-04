@@ -77,6 +77,24 @@ test("all 18 runtime catalogs have exact EN key parity, non-empty values and pla
   }
 });
 
+test("public picker names distinguish compact and dual-energy overviews in all 18 languages", () => {
+  for (const language of LANGUAGES) {
+    const compact = FRONTEND_TEXT.vehicleOverview[language];
+    const dual = FRONTEND_TEXT.dualEnergyOverview[language];
+    assert.ok(compact.cardName?.trim(), `missing compact card name for ${language}`);
+    assert.ok(dual.cardName?.trim(), `missing dual-energy card name for ${language}`);
+    assert.notEqual(compact.cardName, dual.cardName, `picker names collide for ${language}`);
+    assert.ok(compact.cardDescription?.trim(), `missing compact card description for ${language}`);
+    assert.ok(dual.cardDescription?.trim(), `missing dual-energy card description for ${language}`);
+  }
+  assert.equal(FRONTEND_TEXT.vehicleOverview.de.cardName, "SV Fahrzeugübersicht (kompakt)");
+  assert.equal(FRONTEND_TEXT.dualEnergyOverview.de.cardName, "SV Fahrzeugübersicht – Dual Energy");
+  assert.equal(FRONTEND_TEXT.vehicleOverview.en.cardName, "SV vehicle overview (compact)");
+  assert.equal(FRONTEND_TEXT.dualEnergyOverview.en.cardName, "SV vehicle overview – Dual Energy");
+  assert.equal(FRONTEND_TEXT.vehicleOverview.fr.cardName, "Vue d’ensemble du véhicule SV (compacte)");
+  assert.equal(FRONTEND_TEXT.dualEnergyOverview.fr.cardName, "Vue d’ensemble du véhicule SV – Double énergie");
+});
+
 test("15 extra languages explicitly provide every overlay-owned EN key before runtime fallback", () => {
   const coreOwnedNamespaces = new Set(["dualEnergyOverview", "fuelHistory"]);
   for (const language of EXTRA_LANGUAGES) {
