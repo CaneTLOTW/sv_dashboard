@@ -1,0 +1,46 @@
+name: Publish beta.7
+
+on:
+  push:
+    branches:
+      - release-beta7-temp
+    paths:
+      - .github/workflows/release-beta7.yml
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish immutable beta.7 prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: 3ef716f0dc11f55e2b5aeb359b6f136645f66660
+        run: |
+          test "$(git rev-parse "$SOURCE_SHA^{commit}")" = "$SOURCE_SHA"
+          if gh release view v0.6.0-beta.7 >/dev/null 2>&1; then
+            echo "v0.6.0-beta.7 already exists" >&2
+            exit 1
+          fi
+          gh release create v0.6.0-beta.7 \
+            --target "$SOURCE_SHA" \
+            --prerelease \
+            --title "SV Dashboard v0.6.0-beta.7" \
+            --notes-file - <<'EOF'
+          ## Dynamic Dual-Energy hero owner QA
+
+          - Enlarged the vehicle hero and reduced unused whitespace.
+          - Added the mapped preconditioning/AC control at the top-left and live vehicle temperature at the top-right.
+          - Idle: green battery bar with electric range.
+          - Driving: blue battery bar with current-trip energy used in **kWh**; no synthesized `kWh/100 km` in the hero.
+          - Charging: blue pulsing battery bar with current charge power in **kW**.
+          - Hybrid driving can show fresh upstream fuel consumption in `l/100 km` only when that value was refreshed during the current drive; otherwise fuel range remains.
+          - EV owner QA keeps the Fuel side visible with neutral missing values; no fuel data is invented.
+          - New hero labels are present in all 18 frontend languages.
+
+          Source: `3ef716f0dc11f55e2b5aeb359b6f136645f66660`
+          Final develop Validate: `33872025761` — Source/frontend PASS, Hassfest PASS, HACS PASS.
+          EOF
