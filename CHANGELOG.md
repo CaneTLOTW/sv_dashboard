@@ -4,6 +4,13 @@ All notable user-facing changes to SV Dashboard are recorded here.
 
 SV Dashboard uses semantic package versions. `develop` is the integration/acceptance branch; `main` represents the last explicitly accepted publishable state.
 
+## 0.6.0-beta.8 owner Hero polish
+
+- Removed the redundant visible `AC` caption below the climate icon while keeping the existing mapped preconditioning control and accessibility label intact.
+- Enlarged the vehicle image another step across the responsive Hero layouts without changing the Battery/Fuel grid or state logic.
+- Preserved the beta.7 Idle / Driving / Charging data contract unchanged; functional runtime acceptance of those states remains pending.
+- Bumped the package frontend resource to beta.8 and cache-busted the changed Dual-Energy Hero asset while leaving unchanged beta.7 modules/dependencies pinned to their existing content URLs.
+
 ## 0.6.0-beta.7 dynamic Dual-Energy hero
 
 - Enlarged the vehicle hero and reduced unused whitespace in the wide Battery/Fuel overview.
