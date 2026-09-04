@@ -4,6 +4,19 @@ All notable user-facing changes to SV Dashboard are recorded here.
 
 SV Dashboard uses semantic package versions. `develop` is the integration/acceptance branch; `main` represents the last explicitly accepted publishable state.
 
+## 0.6.0-beta.10 Hybrid/i18n external validation candidate
+
+- Localized the package-owned Dashboard status entity through the normal Home Assistant 18-language translation contract.
+- Applied the DS4 tester's reviewed French entity wording, including clarified current-trip energy and SV-local trip/charge result semantics.
+- Moved the owner-approved German Dual-Energy wording (`Kraftstoff`, `Kraftstoffreichweite`, `Verbraucht`) into the canonical frontend source catalog rather than another runtime patch layer.
+- Carries the public compact-vs-Dual-Energy card-picker naming cleanup already merged on `develop`.
+- Refreshed README, dashboard/features, localisation, capability and vehicle-card documentation and added DE/EN/FR Dual-Energy Hero examples.
+- Documents native More Info/history interactions and the Hybrid Idle/Driving/Charging data contract.
+- Explicitly distinguishes battery-side SOC/time estimates from EVSE/grid meter readings.
+- Documents how testers/users can share alternative Lovelace/YAML layouts plus screenshots as concrete feature-design input.
+- Cache-busts the changed shared i18n runtime and every consuming frontend module so beta upgrades cannot retain stale beta.7/beta.9 translation code.
+- Remains a prerelease on `develop`; promotion to `main` waits for the real DS4 Hybrid/French external test in issue #2.
+
 ## 0.6.0-beta.9 native Hero interactions and i18n audit
 
 - Replaced the temporary YAML/button-card interaction prototype with native Lit controls inside the package-owned Dual-Energy Hero; no nested custom cards are introduced by the Hero itself.

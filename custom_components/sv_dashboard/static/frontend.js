@@ -84,12 +84,12 @@ installTransparentMapMarkerCompatibility();
  * no longer produce a false missing-dependency page during the first reload.
  */
 const packageModules = Promise.all([
-  import("./trip-history-card.js?v=0.6.0-beta.7"),
-  import("./charge-history-card.js?v=0.6.0-beta.7"),
+  import("./trip-history-card.js?v=0.6.0-beta.10"),
+  import("./charge-history-card.js?v=0.6.0-beta.10"),
   import("./gps-history-card.js?v=0.6.0-beta.7"),
-  import("./vehicle-overview-card.js?v=0.6.0-beta.7"),
-  import("./dual-energy-overview-card.js?v=0.6.0-beta.9"),
-  import("./fuel-history-card.js?v=0.6.0-beta.7"),
+  import("./vehicle-overview-card.js?v=0.6.0-beta.10"),
+  import("./dual-energy-overview-card.js?v=0.6.0-beta.10"),
+  import("./fuel-history-card.js?v=0.6.0-beta.10"),
 ]);
 const dependencyReadiness = Promise.all(REQUIRED_ELEMENTS.map(waitForElement));
 
@@ -98,4 +98,4 @@ window.customCards = (window.customCards || []).filter(
   (card) => !INTERNAL_CARD_TYPES.has(card?.type),
 );
 window.__svDashboardDependencyReadiness = await dependencyReadiness;
-await import("./sv_dashboard.js?v=0.6.0-beta.7");
+await import("./sv_dashboard.js?v=0.6.0-beta.10");

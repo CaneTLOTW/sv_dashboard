@@ -43,7 +43,7 @@ test("runtime wires all advanced catalogs with the release cache key", () => {
   for (const region of ["west", "north", "east"]) {
     assert.match(runtimeSource, new RegExp(`i18n-advanced-${region}\\.js\\?v=0\\.6\\.0-beta\\.7`));
   }
-  assert.match(runtimeSource, /i18n-core\.js\?v=0\.6\.0-beta\.7/);
+  assert.match(runtimeSource, /i18n-core\.js\?v=0\.6\.0-beta\.10/);
 });
 
 test("locale resolver accepts regional variants and safe fallbacks", () => {
@@ -93,6 +93,14 @@ test("public picker names distinguish compact and dual-energy overviews in all 1
   assert.equal(FRONTEND_TEXT.dualEnergyOverview.en.cardName, "SV vehicle overview – Dual Energy");
   assert.equal(FRONTEND_TEXT.vehicleOverview.fr.cardName, "Vue d’ensemble du véhicule SV (compacte)");
   assert.equal(FRONTEND_TEXT.dualEnergyOverview.fr.cardName, "Vue d’ensemble du véhicule SV – Double énergie");
+});
+
+test("owner-reviewed German Dual-Energy wording is resolved by the shared i18n layer", () => {
+  const text = FRONTEND_TEXT.dualEnergyOverview.de;
+  assert.equal(text.fuel, "Kraftstoff");
+  assert.equal(text.fuelRange, "Kraftstoffreichweite");
+  assert.equal(text.tripEnergy, "Verbraucht");
+  assert.doesNotMatch(runtimeSource, /dualEnergyTerms/);
 });
 
 test("15 extra languages explicitly provide every overlay-owned EN key before runtime fallback", () => {

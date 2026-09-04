@@ -4,7 +4,7 @@
 
 SV Dashboard is a HACS custom integration that builds a vehicle-focused Home Assistant dashboard on top of [Stellantis Vehicles](https://github.com/andreadegiovine/homeassistant-stellantis-vehicles).
 
-> **Beta status:** SV Dashboard is the successor to `CaneTLOTW/e_c3_dashboard`. The new Home Assistant domain is `sv_dashboard`. The first owner live validation has passed on `v0.6.0-beta.2`; no stable SV release has been promoted to `main` yet.
+> **Beta status:** SV Dashboard is the successor to `CaneTLOTW/e_c3_dashboard`. The new Home Assistant domain is `sv_dashboard`. Owner live/visual validation has passed through the native Dual-Energy Hero beta cycle; a real DS4 Hybrid/French external validation remains active before promotion to `main`.
 
 [![Open the SV Dashboard repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=CaneTLOTW&repository=sv_dashboard&category=integration)
 
@@ -17,13 +17,14 @@ Install this repository as an **Integration**, not as a standalone Lovelace-card
 - Capability-based UI for electric, hybrid and combustion vehicles.
 - Electric SOC/range/charging views only when the upstream vehicle exposes those capabilities.
 - Fuel/range/consumption views for combustion-capable vehicles when available upstream.
-- Vehicle overview card shared by the generated LIVE view and reusable Home Assistant cards.
-- Trip, charging and GPS history with data-quality guards.
+- A compact universal vehicle overview plus a native **Dual-Energy** vehicle overview for simultaneous battery + fuel presentation.
+- Native Hero interactions: vehicle navigation and Home Assistant More Info/history for temperature, battery/fuel percentages and the active detail metric.
+- Trip, charging, fuel and GPS history with data-quality guards.
 - Long-term statistics for supported mileage/SOH data.
 - Optional notifications, recipients, warning thresholds, quiet hours and reachability diagnostics.
 - Wake-up/reachability controls with conservative status handling.
-- 18 Home Assistant/frontend languages with English fallback.
-- No fixed e-C3 battery capacity assumption; battery energy is shown only from trustworthy vehicle-specific data.
+- 18 Home Assistant/frontend/backend languages with English fallback.
+- No fixed e-C3/DS4 battery-capacity assumption; battery energy is shown only from trustworthy vehicle-specific data or an explicit per-vehicle fallback.
 
 ## Vehicle and brand compatibility
 
@@ -41,8 +42,8 @@ Real-world SV Dashboard validation is intentionally tracked separately from expe
 
 | Brand / vehicle | SV status |
 | --- | --- |
-| Citroën e-C3 | **Confirmed** — owner live validation passed on `v0.6.0-beta.2` |
-| DS4 Hybrid | **Beta testing** — external Hybrid/French validation active |
+| Citroën e-C3 | **Confirmed owner validation** — EV dashboard and native Hero visual/i18n QA passed |
+| DS4 Hybrid | **Active external beta** — real Hybrid/French/SOH validation by `@chmtc94` |
 | Peugeot | **Expected / upstream-supported** — real SV vehicle test pending |
 | Opel | **Expected / upstream-supported** — real SV vehicle test pending |
 | Vauxhall | **Expected / upstream-supported** — real SV vehicle test pending |
@@ -56,9 +57,11 @@ See the [Vehicle validation guide](docs/VEHICLE_VALIDATION.en.md), the completed
 SV Dashboard derives a vehicle capability profile from the upstream integration:
 
 - **Electric** — SOC, electric range, charging, battery/SOH and electric energy metrics when available.
-- **Hybrid** — electric and fuel capabilities can appear independently; no battery-capacity estimate is invented when upstream does not provide one.
+- **Hybrid / PHEV** — electric and fuel capabilities can appear simultaneously or independently. The Dual-Energy Hero keeps both energy domains visible without inventing unavailable values.
 - **Thermic / combustion** — fuel level, fuel range and fuel-consumption views where available; electric-only charging and battery analytics remain hidden.
 - **Hydrogen / unknown** — handled defensively; only capabilities actually exposed upstream are shown.
+
+For the Dual-Energy Hero, `current_trip_energy` means absolute energy used during the current trip in **kWh**. It is not a synthetic `kWh/100 km` Hero value. While driving, a fuel-consumption value is shown only when the mapped upstream value is numeric and fresh for the current drive; otherwise fuel range remains visible. Package-derived charge power/energy can be battery-side SOC/time estimates and are not EVSE/grid meter readings.
 
 ## Languages
 
@@ -66,23 +69,37 @@ Home Assistant integration UI, package-owned entities, frontend cards and backen
 
 `de`, `en`, `fr`, `it`, `es`, `pt`, `nl`, `da`, `nb`, `sv`, `fi`, `pl`, `cs`, `sk`, `hu`, `ro`, `sl`, `hr`
 
-English is the fallback language. See [Localisation](docs/LOCALISATION.en.md).
+English is the fallback language. DE/EN/FR runtime switching of the native Dual-Energy Hero has been visually checked, including long French Hybrid labels. See [Localisation](docs/LOCALISATION.en.md).
 
-## Compact vehicle overview card
+## Public vehicle cards
 
-The integration registers a reusable vehicle overview card:
+SV Dashboard exposes two vehicle cards in Home Assistant's normal card picker.
+
+### Compact universal overview
 
 ```yaml
 type: custom:sv-dashboard-vehicle-overview-card
 ```
 
-With multiple SV Dashboard entries, bind the card to the required config entry with `entry_id`.
-
-The generated Vehicle/LIVE hero uses the same card implementation (`variant: live`), so the compact card and full dashboard share entity mapping, vehicle-image handling and primary status semantics.
+This is the compact reusable vehicle card for another Home Assistant dashboard. With multiple SV Dashboard entries, bind it to the required config entry with `entry_id`.
 
 ![Compact vehicle overview card](docs/assets/vehicle-overview-card.png)
 
 See [Vehicle overview card](docs/VEHICLE_OVERVIEW_CARD.md).
+
+### Dual-Energy overview
+
+```yaml
+type: custom:sv-dashboard-dual-energy-overview-card
+```
+
+This is the wide native battery + fuel Hero intended especially for Hybrid/PHEV vehicles. It supports idle, driving and charging presentation, native More Info/history targets, mapped preconditioning and automatic localisation.
+
+![Dual-Energy Hero – English](docs/assets/dual-energy-hero-en.svg)
+
+See [Dual-Energy vehicle overview card](docs/DUAL_ENERGY_OVERVIEW_CARD.md) for DE/EN/FR examples and the exact data/interaction contract.
+
+Advanced users are not limited to the bundled presentation: the mapped Stellantis entities and SV-owned metric entities are normal Home Assistant data sources. A custom Lovelace/YAML prototype plus screenshots can be shared as concrete design input for future package features.
 
 ## Requirements
 
@@ -96,7 +113,7 @@ Install and configure these dependencies first:
 4. [ha-map-card](https://github.com/nathan-gs/ha-map-card)
 5. [layout-card](https://github.com/thomasloven/lovelace-layout-card)
 
-Stellantis Vehicles must already expose a real vehicle. Mileage and tracker data are the universal baseline; battery entities are only required for battery-specific features.
+Stellantis Vehicles must already expose a real vehicle. Mileage and tracker data are the universal baseline; battery/fuel/charging entities are capability-specific.
 
 See [Installation](docs/INSTALLATION.en.md).
 
@@ -104,7 +121,7 @@ See [Installation](docs/INSTALLATION.en.md).
 
 | View | Purpose |
 | --- | --- |
-| **Vehicle** | Current vehicle state, LIVE hero, range/energy or fuel state, latest trip/charge and quick actions. |
+| **Vehicle** | Current vehicle state, native LIVE/Dual-Energy Hero where applicable, range/energy/fuel state, latest trip/charge and quick actions. |
 | **Charging** | Charging sessions and charge curves when the vehicle exposes charging capabilities. |
 | **Statistics** | Mileage, driven distance, consumption and available SOH/long-term statistics. |
 | **Trips** | Canonical driving history, filters and data-quality handling. |
@@ -179,7 +196,7 @@ CI currently checks:
 - Hassfest
 - HACS repository validation
 
-Promotion to `main` happens only after the exact candidate has passed CI and the required live acceptance.
+Promotion to `main` happens only after the exact candidate has passed CI and the required owner/external live acceptance. The current plan is to wait for the DS4 Hybrid tester feedback before the next `develop` → `main` promotion.
 
 ## License and trademarks
 
@@ -198,6 +215,7 @@ SV Dashboard is an independent community project and is not affiliated with or e
 - [Localisation](docs/LOCALISATION.en.md)
 - [Notifications and wake-up](docs/NOTIFICATIONS_AND_WAKEUP.en.md)
 - [Vehicle overview card](docs/VEHICLE_OVERVIEW_CARD.md)
+- [Dual-Energy vehicle overview card](docs/DUAL_ENERGY_OVERVIEW_CARD.md)
 - [Release checklist](docs/RELEASE_CHECKLIST.md)
 - [Branch and deployment workflow](docs/BRANCH_AND_DEPLOYMENT_WORKFLOW.md)
 

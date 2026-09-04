@@ -52,6 +52,9 @@
   },
   "entity": {
     "sensor": {
+      "dashboard_status": {
+        "name": "Statut du tableau de bord"
+      },
       "server_trip_history": {
         "name": "Historique serveur des trajets"
       },
@@ -71,16 +74,16 @@
         "name": "Distance depuis la dernière recharge"
       },
       "current_trip_energy": {
-        "name": "Énergie du trajet en cours"
+        "name": "Énergie consommée sur le trajet en cours"
       },
       "current_charge_power": {
         "name": "Puissance de recharge actuelle"
       },
       "last_trip_result": {
-        "name": "Dernier trajet local"
+        "name": "Dernier trajet enregistré par SV Dashboard"
       },
       "last_charge_result": {
-        "name": "Dernière recharge locale"
+        "name": "Dernière recharge enregistrée par SV Dashboard"
       },
       "current_trip_consumption": {
         "name": "Consommation du trajet en cours"

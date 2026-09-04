@@ -52,6 +52,9 @@
   },
   "entity": {
     "sensor": {
+      "dashboard_status": {
+        "name": "Starea tabloului de bord"
+      },
       "server_trip_history": {
         "name": "Istoric deplasări server"
       },

@@ -52,6 +52,9 @@
   },
   "entity": {
     "sensor": {
+      "dashboard_status": {
+        "name": "Status nadzorne ploče"
+      },
       "server_trip_history": {
         "name": "Poslužiteljska povijest vožnji"
       },

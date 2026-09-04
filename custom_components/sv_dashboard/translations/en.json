@@ -52,6 +52,9 @@
   },
   "entity": {
     "sensor": {
+      "dashboard_status": {
+        "name": "Dashboard status"
+      },
       "server_trip_history": {
         "name": "Server trip history"
       },
