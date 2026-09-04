@@ -52,6 +52,9 @@
   },
   "entity": {
     "sensor": {
+      "dashboard_status": {
+        "name": "Stav prehľadu"
+      },
       "server_trip_history": {
         "name": "Serverová história jázd"
       },
