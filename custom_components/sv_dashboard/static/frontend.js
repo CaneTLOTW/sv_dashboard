@@ -74,7 +74,7 @@ const packageModules = Promise.all([
   import("./charge-history-card.js?v=0.6.0-beta.7"),
   import("./gps-history-card.js?v=0.6.0-beta.7"),
   import("./vehicle-overview-card.js?v=0.6.0-beta.7"),
-  import("./dual-energy-overview-card.js?v=0.6.0-beta.7"),
+  import("./dual-energy-overview-card.js?v=0.6.0-beta.8"),
   import("./fuel-history-card.js?v=0.6.0-beta.7"),
 ]);
 const dependencyReadiness = Promise.all(REQUIRED_ELEMENTS.map(waitForElement));
