@@ -1,6 +1,6 @@
 import { LitElement, html, css, nothing } from "./vendor-lit.js?v=0.6.0-beta.7";
 import { buildChargeCurve, buildChargeSessions, buildLocalChargeSessions, chargeSessionId, findChargeSession, mergeChargeSessions } from "./charge-history-core.js?v=0.5.49";
-import { localeFor, textFor } from "./i18n.js?v=0.6.0-beta.7";
+import { localeFor, textFor } from "./i18n.js?v=0.6.0-beta.10";
 
 const SELECTION_QUERY_PARAM = "sv_charge";
 

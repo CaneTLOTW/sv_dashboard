@@ -43,7 +43,7 @@ test("runtime wires all advanced catalogs with the release cache key", () => {
   for (const region of ["west", "north", "east"]) {
     assert.match(runtimeSource, new RegExp(`i18n-advanced-${region}\\.js\\?v=0\\.6\\.0-beta\\.7`));
   }
-  assert.match(runtimeSource, /i18n-core\.js\?v=0\.6\.0-beta\.7/);
+  assert.match(runtimeSource, /i18n-core\.js\?v=0\.6\.0-beta\.10/);
 });
 
 test("locale resolver accepts regional variants and safe fallbacks", () => {
@@ -100,7 +100,7 @@ test("owner-reviewed German Dual-Energy wording is resolved by the shared i18n l
   assert.equal(text.fuel, "Kraftstoff");
   assert.equal(text.fuelRange, "Kraftstoffreichweite");
   assert.equal(text.tripEnergy, "Verbraucht");
-  assert.match(runtimeSource, /dualEnergyTerms/);
+  assert.doesNotMatch(runtimeSource, /dualEnergyTerms/);
 });
 
 test("15 extra languages explicitly provide every overlay-owned EN key before runtime fallback", () => {

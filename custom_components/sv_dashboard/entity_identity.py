@@ -22,15 +22,6 @@ _LOGGER = logging.getLogger(__name__)
 
 ENTITY_ID_PREFIX = "sv"
 
-# The dashboard status sensor predates the package-wide translation-key pass and
-# is the only entity whose technical key is applied here without class-owned
-# translation metadata. Keep the mapping explicit so entity identity remains
-# language-neutral while Home Assistant can resolve the visible name from the
-# normal 18-language translation catalogs.
-ENTITY_TRANSLATION_KEYS = {
-    "status": "dashboard_status",
-}
-
 
 def _device_vin(device: Any) -> str | None:
     if device is None:
@@ -140,9 +131,6 @@ def apply_vehicle_entity_identity(
     entity.entity_id = vehicle_entity_id(
         hass, entry, entity_domain, technical_key
     )
-    translation_key = ENTITY_TRANSLATION_KEYS.get(technical_key)
-    if translation_key and getattr(entity, "_attr_translation_key", None) is None:
-        entity._attr_translation_key = translation_key
 
 
 def registry_technical_key(

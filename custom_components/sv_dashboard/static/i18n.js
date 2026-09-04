@@ -1,15 +1,14 @@
 /* Runtime composition layer for the bundled Lovelace localisation catalogs.
  *
  * Keep the established DE/EN/FR + base extra-language catalog in i18n-core.js,
- * then overlay the reviewed advanced completion catalogs. All browser-facing
- * imports use the same 0.6.0-beta.7 cache key as the release candidate resources.
+ * then overlay the reviewed advanced completion catalogs. Browser-facing imports use explicit content cache keys; the changed core catalog is cache-busted for beta.10.
  */
 import {
   FRONTEND_TEXT,
   languageFor,
   localeFor,
   textFor,
-} from "./i18n-core.js?v=0.6.0-beta.7";
+} from "./i18n-core.js?v=0.6.0-beta.10";
 import { ADVANCED_FRONTEND_TEXT as WESTERN_ADVANCED } from "./i18n-advanced-west.js?v=0.6.0-beta.7";
 import { ADVANCED_FRONTEND_TEXT as NORTHERN_ADVANCED } from "./i18n-advanced-north.js?v=0.6.0-beta.7";
 import { ADVANCED_FRONTEND_TEXT as EASTERN_ADVANCED } from "./i18n-advanced-east.js?v=0.6.0-beta.7";
@@ -26,19 +25,13 @@ for (const catalog of [WESTERN_ADVANCED, NORTHERN_ADVANCED, EASTERN_ADVANCED]) {
   }
 }
 
-// Public Home Assistant card-picker names and the small set of owner-reviewed
-// public-surface terminology corrections are intentionally applied in the
-// shared composition layer. Card modules therefore remain language-neutral and
-// consume one resolved 18-language runtime catalog.
-const PUBLIC_CARD_TEXT = {
+// Public Home Assistant card-picker names are intentionally owned by the
+// shared i18n layer. Keep the compact universal overview clearly distinct from
+// the wide Battery + Fuel / Dual-Energy overview in every supported language.
+const PUBLIC_CARD_NAMES = {
   de: {
     compact: "SV Fahrzeugübersicht (kompakt)",
     dualEnergy: "SV Fahrzeugübersicht – Dual Energy",
-    dualEnergyTerms: {
-      fuel: "Kraftstoff",
-      fuelRange: "Kraftstoffreichweite",
-      tripEnergy: "Verbraucht",
-    },
   },
   en: {
     compact: "SV vehicle overview (compact)",
@@ -110,15 +103,12 @@ const PUBLIC_CARD_TEXT = {
   },
 };
 
-for (const [language, surface] of Object.entries(PUBLIC_CARD_TEXT)) {
+for (const [language, names] of Object.entries(PUBLIC_CARD_NAMES)) {
   if (FRONTEND_TEXT.vehicleOverview?.[language]) {
-    FRONTEND_TEXT.vehicleOverview[language].cardName = surface.compact;
+    FRONTEND_TEXT.vehicleOverview[language].cardName = names.compact;
   }
   if (FRONTEND_TEXT.dualEnergyOverview?.[language]) {
-    FRONTEND_TEXT.dualEnergyOverview[language].cardName = surface.dualEnergy;
-    if (surface.dualEnergyTerms) {
-      Object.assign(FRONTEND_TEXT.dualEnergyOverview[language], surface.dualEnergyTerms);
-    }
+    FRONTEND_TEXT.dualEnergyOverview[language].cardName = names.dualEnergy;
   }
 }
 

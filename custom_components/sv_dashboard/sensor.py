@@ -253,6 +253,7 @@ class SvDashboardStatusSensor(CoordinatorEntity, SensorEntity):
 
     _attr_has_entity_name = True
     _attr_name = "Dashboard status"
+    _attr_translation_key = "dashboard_status"
     _attr_icon = "mdi:car-cog"
     _attr_should_poll = False
 
