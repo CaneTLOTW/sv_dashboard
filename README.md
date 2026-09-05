@@ -10,6 +10,14 @@ SV Dashboard is a HACS custom integration that builds a vehicle-focused Home Ass
 
 Install this repository as an **Integration**, not as a standalone Lovelace-card repository.
 
+### Beta updates through HACS
+
+While SV Dashboard is distributed only as GitHub **prereleases**, beta testers should enable the per-repository **Pre-release** switch for SV Dashboard in HACS. With that switch disabled, HACS can fall back to the repository's `develop` commit SHA instead of advertising the semantic `v0.6.0-beta.N` tag.
+
+HACS 2.0.x also currently builds the external update/release link without GitHub's required `/tag/` path segment. A 404 from that particular HACS-generated link does not mean the SV Dashboard package failed to install; use the canonical GitHub release page (`/releases/tag/<tag>`) instead. This upstream behavior is tracked in [issue #41](https://github.com/CaneTLOTW/sv_dashboard/issues/41).
+
+Once a stable SV Dashboard release exists, normal stable users should not need to enable HACS prereleases.
+
 ## What it provides
 
 - Dynamic vehicle discovery from Stellantis Vehicles; no hard-coded VIN entity IDs.

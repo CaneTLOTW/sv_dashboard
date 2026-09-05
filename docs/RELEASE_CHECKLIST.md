@@ -20,10 +20,23 @@ For a runtime release:
 - [ ] `custom_components/sv_dashboard/manifest.json` has the intended package version;
 - [ ] `FRONTEND_VERSION` matches the intended frontend/cache version;
 - [ ] every internal `?v=` frontend import uses the same version when frontend code changed;
+- [ ] unchanged internal frontend modules may retain their existing cache key when only the package/top-level resource version changes;
 - [ ] the HACS metadata/minimum Home Assistant requirement remains correct;
 - [ ] no changed frontend is shipped under a cache key that was already served for different code.
 
 Documentation-only cleanup does not require a package version bump when no runtime/browser asset changes.
+
+### HACS beta channel
+
+For prerelease validation:
+
+- [ ] the GitHub release is explicitly marked **prerelease**; do not publish a beta as a stable release merely to influence HACS;
+- [ ] beta testers enable the HACS per-repository **Pre-release** switch before testing update discovery;
+- [ ] after a HACS refresh, the update entity advertises the semantic `v0.6.0-beta.N` tag rather than a `develop` commit SHA;
+- [ ] the tester records the displayed installed/available versions and, when relevant, a screenshot of the Home Assistant update notification;
+- [ ] a HACS-generated external release-link 404 is tracked separately from package/runtime health; HACS 2.0.x currently constructs that link without GitHub's required `/tag/` segment (see #41).
+
+Before the first stable release, explicitly review the repository default-branch/release-channel policy so unaccepted `develop` commits cannot be mistaken for the stable update channel.
 
 ## 3. Repository validation
 
