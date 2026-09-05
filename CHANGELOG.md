@@ -4,6 +4,14 @@ All notable user-facing changes to SV Dashboard are recorded here.
 
 SV Dashboard uses semantic package versions. `develop` is the integration/acceptance branch; `main` represents the last explicitly accepted publishable state.
 
+## 0.6.0-beta.11 HACS update-channel verification minifix
+
+- Bumps the package and top-level Home Assistant frontend resource version to `0.6.0-beta.11` to create a clean beta update event for external validation in #2/#41.
+- Documents that HACS beta testers must enable the per-repository **Pre-release** switch so HACS resolves the semantic `v0.6.0-beta.N` prerelease tag instead of falling back to a `develop` commit SHA.
+- Records the HACS 2.0.x external release-link 404 as an upstream URL-construction limitation (`/releases/<tag>` instead of GitHub's `/releases/tag/<tag>`); SV Dashboard does not publish a fake stable release or malformed tag as a workaround.
+- Keeps all beta.10 Hybrid, Hero, entity and translation behavior unchanged; unchanged internal frontend modules deliberately retain their validated beta.10/beta.7 cache keys.
+- Remains a prerelease on `develop`; `main` stays unchanged until the DS4 Hybrid/French beta acceptance is complete.
+
 ## 0.6.0-beta.10 Hybrid/i18n external validation candidate
 
 - Localized the package-owned Dashboard status entity through the normal Home Assistant 18-language translation contract.
