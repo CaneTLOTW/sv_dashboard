@@ -19,13 +19,13 @@ const times = read("time.py");
 
 test("Home Assistant registers one SV frontend resource", () => {
   assert.match(constants, /FRONTEND_URL = "\/sv_dashboard\/frontend\.js"/);
-  assert.match(constants, /FRONTEND_VERSION = "0\.6\.0-beta\.11"/);
+  assert.match(constants, /FRONTEND_VERSION = "0\.6\.0-beta\.12"/);
   assert.match(constants, /FRONTEND_RESOURCE_URLS = \(FRONTEND_URL,\)/);
-  // beta.11 changes the package/resource version only; unchanged internal modules
-  // deliberately retain their beta.10 cache keys.
+  // beta.12 cache-busts only the changed package modules; unchanged modules
+  // deliberately retain their previously validated content URLs.
   assert.match(frontend, /import\("\.\/vehicle-overview-card\.js\?v=0\.6\.0-beta\.10"\)/);
   assert.match(frontend, /import\("\.\/gps-history-card\.js\?v=0\.6\.0-beta\.7"\)/);
-  assert.match(frontend, /import\("\.\/sv_dashboard\.js\?v=0\.6\.0-beta\.10"\)/);
+  assert.match(frontend, /import\("\.\/sv_dashboard\.js\?v=0\.6\.0-beta\.12"\)/);
   assert.doesNotMatch(frontend, /gps-history-fix\.js/);
   assert.doesNotMatch(frontend, /map-marker-fix\.js/);
 });
@@ -34,10 +34,10 @@ test("dependency preflight waits instead of failing on first customElements look
   assert.match(frontend, /customElements\.whenDefined\(tag\)/);
   assert.match(frontend, /DEPENDENCY_GRACE_MS = 10000/);
   assert.match(frontend, /await dependencyReadiness/);
-  assert.match(frontend, /await import\("\.\/sv_dashboard\.js\?v=0\.6\.0-beta\.10"\)/);
+  assert.match(frontend, /await import\("\.\/sv_dashboard\.js\?v=0\.6\.0-beta\.12"\)/);
 });
 
-test("LIVE reuses the validated vehicle overview lifecycle instead of owning a second hero", () => {
+test("LIVE reuses the validated vehicle overview lifecycle instead of owning a second compact hero", () => {
   assert.match(strategy, /type: "custom:sv-dashboard-vehicle-overview-card"/);
   assert.match(strategy, /variant: "live"/);
   assert.match(strategy, /entry_id: attributes\.entry_id/);
