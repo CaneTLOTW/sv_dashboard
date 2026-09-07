@@ -55,12 +55,15 @@ test("dashboard status has a localized HA entity name in all 18 catalogs", () =>
   assert.equal(load("translations/fr.json").entity.sensor.dashboard_status.name, "Statut du tableau de bord");
 });
 
-test("French derived-entity wording is explicit about energy use and SV-local provenance", () => {
+test("French derived-entity wording distinguishes electric metrics and SV-local provenance", () => {
   const sensor = load("translations/fr.json").entity.sensor;
-  assert.equal(sensor.current_trip_energy.name, "Énergie consommée sur le trajet en cours");
+  assert.equal(sensor.current_trip_energy.name, "Énergie électrique consommée depuis le début du trajet");
+  assert.equal(sensor.current_trip_consumption.name, "Consommation électrique du trajet en cours");
+  assert.equal(sensor.distance_since_charge.name, "Distance depuis la dernière recharge électrique");
+  assert.equal(sensor.trailing_consumption_500km.name, "Consommation électrique moyenne sur les 500 derniers km");
+  assert.equal(sensor.current_charge_power.name, "Puissance de recharge actuelle");
   assert.equal(sensor.last_trip_result.name, "Dernier trajet enregistré par SV Dashboard");
   assert.equal(sensor.last_charge_result.name, "Dernière recharge enregistrée par SV Dashboard");
-  assert.equal(sensor.trailing_consumption_500km.name, "Consommation moyenne (500 km)");
 });
 
 test("upstream readiness does not require a universal battery entity", () => {
