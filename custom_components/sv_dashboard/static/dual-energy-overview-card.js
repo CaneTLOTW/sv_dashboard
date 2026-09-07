@@ -4,6 +4,7 @@ import { localeFor, textFor } from "./i18n.js?v=0.6.0-beta.10";
 const STATUS_DOMAIN = "sv_dashboard";
 const CARD_TAG = "sv-dashboard-dual-energy-overview-card";
 const EDITOR_TAG = "sv-dashboard-dual-energy-overview-card-editor";
+const CLIMATE_COMMAND_GUARD_MS = 90 * 1000;
 
 const statusCandidates = (hass, entryId) => Object.entries(hass?.states || {}).filter(([entityId, state]) => {
   const attributes = state?.attributes || {};
@@ -41,7 +42,7 @@ const timestamp = (state) => {
 };
 
 class SvDashboardDualEnergyOverviewCard extends LitElement {
-  static properties = { _hass: { state: true }, _config: { state: true } };
+  static properties = { _hass: { state: true }, _config: { state: true }, _climatePendingUntil: { state: true } };
 
   static styles = css`
     :host { display: block; }
@@ -95,8 +96,12 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
       cursor: pointer;
       box-shadow: 0 2px 9px rgba(0,0,0,.10);
     }
-    .climate-control ha-icon { --mdc-icon-size: 24px; color: var(--primary-color); }
+    .climate-control ha-icon { --mdc-icon-size: 24px; color: var(--secondary-text-color); }
     .climate-control.active { background: color-mix(in srgb, var(--primary-color) 13%, var(--card-background-color)); border-color: color-mix(in srgb, var(--primary-color) 32%, var(--divider-color)); }
+    .climate-control.active ha-icon { color: var(--primary-color); }
+    .climate-control.pending { background: color-mix(in srgb, var(--primary-color) 8%, var(--card-background-color)); border-color: color-mix(in srgb, var(--primary-color) 22%, var(--divider-color)); }
+    .climate-control.pending ha-icon { color: var(--primary-color); opacity: .72; animation: svHeroClimatePending 1.2s ease-in-out infinite; }
+    .climate-control:disabled { cursor: default; }
     .temperature-badge {
       right: 18px;
       min-height: 36px;
@@ -152,6 +157,10 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
       0%, 100% { filter: brightness(1); box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary-color) 12%, transparent); }
       50% { filter: brightness(1.18); box-shadow: 0 0 15px 4px color-mix(in srgb, var(--primary-color) 52%, transparent); }
     }
+    @keyframes svHeroClimatePending {
+      0%, 100% { opacity: .55; }
+      50% { opacity: 1; }
+    }
     @container (max-width: 760px) {
       .hero { padding: 14px 16px 18px; gap: 0 14px; }
       .picture { min-height: 300px; }
@@ -181,7 +190,17 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
     }
   `;
 
-  constructor() { super(); this._hass = undefined; this._config = {}; }
+  constructor() {
+    super();
+    this._hass = undefined;
+    this._config = {};
+    this._climatePendingUntil = 0;
+    this._climatePendingTimer = undefined;
+  }
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    if (this._climatePendingTimer) clearTimeout(this._climatePendingTimer);
+  }
   setConfig(config) { this._config = { ...(config || {}) }; }
   set hass(hass) { this._hass = hass; this.requestUpdate(); }
   get hass() { return this._hass; }
@@ -244,13 +263,29 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
     return mapped.fuel_consumption_instant;
   }
 
-  _toggleClimate(mapped) {
+  _startClimate(mapped) {
     const start = mapped.preconditioning_start;
-    const stop = mapped.preconditioning_stop;
     const active = isOn(this._hass?.states?.[mapped.preconditioning]?.state);
-    const target = active && stop ? stop : start;
-    if (!target || !this._hass?.callService) return;
-    this._hass.callService("button", "press", { entity_id: target });
+    if (!start || active || Date.now() < this._climatePendingUntil || !this._hass?.callService) return;
+
+    this._climatePendingUntil = Date.now() + CLIMATE_COMMAND_GUARD_MS;
+    if (this._climatePendingTimer) clearTimeout(this._climatePendingTimer);
+    this._climatePendingTimer = setTimeout(() => {
+      this._climatePendingUntil = 0;
+      this._climatePendingTimer = undefined;
+      this.requestUpdate();
+    }, CLIMATE_COMMAND_GUARD_MS);
+    this.requestUpdate();
+
+    const result = this._hass.callService("button", "press", { entity_id: start });
+    if (result?.catch) {
+      result.catch(() => {
+        this._climatePendingUntil = 0;
+        if (this._climatePendingTimer) clearTimeout(this._climatePendingTimer);
+        this._climatePendingTimer = undefined;
+        this.requestUpdate();
+      });
+    }
   }
 
   render() {
@@ -305,6 +340,7 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
     const temperature = this._formatValue(mapped.temperature, 0);
     const temperatureUnit = this._hass.states?.[mapped.temperature]?.attributes?.unit_of_measurement || "°C";
     const climateActive = isOn(this._hass.states?.[mapped.preconditioning]?.state);
+    const climatePending = !climateActive && Date.now() < this._climatePendingUntil;
     const temperatureNumber = numeric(this._hass.states?.[mapped.temperature]);
     const climateIcon = climateActive && temperatureNumber !== null && temperatureNumber <= 20 ? "mdi:radiator" : "mdi:air-conditioner";
 
@@ -316,7 +352,7 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
       <ha-card>
         <div class="hero">
 ${mapped.preconditioning_start ? html`
-  <button class="top-control climate-control ${climateActive ? "active" : ""}" type="button" aria-label=${dashboardText.climate} title=${dashboardText.climate} @click=${(event) => { event.stopPropagation(); this._toggleClimate(mapped); }}>
+  <button class="top-control climate-control ${climateActive ? "active" : ""} ${climatePending ? "pending" : ""}" type="button" ?disabled=${climateActive || climatePending} aria-label=${dashboardText.startClimate} title=${dashboardText.startClimate} @click=${(event) => { event.stopPropagation(); this._startClimate(mapped); }}>
     <ha-icon icon=${climateIcon}></ha-icon>
   </button>` : nothing}
 ${mapped.temperature ? html`

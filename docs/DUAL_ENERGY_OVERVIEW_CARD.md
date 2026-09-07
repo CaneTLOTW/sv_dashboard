@@ -4,6 +4,15 @@
 
 It is also available from Home Assistant's normal **Add card** picker as the localized **SV vehicle overview – Dual Energy** entry. The compact universal vehicle overview remains a separate public card.
 
+## Two intended roles
+
+The Dual-Energy Hero is deliberately reusable in two different contexts:
+
+1. **Standalone/start-page Hero** — add the card to any ordinary Home Assistant dashboard to show the most important vehicle information without opening the complete SV Dashboard first. This is a supported product use case, not only a beta test scaffold.
+2. **Generated SV Dashboard Hero** — the generated dashboard can use the same Dual-Energy presentation for vehicles that expose both electric and fuel capabilities. Pure-electric and other non-dual vehicles keep the compact/universal Hero.
+
+The current beta still uses the compact/universal card in the generated LIVE view. Capability-driven automatic selection of the Dual-Energy Hero for Hybrid/PHEV vehicles is the next integration step after external DS4 validation.
+
 ## Minimal configuration
 
 ```yaml
@@ -33,13 +42,28 @@ Important rules:
 
 The production Hero uses native card interactions rather than nested `custom:button-card` instances:
 
-- click the vehicle image → generated SV vehicle dashboard;
+- click the **vehicle image** → generated SV vehicle dashboard (`/<dashboard_url_path>/vehicle` unless `navigation_path` overrides it);
 - click vehicle temperature → Home Assistant native **More Info** / recorded history;
 - click Battery or Fuel percentage → native **More Info** for the mapped entity;
-- click the current battery/fuel detail → native **More Info** for the metric currently being displayed;
-- climate/preconditioning remains a direct package action where the upstream capability exists.
+- click the current battery/fuel detail → native **More Info** for the metric currently being displayed.
+
+The vehicle-picture navigation is especially important for the standalone/start-page use case: the card acts as the compact entry point into the full generated vehicle dashboard. The whole card is not a navigation target; the vehicle picture is.
 
 The native implementation replaced the temporary YAML/button-card interaction playground used during beta development.
+
+## Preconditioning interaction
+
+The small Hero climate control is intentionally treated primarily as a **one-shot preconditioning start action**, not as the main start/stop control surface.
+
+Citroën describes remote temperature preconditioning as a vehicle-managed cycle to a fixed target around **21 °C**. Exact timing differs by model and by immediate versus scheduled use, and Stellantis state feedback can arrive with noticeable delay. For that reason the overview Hero must not encourage rapid repeated clicks that depend on an immediately updated remote state.
+
+Design contract:
+
+- the Hero control starts the available mapped preconditioning action;
+- the visual state may follow the upstream preconditioning entity when that state becomes available;
+- a delayed state transition does not mean the first command failed;
+- explicit **Start climate / Stop climate** actions remain available in the generated SV Dashboard Quick Actions area for users who intentionally want to stop a running cycle;
+- the Hero should not send duplicate start commands merely because remote state feedback is still pending.
 
 ## Localisation
 

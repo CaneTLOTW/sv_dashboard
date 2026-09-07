@@ -58,11 +58,18 @@ type: custom:sv-dashboard-dual-energy-overview-card
 
 The production Hero is native Lit code. It does not embed the temporary `custom:button-card` prototype that was used during beta design work.
 
+The card remains independently addable to any normal Lovelace dashboard, for example as a start-page vehicle summary. Clicking the vehicle image opens the generated SV vehicle dashboard.
+
 See [Dual-Energy vehicle overview card](DUAL_ENERGY_OVERVIEW_CARD.md).
 
 ## Vehicle / LIVE
 
-Vehicle / LIVE is the day-to-day cockpit. Depending on the selected vehicle it can show:
+Vehicle / LIVE is the day-to-day cockpit. Its Hero is selected automatically from actual vehicle capabilities:
+
+- vehicles exposing **both electric and fuel** data use the wide **Dual-Energy Hero**;
+- vehicles without both energy domains retain the compact universal vehicle overview.
+
+This selection is capability-driven rather than tied to DS4, e-C3 or another hard-coded model name. Depending on the selected vehicle, the LIVE view can show:
 
 - vehicle picture;
 - electric SOC/range and/or fuel level/range;
@@ -87,7 +94,11 @@ The native Dual-Energy Hero uses normal Home Assistant interactions:
 - vehicle temperature → native More Info/history;
 - battery/fuel percentage → native More Info/history for the mapped entity;
 - detail value → native More Info/history for the metric currently displayed;
-- preconditioning → mapped upstream start/stop action where supported.
+- preconditioning icon → sends a mapped **START** request once where supported.
+
+The Hero deliberately does **not** turn the preconditioning icon into a start/stop toggle. Vehicle/API state feedback can arrive with a delay, so repeated START requests are temporarily guarded while the command is pending. The icon is neutral while inactive, shows pending feedback after a START request and follows the actual mapped preconditioning state once it becomes active. Explicit **Start** and **Stop** controls remain available in the generated dashboard's **Quick actions** section.
+
+SV Dashboard does not impose its own fixed climate run time. The vehicle/upstream service remains responsible for the remote-preconditioning cycle and its termination.
 
 ### Hybrid / Dual-Energy state contract
 
@@ -118,7 +129,10 @@ It can include:
 - duration;
 - energy when source data permits;
 - average charging power when defensibly derivable;
+- mileage in expanded history details when a canonical session carries it;
 - reconstructed SOC/time curves.
+
+Reconstructed parking-window events show only information actually known for that event. Unknown charging duration/type fields are not repeated as empty detail rows when the reconstruction hint already explains why they are unavailable.
 
 Derived power/energy values are **battery-side estimates**, not wallbox/EVSE/grid meter data. They must not be mixed silently with an external measured energy source because charging losses and tariff accounting would otherwise become ambiguous.
 
@@ -143,7 +157,13 @@ Trips uses canonical Stellantis server history with:
 - short/zero-distance handling;
 - plausibility checks;
 - continuity repair only when strong evidence exists;
-- electric and fuel columns only when the selected vehicle actually provides the corresponding data.
+- electric and fuel telemetry only when the selected vehicle actually provides the corresponding data.
+
+For Dual-Energy vehicles, the main table is intentionally compact:
+
+`Date | Duration | Distance | Avg. km/h | kWh/100 km | l/100 km`
+
+Additional telemetry such as absolute kWh, trip type, SOC, start/end mileage, fuel level/range, consumed litres and maximum speed stays available in the expandable row details. Missing electric or fuel values remain `—`; the UI does not infer a value from the other energy domain.
 
 Raw upstream values remain retained for diagnostics when a derived boundary is repaired.
 
@@ -201,7 +221,7 @@ The package-owned **Dashboard status** sensor is part of the same Home Assistant
 SV Dashboard is not model-hardcoded.
 
 - **Electric:** electric SOC/range/charging/battery analytics where available.
-- **Hybrid / PHEV:** electric and fuel features can coexist and are gated independently.
+- **Hybrid / PHEV:** electric and fuel features can coexist and are gated independently; when both domains are present, the generated LIVE view uses the Dual-Energy Hero.
 - **Thermic / combustion:** fuel features without electric-only charging/battery analytics.
 - **Hydrogen / unknown:** only actual mapped capabilities are shown.
 

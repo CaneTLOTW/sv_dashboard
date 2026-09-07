@@ -161,6 +161,7 @@ class SvDashboardStrategy extends HTMLElement {
     const supportsFuel = capabilities.fuel ?? Boolean(entity("fuel"));
     const supportsCharging = capabilities.charging ?? Boolean(entity("battery_charging"));
     const supportsChargeHistory = capabilities.charge_history ?? (supportsCharging && Boolean(entity("battery")));
+    const supportsDualEnergy = supportsElectric && supportsFuel;
     const vehicleIcon = supportsElectric ? "mdi:car-electric" : "mdi:car";
     const control = (key) => controls[key];
     const present = (cards) => cards.filter(Boolean);
@@ -405,17 +406,21 @@ class SvDashboardStrategy extends HTMLElement {
     } : null;
 
     /*
-     * LIVE and the reusable start-page card intentionally share one component.
-     * The wrapper owns entity-picture lifecycle/rebuild handling, so entering
-     * this view through normal Home Assistant navigation behaves exactly like
-     * the already validated standalone overview card.
+     * The generated LIVE view is capability driven. Dual-energy vehicles use
+     * the native Battery + Fuel Hero, while EV/thermic-only vehicles retain the
+     * compact universal overview card. The same cards remain independently
+     * addable to any Home Assistant dashboard.
      */
-    const hero = tracker && (entity("battery") || entity("fuel")) ? {
+    const hero = tracker && (entity("battery") || entity("fuel")) ? (supportsDualEnergy ? {
+      type: "custom:sv-dashboard-dual-energy-overview-card",
+      entry_id: attributes.entry_id,
+      grid_options: { columns: "full", rows: 5 },
+    } : {
       type: "custom:sv-dashboard-vehicle-overview-card",
       entry_id: attributes.entry_id,
       variant: "live",
       grid_options: { columns: "full", rows: 4.5 },
-    } : null;
+    }) : null;
 
     const overviewSections = [
       { type: "grid", cards: present([
@@ -465,9 +470,9 @@ class SvDashboardStrategy extends HTMLElement {
         separator(strings.latestActivities, "mdi:history"),
         lastTripDisplayEntity ? bubble("last_trip", strings.lastTrip, "mdi:map-marker-distance", [], 6, lastTripDisplayEntity) : null,
         supportsCharging && lastChargeDisplayEntity ? { ...bubble("last_charge", strings.lastCharge, "mdi:ev-station", [], 6, lastChargeDisplayEntity), styles: relativeEventStyles } : null,
-        modules.trips && lastTripDisplayEntity ? { type: "custom:sv-dashboard-trip-history-card", entity: lastTripDisplayEntity, server_entity: serverTripEntity, trip_entities: [nativeLastTrip].filter(Boolean), energy_entities: supportsElectric ? [lastTripResult].filter(Boolean) : [], title: strings.tripHistory, language: language(hass), compact_filters: true, filter_days: 30, hide_short_trips: true, show_zero_events: false, hours_to_show: historyHours, max_trips: 50, grid_options: { columns: "full" } } : null,
+        modules.trips && lastTripDisplayEntity ? { type: "custom:sv-dashboard-trip-history-card", entity: lastTripDisplayEntity, server_entity: serverTripEntity, trip_entities: [nativeLastTrip].filter(Boolean), energy_entities: supportsElectric ? [lastTripResult].filter(Boolean) : [], title: strings.tripHistory, language: language(hass), hybrid_layout: supportsDualEnergy, compact_filters: true, filter_days: 30, hide_short_trips: true, show_zero_events: false, hours_to_show: historyHours, max_trips: 50, grid_options: { columns: "full" } } : null,
         modules.trips && supportsFuel ? { type: "custom:sv-dashboard-fuel-history-card", entry_id: attributes.entry_id, fuel_entity: entity("fuel"), hours_to_show: historyHours, max_events: 50, grid_options: { columns: "full" } } : null,
-        modules.charging && supportsChargeHistory ? { type: "custom:sv-dashboard-charge-history-card", title: strings.chargeHistory, server_entity: serverChargeEntity, language: language(hass), charging_entity: entity("battery_charging"), soc_entity: entity("battery"), power_entity: currentChargePower, mode_entity: entity("battery_charging_type"), capacity_entity: entity("battery_capacity"), result_entity: lastChargeResult, navigation_path: chargeViewPath, selection_storage_key: chargeSelectionKey, hours_to_show: historyHours, max_sessions: 50, fallback_capacity_kwh: null, grid_options: { columns: "full" } } : null,
+        modules.charging && supportsChargeHistory ? { type: "custom:sv-dashboard-charge-history-card", title: strings.chargeHistory, server_entity: serverChargeEntity, language: language(hass), charging_entity: entity("battery_charging"), soc_entity: entity("battery"), power_entity: currentChargePower, mode_entity: entity("battery_charging_type"), capacity_entity: entity("battery_capacity"), result_entity: lastChargeResult, mileage_entity: entity("mileage"), navigation_path: chargeViewPath, selection_storage_key: chargeSelectionKey, hours_to_show: historyHours, max_sessions: 50, fallback_capacity_kwh: null, grid_options: { columns: "full" } } : null,
       ]) },
     ].filter((section) => section.cards.length);
 
@@ -512,7 +517,7 @@ class SvDashboardStrategy extends HTMLElement {
             { type: "heading", heading: strings.tripHistory, icon: "mdi:car-clock", heading_style: "title" },
             markdown(strings.tripHistoryIntro),
             control("sync_server_history") ? controlButton("sync_server_history", strings.syncServerHistory, "mdi:database-sync") : null,
-            { type: "custom:sv-dashboard-trip-history-card", entity: lastTripDisplayEntity, server_entity: serverTripEntity, trip_entities: [nativeLastTrip].filter(Boolean), energy_entities: supportsElectric ? [lastTripResult].filter(Boolean) : [], title: strings.tripHistory, language: language(hass), hours_to_show: historyHours, expanded_window: true, initial_visible_trips: 100, max_trips: 0, grid_options: { columns: "full", rows: 10 } },
+            { type: "custom:sv-dashboard-trip-history-card", entity: lastTripDisplayEntity, server_entity: serverTripEntity, trip_entities: [nativeLastTrip].filter(Boolean), energy_entities: supportsElectric ? [lastTripResult].filter(Boolean) : [], title: strings.tripHistory, language: language(hass), hybrid_layout: supportsDualEnergy, hours_to_show: historyHours, expanded_window: true, initial_visible_trips: 100, max_trips: 0, grid_options: { columns: "full", rows: 10 } },
             supportsFuel ? { type: "custom:sv-dashboard-fuel-history-card", entry_id: attributes.entry_id, fuel_entity: entity("fuel"), hours_to_show: historyHours, max_events: 100, grid_options: { columns: "full", rows: 5 } } : null,
           ].filter(Boolean),
         }],

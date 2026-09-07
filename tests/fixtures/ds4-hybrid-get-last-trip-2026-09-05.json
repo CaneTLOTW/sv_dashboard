@@ -1,0 +1,49 @@
+{
+  "total": 2,
+  "_embedded": {
+    "trips": [
+      {
+        "id": "<TRIP_ID_1>",
+        "startedAt": "2026-09-05T08:36:16Z",
+        "stoppedAt": "2026-09-05T08:51:45Z",
+        "duration": 929,
+        "distance": 2.9,
+        "done": true,
+        "startEnergies": [
+          {"type": "Fuel", "subType": "FossilEnergy", "level": 28.0, "autonomy": 165},
+          {"type": "Electric", "subType": "ElectricEnergy", "level": 75.0, "autonomy": 50}
+        ],
+        "endEnergies": [
+          {"type": "Fuel", "subType": "FossilEnergy", "level": 28.0, "autonomy": 165},
+          {"type": "Electric", "subType": "ElectricEnergy", "level": 71.0, "autonomy": 48}
+        ],
+        "energyConsumptions": [
+          {"consumption": 0.0, "avgConsumption": 0.0, "type": "Fuel", "subType": "FossilEnergy"}
+        ],
+        "kinetic": {"avgSpeed": 3.12, "maxSpeed": 0.0},
+        "startMileage": 1859.7
+      },
+      {
+        "id": "<TRIP_ID_2>",
+        "startedAt": "2026-09-05T09:19:56Z",
+        "stoppedAt": "2026-09-05T09:31:40Z",
+        "duration": 704,
+        "distance": 3.1,
+        "done": true,
+        "startEnergies": [
+          {"type": "Fuel", "subType": "FossilEnergy", "level": 28.0, "autonomy": 165},
+          {"type": "Electric", "subType": "ElectricEnergy", "level": 68.0, "autonomy": 42}
+        ],
+        "endEnergies": [
+          {"type": "Fuel", "subType": "FossilEnergy", "level": 28.0, "autonomy": 145},
+          {"type": "Electric", "subType": "ElectricEnergy", "level": 68.0, "autonomy": 42}
+        ],
+        "energyConsumptions": [
+          {"consumption": 25.616, "avgConsumption": 826.32263, "type": "Fuel", "subType": "FossilEnergy"}
+        ],
+        "kinetic": {"avgSpeed": 4.4, "maxSpeed": 0.0},
+        "startMileage": 1862.6
+      }
+    ]
+  }
+}

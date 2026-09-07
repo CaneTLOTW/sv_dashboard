@@ -4,6 +4,18 @@ All notable user-facing changes to SV Dashboard are recorded here.
 
 SV Dashboard uses semantic package versions. `develop` is the integration/acceptance branch; `main` represents the last explicitly accepted publishable state.
 
+## 0.6.0-beta.12 Hybrid dashboard integration and tester-feedback minifix
+
+- Makes the generated Vehicle/LIVE Hero capability-driven: vehicles exposing both electric and fuel data now use the native **Dual-Energy Hero** automatically, while EV/thermic-only vehicles retain the compact universal Hero.
+- Keeps the Dual-Energy Hero independently addable to any Home Assistant dashboard; clicking its vehicle picture continues to open the generated SV vehicle dashboard.
+- Clarifies Hero preconditioning as a guarded **START-only** convenience action. The inactive icon is neutral, a pending START is visualized, duplicate START presses are blocked for 90 seconds while upstream state catches up, and the actual mapped preconditioning state drives the active styling. Explicit START/STOP controls remain in the generated dashboard Quick Actions.
+- Simplifies the main Hybrid trip-history table to `Date | Duration | Distance | Avg. km/h | kWh/100 km | l/100 km`; absolute kWh, trip type, SOC, mileage, fuel level/range/litres and maximum speed remain in expandable details.
+- Adds canonical charge-session mileage to expanded Charging History details where available and removes redundant empty reconstructed charge-duration/type rows already explained by the reconstruction hint.
+- Applies the reviewed French package-entity wording for current-trip energy and SV-recorded trip/charge results while retaining the semantically correct `Puissance de recharge actuelle` for current charge power.
+- Adds an anonymized real DS4 Hybrid two-trip fixture to regression coverage, including a fuel-using trip with unchanged electric SOC so the parser/UI cannot silently invent electric energy.
+- Bumps package and top-level frontend resources to `0.6.0-beta.12` for clean external HACS validation in issue #2.
+- Remains a prerelease on `develop`; `main` stays unchanged until the DS4 Hybrid/French beta acceptance is complete.
+
 ## 0.6.0-beta.11 HACS update-channel verification minifix
 
 - Bumps the package and top-level Home Assistant frontend resource version to `0.6.0-beta.11` to create a clean beta update event for external validation in #2/#41.

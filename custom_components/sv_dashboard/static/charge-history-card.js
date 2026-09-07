@@ -192,6 +192,10 @@ class CodexStellantisChargeHistoryCardV1 extends LitElement {
         return textFor(this._i18nContext(), "chargeHistory");
     }
 
+    _dashboardText() {
+        return textFor(this._i18nContext(), "dashboard");
+    }
+
     _selectionKey() {
         return this._config.selection_storage_key || "sv_dashboard_charge_selection";
     }
@@ -233,10 +237,13 @@ class CodexStellantisChargeHistoryCardV1 extends LitElement {
     _detail(session) {
         const observed = session.quality === "observed";
         const text = this._text();
+        const dashboardText = this._dashboardText();
+        const mileage = session.start_mileage_km ?? session.parking_mileage_km;
         return html`<div class="detail">
             <div class="detail-grid">
                 <span><strong>SOC:</strong> ${this._number(session.soc_start, 0)} → ${this._number(session.soc_end, 0)} %</span>
                 <span><strong>${text.batteryEnergy}:</strong> ${this._number(session.energy_kwh)} kWh</span>
+                ${mileage !== null && mileage !== undefined ? html`<span><strong>${dashboardText.mileage}:</strong> ${this._number(mileage, 1)} km</span>` : nothing}
                 ${observed ? html`
                     <span><strong>${text.chargeStartDetail}:</strong> ${this._formatDate(session.start_time)}</span>
                     <span><strong>${text.chargeEndDetail}:</strong> ${this._formatDate(session.end_time)}</span>
@@ -244,8 +251,6 @@ class CodexStellantisChargeHistoryCardV1 extends LitElement {
                     <span><strong>${text.averagePowerDetail}:</strong> ${this._number(session.average_power_kw)} kW</span>
                 ` : html`
                     <span><strong>${text.standstill}:</strong> ${this._formatDuration(session.standstill_duration_seconds)}</span>
-                    <span><strong>${text.chargingDuration}:</strong> —</span>
-                    <span><strong>${text.type}:</strong> —</span>
                 `}
             </div>
             ${observed && session.has_charge_curve ? html`<button @click=${(event) => { event.stopPropagation(); this._openSession(session); }}>${text.showCurve}</button>` : nothing}
