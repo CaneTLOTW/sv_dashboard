@@ -64,6 +64,21 @@ jobs:
           )
           naming_path.write_text(naming)
 
+          architecture_path = Path("tests/frontend-architecture.test.mjs")
+          architecture = architecture_path.read_text()
+          assert 'FRONTEND_VERSION = "0\\.6\\.0-beta\\.12"' in architecture
+          architecture = architecture.replace(
+              'FRONTEND_VERSION = "0\\.6\\.0-beta\\.12"',
+              'FRONTEND_VERSION = "0\\.6\\.0-beta\\.13"',
+              1,
+          )
+          architecture = architecture.replace(
+              '// beta.12 cache-busts only the changed package modules; unchanged modules',
+              '// beta.13 cache-busts only Trip History; unchanged package modules',
+              1,
+          )
+          architecture_path.write_text(architecture)
+
           hybrid_path = Path("tests/hybrid-fuel-ui.test.mjs")
           hybrid = hybrid_path.read_text()
           old_title = 'test("frontend loads beta.12 changed cards and fuel history remains capability gated", () => {'
@@ -108,6 +123,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/prepare-beta13.yml
-          git add CHANGELOG.md docs/BETA13_TEST_SCOPE.md custom_components/sv_dashboard/manifest.json custom_components/sv_dashboard/const.py custom_components/sv_dashboard/static/frontend.js tests/dashboard-naming.test.mjs tests/hybrid-fuel-ui.test.mjs
+          git add CHANGELOG.md docs/BETA13_TEST_SCOPE.md custom_components/sv_dashboard/manifest.json custom_components/sv_dashboard/const.py custom_components/sv_dashboard/static/frontend.js tests/dashboard-naming.test.mjs tests/frontend-architecture.test.mjs tests/hybrid-fuel-ui.test.mjs
           git commit -m "chore: prepare v0.6.0-beta.13"
           git push origin HEAD:release/beta13-candidate
