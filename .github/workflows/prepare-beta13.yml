@@ -1,0 +1,113 @@
+name: Prepare beta.13 candidate
+
+on:
+  push:
+    branches:
+      - release/beta13-candidate
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Prepare beta.13 metadata and cache keys
+        shell: python
+        run: |
+          from pathlib import Path
+          import json
+
+          version = "0.6.0-beta.13"
+
+          manifest_path = Path("custom_components/sv_dashboard/manifest.json")
+          manifest = json.loads(manifest_path.read_text())
+          assert manifest["version"] == "0.6.0-beta.12"
+          manifest["version"] = version
+          manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n")
+
+          const_path = Path("custom_components/sv_dashboard/const.py")
+          const = const_path.read_text()
+          assert 'FRONTEND_VERSION = "0.6.0-beta.12"' in const
+          const = const.replace('FRONTEND_VERSION = "0.6.0-beta.12"', f'FRONTEND_VERSION = "{version}"', 1)
+          const_path.write_text(const)
+
+          frontend_path = Path("custom_components/sv_dashboard/static/frontend.js")
+          frontend = frontend_path.read_text()
+          assert 'import("./trip-history-card.js?v=0.6.0-beta.12")' in frontend
+          frontend = frontend.replace(
+              'import("./trip-history-card.js?v=0.6.0-beta.12")',
+              'import("./trip-history-card.js?v=0.6.0-beta.13")',
+              1,
+          )
+          frontend_path.write_text(frontend)
+
+          naming_path = Path("tests/dashboard-naming.test.mjs")
+          naming = naming_path.read_text()
+          assert "0.6.0-beta.12 resource version" in naming
+          naming = naming.replace("0.6.0-beta.12 resource version", "0.6.0-beta.13 resource version", 1)
+          assert 'FRONTEND_VERSION = "0\\.6\\.0-beta\\.12"' in naming
+          naming = naming.replace(
+              'FRONTEND_VERSION = "0\\.6\\.0-beta\\.12"',
+              'FRONTEND_VERSION = "0\\.6\\.0-beta\\.13"',
+              1,
+          )
+          naming_path.write_text(naming)
+
+          hybrid_path = Path("tests/hybrid-fuel-ui.test.mjs")
+          hybrid = hybrid_path.read_text()
+          old_title = 'test("frontend loads beta.12 changed cards and fuel history remains capability gated", () => {'
+          assert old_title in hybrid
+          hybrid = hybrid.replace(
+              old_title,
+              'test("frontend cache-busts beta.13 trip history while unchanged beta.12 modules stay pinned", () => {',
+              1,
+          )
+          assert '/trip-history-card\\.js\\?v=0\\.6\\.0-beta\\.12/' in hybrid
+          hybrid = hybrid.replace(
+              '/trip-history-card\\.js\\?v=0\\.6\\.0-beta\\.12/',
+              '/trip-history-card\\.js\\?v=0\\.6\\.0-beta\\.13/',
+              1,
+          )
+          hybrid_path.write_text(hybrid)
+
+          changelog_path = Path("CHANGELOG.md")
+          changelog = changelog_path.read_text()
+          marker = "## 0.6.0-beta.12 Hybrid dashboard integration and tester-feedback minifix\n"
+          assert marker in changelog
+          section = """## 0.6.0-beta.13 trip-history EV cleanup and energy recovery\n\n- Hides the redundant **Powertrain / Antrieb** column for single-energy vehicles; pure EV and thermic trip tables no longer repeat the already-known vehicle powertrain on every row.\n- Keeps per-trip **EV / Hybrid / ICE** classification in the Dual-Energy/Hybrid trip table, where the distinction is meaningful.\n- Restores missing electric **kWh** and **kWh/100 km** in canonical trip history when Stellantis server history omits electric energy but SV Dashboard has a strongly matched, positive locally observed SOC/capacity-derived trip result.\n- Never overwrites real server electric telemetry and never invents energy from missing, unchanged or zero local SOC-derived values.\n- Recomputes kWh/100 km from the canonical server distance after a successful local-energy enrichment and records the local provenance.\n- Adds regression coverage for both capability-gated powertrain display and conservative electric-energy enrichment.\n- Cache-busts the changed Trip History card and bumps the package/frontend resource to `0.6.0-beta.13`; unchanged beta.12/beta.10/beta.7 frontend modules retain their existing content keys.\n- Remains a prerelease on `develop`; `main` stays unchanged pending explicit acceptance.\n\n"""
+          changelog = changelog.replace(marker, section + marker, 1)
+          changelog_path.write_text(changelog)
+
+          Path("docs/BETA13_TEST_SCOPE.md").write_text("""# beta.13 owner test scope\n\nThis focused prerelease verifies the trip-history regression reported during owner QA after beta.12.\n\n- Pure EV / thermic vehicles: the main Trip History table must not show a redundant Powertrain/Antrieb column.\n- Hybrid/PHEV vehicles: the main table keeps per-trip EV / Hybrid / ICE classification.\n- Electric-capable vehicles: kWh and kWh/100 km may be restored only when a canonical Stellantis server trip has no electric energy and a strongly matched local SV observation contains a positive SOC/capacity-derived energy result.\n- Existing server electric telemetry must never be overwritten.\n- Missing or unchanged SOC must remain unknown rather than being converted into invented electric consumption.\n- Short-trip and zero-distance filtering remains unchanged.\n\nCandidate branch starts from `develop` commit `0eceffe48c1565b27cc9b7b90319a2a7ac8a1935`, which already contains the reviewed fix from PR #45 and a fully green post-merge Validate run.\n""")
+      - name: Validate beta.13 candidate
+        run: |
+          python -m compileall -q custom_components/sv_dashboard
+          node --check custom_components/sv_dashboard/static/frontend.js
+          node --check custom_components/sv_dashboard/static/trip-history-card.js
+          node --test tests/*.test.mjs
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          for path in Path('custom_components/sv_dashboard').rglob('*.json'):
+              json.loads(path.read_text())
+          PY
+          git diff --check
+      - name: Commit candidate and remove helper workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/prepare-beta13.yml
+          git add CHANGELOG.md docs/BETA13_TEST_SCOPE.md custom_components/sv_dashboard/manifest.json custom_components/sv_dashboard/const.py custom_components/sv_dashboard/static/frontend.js tests/dashboard-naming.test.mjs tests/hybrid-fuel-ui.test.mjs
+          git commit -m "chore: prepare v0.6.0-beta.13"
+          git push origin HEAD:release/beta13-candidate
