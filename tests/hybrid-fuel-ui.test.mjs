@@ -42,8 +42,8 @@ test("real DS4 Hybrid fixture covers electric SOC use and fuel-only telemetry wi
 
 test("hybrid trip history keeps the main table compact and moves extra telemetry into details", () => {
   assert.match(trip, /const hybridLayout = Boolean\(this\._config\.hybrid_layout\)/);
-  assert.match(trip, /const columnCount = hybridLayout \? 6/);
-  assert.match(trip, /hybridLayout \? html`<th>\$\{text\.consumption\}<\/th><th>l\/100 km<\/th>`/);
+  assert.match(trip, /const columnCount = hybridLayout \? 7/);
+  assert.match(trip, /hybridLayout \? html`<th>\$\{text\.consumption\}<\/th><th>l\/100 km<\/th><th>\$\{dashboardText\.powertrain\}<\/th>`/);
   assert.match(trip, /trip\.attributes\?\.energy_kwh/);
   assert.match(trip, /dashboardText\.fuelRange/);
   assert.match(trip, /ev: "EV", hybrid: "Hybrid", ice: "ICE"/);
