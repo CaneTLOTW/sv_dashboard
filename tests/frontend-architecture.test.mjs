@@ -19,9 +19,9 @@ const times = read("time.py");
 
 test("Home Assistant registers one SV frontend resource", () => {
   assert.match(constants, /FRONTEND_URL = "\/sv_dashboard\/frontend\.js"/);
-  assert.match(constants, /FRONTEND_VERSION = "0\.6\.0-beta\.12"/);
+  assert.match(constants, /FRONTEND_VERSION = "0\.6\.0-beta\.13"/);
   assert.match(constants, /FRONTEND_RESOURCE_URLS = \(FRONTEND_URL,\)/);
-  // beta.12 cache-busts only the changed package modules; unchanged modules
+  // beta.13 cache-busts only Trip History; unchanged package modules
   // deliberately retain their previously validated content URLs.
   assert.match(frontend, /import\("\.\/vehicle-overview-card\.js\?v=0\.6\.0-beta\.10"\)/);
   assert.match(frontend, /import\("\.\/gps-history-card\.js\?v=0\.6\.0-beta\.7"\)/);

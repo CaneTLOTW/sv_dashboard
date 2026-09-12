@@ -148,8 +148,8 @@ test("new card strings cover 18 languages", () => {
   }
 });
 
-test("frontend loads beta.12 changed cards and fuel history remains capability gated", () => {
-  assert.match(frontend, /trip-history-card\.js\?v=0\.6\.0-beta\.12/);
+test("frontend cache-busts beta.13 trip history while unchanged beta.12 modules stay pinned", () => {
+  assert.match(frontend, /trip-history-card\.js\?v=0\.6\.0-beta\.13/);
   assert.match(frontend, /charge-history-card\.js\?v=0\.6\.0-beta\.12/);
   assert.match(frontend, /dual-energy-overview-card\.js\?v=0\.6\.0-beta\.12/);
   assert.match(frontend, /sv_dashboard\.js\?v=0\.6\.0-beta\.12/);

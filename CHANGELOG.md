@@ -4,6 +4,17 @@ All notable user-facing changes to SV Dashboard are recorded here.
 
 SV Dashboard uses semantic package versions. `develop` is the integration/acceptance branch; `main` represents the last explicitly accepted publishable state.
 
+## 0.6.0-beta.13 trip-history EV cleanup and energy recovery
+
+- Hides the redundant **Powertrain / Antrieb** column for single-energy vehicles; pure EV and thermic trip tables no longer repeat the already-known vehicle powertrain on every row.
+- Keeps per-trip **EV / Hybrid / ICE** classification in the Dual-Energy/Hybrid trip table, where the distinction is meaningful.
+- Restores missing electric **kWh** and **kWh/100 km** in canonical trip history when Stellantis server history omits electric energy but SV Dashboard has a strongly matched, positive locally observed SOC/capacity-derived trip result.
+- Never overwrites real server electric telemetry and never invents energy from missing, unchanged or zero local SOC-derived values.
+- Recomputes kWh/100 km from the canonical server distance after a successful local-energy enrichment and records the local provenance.
+- Adds regression coverage for both capability-gated powertrain display and conservative electric-energy enrichment.
+- Cache-busts the changed Trip History card and bumps the package/frontend resource to `0.6.0-beta.13`; unchanged beta.12/beta.10/beta.7 frontend modules retain their existing content keys.
+- Remains a prerelease on `develop`; `main` stays unchanged pending explicit acceptance.
+
 ## 0.6.0-beta.12 Hybrid dashboard integration and tester-feedback minifix
 
 - Makes the generated Vehicle/LIVE Hero capability-driven: vehicles exposing both electric and fuel data now use the native **Dual-Energy Hero** automatically, while EV/thermic-only vehicles retain the compact universal Hero.
