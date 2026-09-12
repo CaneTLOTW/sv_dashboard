@@ -614,6 +614,78 @@ def merge_charges(
     )
 
 
+def enrich_trips_with_local_energy(
+    server_trips: list[dict[str, Any]],
+    local_trips: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    """Fill only missing electric trip energy from a matched local observation.
+
+    The server trip remains canonical for timing, distance and fuel telemetry.
+    Local SV tracking is used only when the server row has no electric energy,
+    a positive locally derived energy value exists, and odometer/distance match
+    the same physical trip. Existing server electric telemetry is never
+    overwritten, and zero/unknown local energy is never promoted into history.
+    """
+    local_rows = [row for row in (local_trips or []) if isinstance(row, dict)]
+    for trip in server_trips:
+        if _number(trip.get("energy_kwh")) is not None:
+            continue
+        start_mileage = _number(trip.get("start_mileage"))
+        distance = _number(trip.get("distance_km"))
+        if start_mileage is None or distance is None or distance <= 0:
+            continue
+
+        candidates: list[tuple[float, dict[str, Any]]] = []
+        trip_start = _parse_time(trip.get("start_time"))
+        for local in local_rows:
+            local_energy = _number(local.get("energy_kwh"))
+            local_start_mileage = _number(local.get("start_mileage"))
+            local_distance = _number(local.get("distance_km"))
+            if (
+                local_energy is None
+                or local_energy <= 0
+                or local_start_mileage is None
+                or local_distance is None
+            ):
+                continue
+            mileage_delta = abs(local_start_mileage - start_mileage)
+            distance_delta = abs(local_distance - distance)
+            if mileage_delta > 0.25 or distance_delta > 2.0:
+                continue
+            local_start = _parse_time(local.get("start_time"))
+            time_delta = None
+            if trip_start is not None and local_start is not None:
+                time_delta = abs((trip_start - local_start).total_seconds())
+                if time_delta > 20 * 60:
+                    continue
+            score = mileage_delta * 1000 + distance_delta * 100 + ((time_delta or 0) / 60)
+            candidates.append((score, local))
+
+        if not candidates:
+            continue
+        local = min(candidates, key=lambda item: item[0])[1]
+        local_energy = _number(local.get("energy_kwh"))
+        if local_energy is None or local_energy <= 0:
+            continue
+
+        trip["energy_kwh"] = round(local_energy, 3)
+        trip["energy_per_100_km"] = round(local_energy / distance * 100, 2)
+        trip["consumption_kwh_100km"] = trip["energy_per_100_km"]
+        trip["energy_estimated"] = True
+        trip["consumption_estimated"] = True
+        trip["energy_source"] = "sv_local_trip_soc_delta"
+        for key in ("soc_start", "soc_end", "capacity_kwh"):
+            if trip.get(key) is None and local.get(key) is not None:
+                trip[key] = local.get(key)
+        fuel_used = (_number(trip.get("fuel_consumption_l")) or 0) > 0
+        trip["trip_type"] = "hybrid" if fuel_used else "ev"
+        trip["sources"] = list(dict.fromkeys([
+            *(trip.get("sources") or [trip.get("source")]),
+            "sv_local_trip",
+        ]))
+    return server_trips
+
+
 class ServerHistoryManager:
     """Maintain raw server data and the single canonical dashboard history."""
 
@@ -980,6 +1052,7 @@ class ServerHistoryManager:
             if isinstance(item, dict)
         ] if self.metrics else []
         trips = repair_trip_odometer_continuity(trips, local_trips)
+        trips = enrich_trips_with_local_energy(trips, local_trips)
         by_id = {trip["id"]: trip for trip in trips if trip.get("id")}
         all_trips = derive_trip_display_positions(
             sorted(by_id.values(), key=_trip_sort_key)

@@ -439,8 +439,8 @@ class CodexStellantisTripHistoryCardV4 extends LitElement {
         const hasMaxSpeed = trips.some((trip) => trip.attributes?.max_speed);
         const hasEnergy = trips.some((trip) => trip.attributes?.energy_kwh !== undefined && trip.attributes?.energy_kwh !== null);
         const hasFuel = trips.some((trip) => trip.attributes?.fuel_consumption_l_100km !== undefined && trip.attributes?.fuel_consumption_l_100km !== null);
-        const hasTripType = trips.some((trip) => trip.attributes?.trip_type && trip.attributes.trip_type !== "unknown");
-        const columnCount = hybridLayout ? 6 : 4 + (hasEnergy ? 2 : 0) + (hasFuel ? 1 : 0) + (hasTripType ? 1 : 0) + (hasMaxSpeed ? 1 : 0);
+        const showTripType = hybridLayout;
+        const columnCount = hybridLayout ? 7 : 4 + (hasEnergy ? 2 : 0) + (hasFuel ? 1 : 0) + (hasMaxSpeed ? 1 : 0);
         return html`
             <ha-card .header=${this._config.title || text.title}>
                 <div class="card-content">
@@ -466,7 +466,7 @@ class CodexStellantisTripHistoryCardV4 extends LitElement {
                         <div class=${this._expandedWindow ? "table-scroll expanded" : "table-scroll"} tabindex="0" aria-label=${text.scroll} @scroll=${(event) => this._onTableScroll(event)}>
                             <table class="trip-table"><thead><tr>
                                 <th>${text.date}</th><th>${text.duration}</th><th>${text.distance}</th><th>${text.average}</th>
-                                ${hybridLayout ? html`<th>${text.consumption}</th><th>l/100 km</th>` : html`${hasEnergy ? html`<th>${text.energy}</th><th>${text.consumption}</th>` : nothing}${hasFuel ? html`<th>l/100 km</th>` : nothing}${hasTripType ? html`<th>${dashboardText.powertrain}</th>` : nothing}${hasMaxSpeed ? html`<th>${text.maximum}</th>` : nothing}`}
+                                ${hybridLayout ? html`<th>${text.consumption}</th><th>l/100 km</th><th>${dashboardText.powertrain}</th>` : html`${hasEnergy ? html`<th>${text.energy}</th><th>${text.consumption}</th>` : nothing}${hasFuel ? html`<th>l/100 km</th>` : nothing}${hasMaxSpeed ? html`<th>${text.maximum}</th>` : nothing}`}
                             </tr></thead>
                             <tbody>${trips.map((trip, index) => {
                                 const key = this._tripKey(trip, index);
@@ -480,17 +480,17 @@ class CodexStellantisTripHistoryCardV4 extends LitElement {
                                 ${hybridLayout ? html`
                                     <td>${invalid ? "—" : this._value(trip.attributes?.energy_per_100_km)}</td>
                                     <td>${invalid ? "—" : this._value(trip.attributes?.fuel_consumption_l_100km)}</td>
+                                    <td><span class="trip-type">${({ ev: "EV", hybrid: "Hybrid", ice: "ICE" })[trip.attributes?.trip_type] || "—"}</span></td>
                                 ` : html`
                                     ${hasEnergy ? html`<td>${this._value(trip.attributes?.energy_kwh)}</td><td>${invalid ? "—" : this._value(trip.attributes?.energy_per_100_km)}</td>` : nothing}
                                     ${hasFuel ? html`<td>${invalid ? "—" : this._value(trip.attributes?.fuel_consumption_l_100km)}</td>` : nothing}
-                                    ${hasTripType ? html`<td><span class="trip-type">${({ ev: "EV", hybrid: "Hybrid", ice: "ICE" })[trip.attributes?.trip_type] || "—"}</span></td>` : nothing}
                                     ${hasMaxSpeed ? html`<td>${invalid ? "—" : this._value(trip.attributes?.max_speed)}</td>` : nothing}
                                 `}
                             </tr>${expanded ? html`<tr class="trip-details">
                                 <td colspan=${columnCount}>
                                     <div class="trip-details-content">
                                         ${invalid ? html`<span class="quality-warning">${text.invalidServerTrip}</span>` : nothing}
-                                        ${hasTripType ? html`<span><strong>${dashboardText.powertrain}:</strong> <span class="trip-type">${({ ev: "EV", hybrid: "Hybrid", ice: "ICE" })[trip.attributes?.trip_type] || "—"}</span></span>` : nothing}
+                                        ${showTripType ? html`<span><strong>${dashboardText.powertrain}:</strong> <span class="trip-type">${({ ev: "EV", hybrid: "Hybrid", ice: "ICE" })[trip.attributes?.trip_type] || "—"}</span></span>` : nothing}
                                         <span><strong>${text.startMileage}:</strong> ${this._formatMileage(trip.attributes?.start_mileage)}</span>
                                         <span><strong>${text.endMileage}:</strong> ${this._formatMileage(this._endMileage(trip))}</span>
                                         ${(trip.attributes?.soc_start !== null && trip.attributes?.soc_start !== undefined) || (trip.attributes?.soc_end !== null && trip.attributes?.soc_end !== undefined) ? html`<span><strong>${text.socStart} / ${text.socEnd}:</strong> ${this._value(trip.attributes?.soc_start)} % → ${this._value(trip.attributes?.soc_end)} %</span>` : nothing}
