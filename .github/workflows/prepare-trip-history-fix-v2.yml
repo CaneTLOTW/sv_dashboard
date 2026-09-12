@@ -1,0 +1,41 @@
+name: Prepare trip-history regression fix v2
+
+on:
+  push:
+    branches:
+      - fix/trip-history-energy-powertrain
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Apply focused patch
+        run: python tools/prepare_trip_history_fix.py
+      - name: Validate focused candidate
+        run: |
+          python -m compileall -q custom_components/sv_dashboard
+          node --check custom_components/sv_dashboard/static/trip-history-card.js
+          node --test tests/*.test.mjs
+      - name: Commit prepared fix and remove temporary helpers
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/prepare-trip-history-fix.yml
+          git rm .github/workflows/prepare-trip-history-fix-v2.yml
+          git rm tools/prepare_trip_history_fix.py
+          git add custom_components/sv_dashboard/static/trip-history-card.js custom_components/sv_dashboard/server_history.py tests/hybrid-fuel-ui.test.mjs tests/trip-history-regression.test.mjs
+          git commit -m "fix: restore trip energy and capability-gate powertrain column"
+          git push origin HEAD:fix/trip-history-energy-powertrain
