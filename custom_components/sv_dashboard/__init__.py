@@ -189,6 +189,7 @@ async def async_setup_entry(
     # background initialization completes.
     server_history_task = hass.async_create_task(server_history.async_initialize())
     entry.async_on_unload(server_history_task.cancel)
+    entry.async_on_unload(server_history.async_cancel_background_tasks)
 
     notifications = VehicleNotificationManager(
         hass, entry, coordinator.data["entity_mapping"], metrics
@@ -227,6 +228,8 @@ async def async_unload_entry(
     unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unloaded:
         coordinator = hass.data[DOMAIN][entry.entry_id]
+        if coordinator.server_history is not None:
+            coordinator.server_history.async_cancel_background_tasks()
         await coordinator.notifications.async_shutdown()
         await coordinator.metrics.async_shutdown()
         hass.data[DOMAIN].pop(entry.entry_id, None)

@@ -71,3 +71,35 @@ def resolve_cached_upstream(client: Any, target_vin: str) -> tuple[Any, dict[str
         if vehicle is not None:
             return client, vehicle
     return None, None
+
+
+def resolve_loaded_upstream(
+    entries: Any,
+    target_vin: str,
+    legacy_clients: Any,
+    preferred_entry_ids: Any = (),
+) -> tuple[Any, dict[str, Any]]:
+    """Resolve a VIN from already-loaded upstream ConfigEntry objects.
+
+    Device linkage is the preferred lookup path, but it can be stale while
+    Home Assistant is still restoring the upstream integration.  The fallback
+    scans only the ConfigEntry/runtime cache already present in memory; it
+    never calls a vehicle-list or other network discovery method.
+    """
+    if not target_vin:
+        return None, None
+
+    entry_list = [entry for entry in (entries or []) if entry is not None]
+    preferred = {str(entry_id) for entry_id in (preferred_entry_ids or ())}
+    ordered = sorted(
+        enumerate(entry_list),
+        key=lambda item: (0 if str(getattr(item[1], "entry_id", "")) in preferred else 1, item[0]),
+    )
+    for _index, upstream_entry in ordered:
+        if getattr(upstream_entry, "domain", None) not in (None, "stellantis_vehicles"):
+            continue
+        client = select_upstream_client(upstream_entry, legacy_clients)
+        resolved_client, vehicle = resolve_cached_upstream(client, target_vin)
+        if resolved_client is not None and vehicle is not None:
+            return resolved_client, vehicle
+    return None, None

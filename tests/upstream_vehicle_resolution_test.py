@@ -11,6 +11,7 @@ SPEC = importlib.util.spec_from_file_location("sv_dashboard_upstream_compat", MO
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
 resolve_cached_upstream = MODULE.resolve_cached_upstream
+resolve_loaded_upstream = MODULE.resolve_loaded_upstream
 select_upstream_client = MODULE.select_upstream_client
 
 
@@ -37,9 +38,10 @@ class Client:
 
 
 class UpstreamEntry:
-    def __init__(self, entry_id, runtime_data=None):
+    def __init__(self, entry_id, runtime_data=None, domain="stellantis_vehicles"):
         self.entry_id = entry_id
         self.runtime_data = runtime_data
+        self.domain = domain
 
 
 def vehicle(vin=VIN):
@@ -79,6 +81,33 @@ def main():
     check("wrong VIN rejected", Client(Coordinator(_vehicle=vehicle("OTHER"))), False)
     check("malformed cache rejected", Client(Coordinator(_vehicle=[vehicle()])), False)
     check("missing vehicle_info does not raise", Client(Coordinator()), False)
+
+    linked = UpstreamEntry("linked", Client(Coordinator(_vehicle=vehicle())))
+    fallback = UpstreamEntry("fallback", Client(Coordinator(_vehicle=vehicle())))
+    resolved_client, resolved_vehicle = resolve_loaded_upstream(
+        [fallback, linked], VIN, {}, {"linked"}
+    )
+    assert resolved_client is linked.runtime_data
+    assert resolved_vehicle == vehicle()
+
+    # A stale/missing device link must fall back to loaded entries only.
+    resolved_client, resolved_vehicle = resolve_loaded_upstream(
+        [fallback], VIN, {}, set()
+    )
+    assert resolved_client is fallback.runtime_data
+    assert resolved_vehicle == vehicle()
+
+    wrong = UpstreamEntry("wrong", Client(Coordinator(_vehicle=vehicle("OTHER"))))
+    resolved_client, resolved_vehicle = resolve_loaded_upstream([wrong], VIN, {}, set())
+    assert resolved_client is None and resolved_vehicle is None
+
+    legacy = Client(Coordinator(_vehicle=vehicle()))
+    legacy_entry = UpstreamEntry("legacy")
+    resolved_client, resolved_vehicle = resolve_loaded_upstream(
+        [legacy_entry], VIN, {"legacy": legacy}, set()
+    )
+    assert resolved_client is legacy
+    assert resolved_vehicle == vehicle()
 
     print("UPSTREAM_VEHICLE_RESOLUTION_TEST=PASS")
 
