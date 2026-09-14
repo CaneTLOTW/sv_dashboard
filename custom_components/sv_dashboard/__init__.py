@@ -225,12 +225,11 @@ async def async_unload_entry(
     hass: HomeAssistant, entry: SvDashboardConfigEntry
 ) -> bool:
     """Unload a selected vehicle without touching its upstream integration."""
-    coordinator = hass.data[DOMAIN].get(entry.entry_id)
-    if coordinator is not None and coordinator.server_history is not None:
-        coordinator.server_history.async_cancel_background_tasks()
     unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unloaded:
         coordinator = hass.data[DOMAIN][entry.entry_id]
+        if coordinator.server_history is not None:
+            coordinator.server_history.async_cancel_background_tasks()
         await coordinator.notifications.async_shutdown()
         await coordinator.metrics.async_shutdown()
         hass.data[DOMAIN].pop(entry.entry_id, None)

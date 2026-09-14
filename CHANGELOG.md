@@ -5,6 +5,9 @@
 - Keep server-history upstream resolution alive after startup ordering misses by
   retrying loaded runtime/cache objects with bounded backoff and strict VIN
   matching, while preserving the local fallback until a normal sync succeeds.
+- Cancel that background worker only after a confirmed successful config-entry
+  unload, so a failed platform unload can continue recovery during the same HA
+  uptime.
 
 All notable user-facing changes to SV Dashboard are recorded here.
 
