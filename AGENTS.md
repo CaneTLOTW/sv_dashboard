@@ -44,6 +44,15 @@ Full rationale: [Branch and deployment workflow](docs/BRANCH_AND_DEPLOYMENT_WORK
 - Larger contract/architecture changes are handed back instead of being redesigned during execution.
 - Use Issue comments headed `## ChatGPT → Codex Handoff`, `## Codex → ChatGPT Ergebnis`, and `## ChatGPT Review / Next Step`.
 - Handoffs reference exact branch/SHA, scope, runbook, acceptance criteria and prohibited changes.
+- A Codex handoff may be deliberately short when the full task already exists in a GitHub Issue or handoff comment. Even then, the handoff **must start with the full repository reference** before any Issue/PR/comment reference; an Issue number by itself is never sufficient because Issue IDs are only unique inside one repository.
+- Canonical short handoff form:
+
+  ```text
+  Repository: CaneTLOTW/sv_dashboard
+  Task: See Issue #47 and follow the latest `## ChatGPT → Codex Handoff` comment.
+  ```
+
+- ChatGPT responses intended to be copied into Codex must use the same repository-qualified form. Never hand off only `Issue #47`, `#47`, `PR #...`, or `see comment ...` without naming `CaneTLOTW/sv_dashboard` first.
 - Keep an Issue open until its acceptance/runtime criteria are actually complete.
 
 ## Scope and architecture
