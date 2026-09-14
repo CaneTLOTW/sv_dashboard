@@ -26,6 +26,8 @@ from .const import (
     UPSTREAM_DOMAIN,
 )
 from .trip_repair import repair_trip_odometer_continuity
+from .entity_identity import vehicle_vin
+from .upstream_compat import resolve_cached_upstream, select_upstream_client
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -1433,23 +1435,31 @@ class ServerHistoryManager:
         return sessions
 
     def _resolve_upstream(self):
-        device_id = self.entry.data.get("vehicle_device_id")
         from homeassistant.helpers import device_registry as dr
 
-        device = dr.async_get(self.hass).async_get(device_id)
+        vin = vehicle_vin(self.hass, self.entry)
+        if not vin:
+            return None, None
+
+        device_id = self.entry.data.get("vehicle_device_id")
+        device = dr.async_get(self.hass).async_get(device_id) if device_id else None
         if device is None:
             return None, None
-        for identifier in device.identifiers:
-            if not isinstance(identifier, tuple) or identifier[0] != UPSTREAM_DOMAIN:
+
+        upstream_entries = getattr(device, "config_entries", ())
+        config_entries = getattr(self.hass, "config_entries", None)
+        async_get = getattr(config_entries, "async_get", None)
+        legacy_clients = self.hass.data.get(UPSTREAM_DOMAIN, {})
+        for upstream_entry_id in upstream_entries:
+            if not callable(async_get):
                 continue
-            vin = identifier[1]
-            for client in self.hass.data.get(UPSTREAM_DOMAIN, {}).values():
-                for vehicle in getattr(client, "vehicles", ()):
-                    if vehicle.get("vin") == vin:
-                        return client, vehicle
-                coordinator = client.async_get_coordinator_by_vin(vin)
-                if coordinator is not None:
-                    return client, coordinator.vehicle_info
+            upstream_entry = async_get(upstream_entry_id)
+            if upstream_entry is None or getattr(upstream_entry, "domain", None) != UPSTREAM_DOMAIN:
+                continue
+            client = select_upstream_client(upstream_entry, legacy_clients)
+            resolved_client, vehicle = resolve_cached_upstream(client, vin)
+            if resolved_client is not None and vehicle is not None:
+                return resolved_client, vehicle
         return None, None
 
     @staticmethod

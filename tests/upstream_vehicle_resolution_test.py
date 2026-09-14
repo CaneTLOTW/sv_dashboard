@@ -1,0 +1,91 @@
+"""Focused offline contract tests for the cached upstream resolver."""
+
+from __future__ import annotations
+
+import sys
+import importlib.util
+from pathlib import Path
+
+MODULE_PATH = Path(__file__).parents[1] / "custom_components" / "sv_dashboard" / "upstream_compat.py"
+SPEC = importlib.util.spec_from_file_location("sv_dashboard_upstream_compat", MODULE_PATH)
+MODULE = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(MODULE)
+resolve_cached_upstream = MODULE.resolve_cached_upstream
+select_upstream_client = MODULE.select_upstream_client
+
+
+VIN = "TESTVIN123"
+
+
+class Coordinator:
+    def __init__(self, **values):
+        self.__dict__.update(values)
+
+
+class Client:
+    def __init__(self, coordinator=None, **values):
+        self.coordinator = coordinator
+        self.__dict__.update(values)
+        self.fetches = 0
+
+    def async_get_coordinator_by_vin(self, vin):
+        return self.coordinator
+
+    def get_user_vehicles(self):  # pragma: no cover - must never be called
+        self.fetches += 1
+        raise AssertionError("resolver performed a network vehicle fetch")
+
+
+class UpstreamEntry:
+    def __init__(self, entry_id, runtime_data=None):
+        self.entry_id = entry_id
+        self.runtime_data = runtime_data
+
+
+def vehicle(vin=VIN):
+    return {"vin": vin, "vehicle_id": "cached-id"}
+
+
+def check(label, client, expected=True):
+    resolved_client, resolved_vehicle = resolve_cached_upstream(client, VIN)
+    actual = resolved_client is client and resolved_vehicle == vehicle()
+    assert actual is expected, label
+    assert client.fetches == 0, label
+
+
+def main():
+    legacy_client = Client(Coordinator(_vehicle=vehicle()))
+    runtime_client = Client(Coordinator(_vehicle=vehicle()))
+    assert select_upstream_client(
+        UpstreamEntry("entry", runtime_client), {"entry": legacy_client}
+    ) is runtime_client
+    assert select_upstream_client(
+        UpstreamEntry("entry"), {"entry": legacy_client}
+    ) is legacy_client
+
+    # Legacy client layout: client is found in hass.data by the caller and its
+    # selected coordinator exposes the current private cache shape.
+    check("legacy _vehicle", Client(Coordinator(_vehicle=vehicle())))
+
+    # Current layout: client comes from ConfigEntry.runtime_data and the
+    # coordinator still owns the selected _vehicle cache.
+    check("runtime_data _vehicle", Client(Coordinator(_vehicle=vehicle())))
+
+    # Older/public candidate attribute remains supported.
+    check("public vehicle_info", Client(Coordinator(vehicle_info=vehicle())))
+
+    # Client-level caches are accepted only when VIN validation succeeds.
+    check("client _vehicles cache", Client(_vehicles={VIN: vehicle()}))
+    check("wrong VIN rejected", Client(Coordinator(_vehicle=vehicle("OTHER"))), False)
+    check("malformed cache rejected", Client(Coordinator(_vehicle=[vehicle()])), False)
+    check("missing vehicle_info does not raise", Client(Coordinator()), False)
+
+    print("UPSTREAM_VEHICLE_RESOLUTION_TEST=PASS")
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as error:
+        print(f"UPSTREAM_VEHICLE_RESOLUTION_TEST=FAIL: {error}", file=sys.stderr)
+        raise
