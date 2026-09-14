@@ -127,6 +127,18 @@ def _packed_trip_row(trip: dict[str, Any]) -> list[Any]:
     return [row.get(column) for column in _TRIP_ATTRIBUTE_COLUMNS]
 
 
+def _ready_server_history(metrics) -> tuple[Any, dict[str, Any]]:
+    """Return server history rows only when its canonical source is ready."""
+    history = getattr(metrics, "server_history", None)
+    status = history.server_history_status() if history else {
+        "server_history_ready": False,
+        "server_history_capability": "unresolved",
+        "server_history_reason": "not_initialized",
+        "server_history_source": "local_fallback",
+    }
+    return history, status
+
+
 def _geojson_coordinates(position: Any) -> list[float] | None:
     """Extract a valid GeoJSON longitude/latitude pair from a trip position."""
     if not isinstance(position, dict):
@@ -387,20 +399,18 @@ class SvServerTripHistorySensor(SvMetricSensor):
 
     @property
     def native_value(self):
-        return len(self.metrics.canonical_trips())
+        _history, status = _ready_server_history(self.metrics)
+        return len(_history.data.get("trips", [])) if status["server_history_ready"] else 0
 
     @property
     def extra_state_attributes(self):
         data = super().extra_state_attributes
-        rows = [_packed_trip_row(trip) for trip in self.metrics.canonical_trips()]
-        history = getattr(self.metrics, "server_history", None)
-        raw_count = (
-            len(getattr(history, "data", {}).get("canonical_trips", []))
-            if history
-            else len(rows)
-        )
+        history, status = _ready_server_history(self.metrics)
+        server_trips = history.data.get("trips", []) if status["server_history_ready"] else []
+        rows = [_packed_trip_row(trip) for trip in server_trips]
+        raw_count = len(history.data.get("canonical_trips", [])) if status["server_history_ready"] else 0
         zero_rows = []
-        if history:
+        if status["server_history_ready"]:
             for trip in history.data.get("canonical_trips", []):
                 if trip.get("distance_km") != 0:
                     continue
@@ -413,12 +423,8 @@ class SvServerTripHistorySensor(SvMetricSensor):
                 "trip_columns": _TRIP_ATTRIBUTE_COLUMNS,
                 "trip_rows": rows,
                 "zero_trip_rows": zero_rows,
-                "source": "canonical_history",
-                "server_history_ready": bool(
-                    history
-                    and history.data.get("updated_at")
-                    and not history.data.get("error")
-                ),
+                "source": status["server_history_source"],
+                **status,
             }
         )
         return data
@@ -436,10 +442,8 @@ class SvServerGpsHistorySensor(SvMetricSensor):
 
     @property
     def native_value(self):
-        history = getattr(self.metrics, "server_history", None)
-        trips = (
-            getattr(history, "data", {}).get("canonical_trips", []) if history else []
-        )
+        history, status = _ready_server_history(self.metrics)
+        trips = history.data.get("canonical_trips", []) if status["server_history_ready"] else []
         return sum(
             1
             for trip in trips
@@ -449,23 +453,17 @@ class SvServerGpsHistorySensor(SvMetricSensor):
     @property
     def extra_state_attributes(self):
         data = super().extra_state_attributes
-        history = getattr(self.metrics, "server_history", None)
-        trips = (
-            getattr(history, "data", {}).get("canonical_trips", []) if history else []
-        )
+        history, status = _ready_server_history(self.metrics)
+        trips = history.data.get("canonical_trips", []) if status["server_history_ready"] else []
         geojson = _trip_position_geojson(trips)
         data.update(
             {
                 "geojson": geojson,
-                "source": "stellantis_trip_positions",
+                "source": status["server_history_source"],
                 "route_detail": "start_stop_only",
                 "trip_count": self.native_value,
                 "feature_count": len(geojson["features"]),
-                "server_history_ready": bool(
-                    history
-                    and history.data.get("updated_at")
-                    and not history.data.get("error")
-                ),
+                **status,
             }
         )
         return data
@@ -483,13 +481,16 @@ class SvServerChargeHistorySensor(SvMetricSensor):
 
     @property
     def native_value(self):
-        return len(self.metrics.canonical_charges())
+        _history, status = _ready_server_history(self.metrics)
+        return len(_history.data.get("charges", [])) if status["server_history_ready"] else 0
 
     @property
     def extra_state_attributes(self):
         data = super().extra_state_attributes
+        history, status = _ready_server_history(self.metrics)
+        server_charges = history.data.get("charges", []) if status["server_history_ready"] else []
         rows = []
-        for charge in self.metrics.canonical_charges():
+        for charge in server_charges:
             if charge.get("quality") == "observed":
                 row = {
                     key: charge.get(key)
@@ -540,7 +541,11 @@ class SvServerChargeHistorySensor(SvMetricSensor):
             if charge.get("quality") == "observed":
                 row["samples"] = _compact_curve_samples(charge.get("samples", []))
             rows.append(row)
-        active = getattr(self.metrics, "data", {}).get("active_charge")
+        active = (
+            getattr(self.metrics, "data", {}).get("active_charge")
+            if status["server_history_ready"]
+            else None
+        )
         active_payload = None
         if isinstance(active, dict) and active.get("start_time"):
             samples = [
@@ -558,9 +563,10 @@ class SvServerChargeHistorySensor(SvMetricSensor):
                 "charge_type": active.get("charge_type") or "Unknown",
                 "samples": _compact_curve_samples(samples),
             }
-        history = getattr(self.metrics, "server_history", None)
         archive = (
-            getattr(history, "data", {}).get("archive_metadata", {}) if history else {}
+            getattr(history, "data", {}).get("archive_metadata", {})
+            if history and status["server_history_ready"]
+            else {}
         )
         data.update(
             {
@@ -573,12 +579,8 @@ class SvServerChargeHistorySensor(SvMetricSensor):
                 "curve_raw_sample_sessions": archive.get("raw_sample_session_count", 0),
                 "curve_raw_sample_count": archive.get("raw_sample_count", 0),
                 "curve_oldest_session": archive.get("curve_oldest_session"),
-                "source": "canonical_history",
-                "server_history_ready": bool(
-                    history
-                    and history.data.get("updated_at")
-                    and not history.data.get("error")
-                ),
+                "source": status["server_history_source"],
+                **status,
             }
         )
         return data

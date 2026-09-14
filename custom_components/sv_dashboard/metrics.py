@@ -76,14 +76,20 @@ class VehicleMetricsManager:
         self.server_history = None
 
     def canonical_trips(self) -> list[dict[str, Any]]:
-        """Return validated server trips, falling back to local rows."""
-        rows = getattr(self.server_history, "data", {}).get("trips", []) if self.server_history else []
-        return rows if rows else self.data.get("trips", [])
+        """Return server trips only when ready, otherwise local rows."""
+        history = self.server_history
+        status = history.server_history_status() if history else {}
+        if status.get("server_history_ready"):
+            return history.data.get("trips", [])
+        return self.data.get("trips", [])
 
     def canonical_charges(self) -> list[dict[str, Any]]:
-        """Return server-derived charges, falling back to local rows."""
-        rows = getattr(self.server_history, "data", {}).get("charges", []) if self.server_history else []
-        return rows if rows else self.data.get("charges", [])
+        """Return server charges only when ready, otherwise local rows."""
+        history = self.server_history
+        status = history.server_history_status() if history else {}
+        if status.get("server_history_ready"):
+            return history.data.get("charges", [])
+        return self.data.get("charges", [])
 
     def canonical_last_trip(self) -> dict[str, Any] | None:
         rows = self.canonical_trips()
