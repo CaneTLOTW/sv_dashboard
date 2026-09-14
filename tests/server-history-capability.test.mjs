@@ -8,14 +8,20 @@ const metrics = read("custom_components/sv_dashboard/metrics.py");
 const sensor = read("custom_components/sv_dashboard/sensor.py");
 
 test("server history is an explicit upstream capability", () => {
-  assert.match(history, /_HISTORY_METHOD = "get_vehicle_trips_history"/);
-  assert.match(history, /reader = getattr\(self\._client, _HISTORY_METHOD, None\)/);
-  assert.match(history, /return reader if callable\(reader\) else None/);
+  const transport = read("custom_components/sv_dashboard/server_history_transport.py");
+  assert.match(history, /historical_transport_available/);
+  assert.match(history, /async_fetch_historical_trips/);
+  assert.match(transport, /CAR_API_GET_VEHICLE_TRIPS_URL/);
+  assert.match(transport, /CLIENT_ID_QUERY_PARAMS/);
+  assert.match(transport, /CAR_API_HEADERS/);
+  assert.match(transport, /apply_query_params/);
+  assert.match(transport, /apply_dict_params/);
+  assert.match(transport, /make_http_request/);
   assert.doesNotMatch(history, /self\._client\.get_vehicle_trips_history/);
 });
 
 test("unsupported history keeps the local fallback and avoids a network history call", () => {
-  assert.match(history, /if history_reader is None:/);
+  assert.match(history, /if not self\._history_transport_available\(\):/);
   assert.match(history, /"unsupported_upstream_capability"/);
   assert.match(history, /self\.data\["server_history_ready"\] = False/);
   assert.match(history, /self\.data\["server_history_source"\] = "local_fallback"/);
@@ -26,7 +32,7 @@ test("unsupported history keeps the local fallback and avoids a network history 
 
 test("full sync never clears archived server rows before capability/sync success", () => {
   const fullSync = history.slice(history.indexOf("    async def async_full_sync"), history.indexOf("    async def async_initialize"));
-  assert.match(fullSync, /if self\._history_reader\(\) is None:/);
+  assert.match(fullSync, /if not self\._history_transport_available\(\):/);
   assert.match(fullSync, /await self\.async_initialize\(_force_full=True\)/);
   assert.doesNotMatch(fullSync, /self\.data\["server_trips_raw"\] = \[\]/);
   assert.doesNotMatch(fullSync, /self\.data\["canonical_trips"\] = \[\]/);
@@ -36,7 +42,7 @@ test("callable history keeps incremental/full sync and preserves rows on failure
   assert.match(history, /if parsed and not _force_full:/);
   assert.match(history, /raw_by_id = \{\} if _force_full else/);
   assert.match(history, /self\._mark_server_history_ready\(\)/);
-  assert.match(history, /self\._mark_server_history_unavailable\("sync_failed", capability="callable"\)/);
+  assert.match(history, /HistoricalTripsTransportUnavailable/);
   assert.match(history, /Existing canonical data survives API failure/);
 });
 
