@@ -27,6 +27,11 @@ from .const import (
 )
 from .trip_repair import repair_trip_odometer_continuity
 from .entity_identity import vehicle_vin
+from .server_history_transport import (
+    HistoricalTripsTransportUnavailable,
+    async_fetch_historical_trips,
+    historical_transport_available,
+)
 from .upstream_compat import resolve_cached_upstream, select_upstream_client
 
 _LOGGER = logging.getLogger(__name__)
@@ -727,6 +732,11 @@ class ServerHistoryManager:
             "last_sync": None,
             "sync_mode": None,
             "error": None,
+            "server_history_ready": False,
+            "server_history_capability": "unresolved",
+            "server_history_reason": "not_initialized",
+            "server_history_source": "local_fallback",
+            "server_history_error": None,
             "telemetry": {"available": False},
         }
 
@@ -1174,21 +1184,67 @@ class ServerHistoryManager:
                 ),
             }
 
-    async def async_full_sync(self) -> None:
-        """Explicitly refresh all server pages without deleting local history."""
-        self.data["server_trips_raw"] = []
-        self.data["canonical_trips"] = []
-        self.data["canonical_charges"] = []
-        self.data["trips"] = []
-        self.data["charges"] = []
-        self.data["sync_metadata"] = {"last_sync": None, "sync_mode": None}
-        await self._store.async_save(self._persistable_data())
-        await self.async_initialize()
+    def _history_transport_available(self) -> bool:
+        """Return whether the loaded upstream auth transport is available."""
+        return historical_transport_available(self._client)
 
-    async def async_initialize(self, _retry: int = 0) -> None:
+    def server_history_status(self) -> dict[str, Any]:
+        """Return the one canonical server-capability/readiness decision."""
+        supported = self._history_transport_available()
+        ready = bool(supported and self.data.get("server_history_ready"))
+        return {
+            "server_history_ready": ready,
+            "server_history_capability": (
+                "authenticated_trips_transport"
+                if supported
+                else self.data.get("server_history_capability", "unsupported")
+            ),
+            "server_history_reason": self.data.get("server_history_reason", "not_initialized"),
+            "server_history_source": "server" if ready else "local_fallback",
+        }
+
+    def _mark_server_history_unavailable(
+        self, reason: str, *, capability: str | None = None
+    ) -> None:
+        """Keep archived rows while making the current server source unavailable."""
+        self.data["server_history_ready"] = False
+        self.data["server_history_capability"] = capability or (
+            "authenticated_trips_transport"
+            if self._history_transport_available()
+            else "unsupported"
+        )
+        self.data["server_history_reason"] = reason
+        self.data["server_history_source"] = "local_fallback"
+
+    def _mark_server_history_ready(self) -> None:
+        self.data["server_history_ready"] = True
+        self.data["server_history_capability"] = "authenticated_trips_transport"
+        self.data["server_history_reason"] = "sync_succeeded"
+        self.data["server_history_source"] = "server"
+        self.data["server_history_error"] = None
+
+    async def async_full_sync(self) -> None:
+        """Refresh all server pages without deleting rows before success."""
+        if not self._history_transport_available():
+            self._mark_server_history_unavailable(
+                "unsupported_upstream_capability",
+                capability="unsupported",
+            )
+            await self._store.async_save(self._persistable_data())
+            for entity in self._entities:
+                entity.async_write_ha_state()
+            return
+        await self.async_initialize(_force_full=True)
+
+    async def async_initialize(self, _retry: int = 0, _force_full: bool = False) -> None:
         stored = await self._store.async_load()
         if isinstance(stored, dict):
             self._migrate_data(stored)
+        # A stored timestamp/row set is archival until this process proves a
+        # current callable capability and completes a successful sync.
+        self.data["server_history_ready"] = False
+        self.data["server_history_source"] = "local_fallback"
+        self.data["server_history_reason"] = "initializing"
         await self._load_curve_store()
         if self.data.get("legacy_live_snapshot") is None and self.metrics:
             # Preserve the pre-migration local results in the new store as a
@@ -1209,6 +1265,10 @@ class ServerHistoryManager:
             }
         self._client, self._vehicle = self._resolve_upstream()
         if not self._client or not self._vehicle:
+            self._mark_server_history_unavailable(
+                "upstream_vehicle_unavailable",
+                capability="unresolved",
+            )
             self.data["error"] = "upstream_vehicle_unavailable"
             await self._store.async_save(self._persistable_data())
             if _retry < 3:
@@ -1224,6 +1284,22 @@ class ServerHistoryManager:
                 _LOGGER.debug("Could not read Stellantis maintenance data: %s", err)
                 maintenance = {}
             self.data["vehicle_info"]["maintenance"] = self._public_maintenance_info(maintenance)
+
+        if not self._history_transport_available():
+            self._mark_server_history_unavailable(
+                "unsupported_upstream_capability",
+                capability="unsupported",
+            )
+            self.data["error"] = "server_history_unsupported"
+            await self._store.async_save(self._persistable_data())
+            for entity in self._entities:
+                entity.async_write_ha_state()
+            return
+
+        # Do not expose stale server rows as ready while a new sync is running.
+        self._mark_server_history_unavailable(
+            "sync_pending", capability="authenticated_trips_transport"
+        )
         self._latest_recorder_capacity_samples = list(self.data.get("recorder_capacity_samples", []))
         self.data["recorder_observed_charges"] = await self._async_recorder_charges()
         self.data["recorder_observed_charges_archive"] = self._merge_observed_archive(
@@ -1248,16 +1324,18 @@ class ServerHistoryManager:
         )
         since = None
         parsed = _parse_time(latest)
-        if parsed:
+        if parsed and not _force_full:
             since = (parsed - timedelta(hours=2)).isoformat()
 
         try:
-            result = await self._client.get_vehicle_trips_history(self._vehicle, since=since)
+            result = await async_fetch_historical_trips(
+                self._client, self._vehicle, since=since
+            )
             incoming = [
                 item for item in result.get("trips", [])
                 if isinstance(item, dict) and item.get("id")
             ]
-            raw_by_id = {
+            raw_by_id = {} if _force_full else {
                 item.get("id"): item
                 for item in self.data.get("server_trips_raw", [])
                 if isinstance(item, dict) and item.get("id")
@@ -1276,9 +1354,24 @@ class ServerHistoryManager:
                     "error": None,
                 }
             )
+            self._mark_server_history_ready()
             await self._store.async_save(self._persistable_data())
         except Exception as err:  # Existing canonical data survives API failure.
             self.data["error"] = str(err)
+            self.data["server_history_error"] = str(err)
+            reason = (
+                "unsupported_upstream_capability"
+                if isinstance(err, HistoricalTripsTransportUnavailable)
+                else "sync_failed"
+            )
+            self._mark_server_history_unavailable(
+                reason,
+                capability=(
+                    "unsupported"
+                    if isinstance(err, HistoricalTripsTransportUnavailable)
+                    else "authenticated_trips_transport"
+                ),
+            )
             _LOGGER.warning("Server trip history unavailable: %s", err)
             await self._store.async_save(self._persistable_data())
 
