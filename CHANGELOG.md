@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Keep server-history upstream resolution alive after startup ordering misses by
+  retrying loaded runtime/cache objects with bounded backoff and strict VIN
+  matching, while preserving the local fallback until a normal sync succeeds.
+
 All notable user-facing changes to SV Dashboard are recorded here.
 
 SV Dashboard uses semantic package versions. `develop` is the integration/acceptance branch; `main` represents the last explicitly accepted publishable state.

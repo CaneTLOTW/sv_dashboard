@@ -189,6 +189,7 @@ async def async_setup_entry(
     # background initialization completes.
     server_history_task = hass.async_create_task(server_history.async_initialize())
     entry.async_on_unload(server_history_task.cancel)
+    entry.async_on_unload(server_history.async_cancel_background_tasks)
 
     notifications = VehicleNotificationManager(
         hass, entry, coordinator.data["entity_mapping"], metrics
@@ -224,6 +225,9 @@ async def async_unload_entry(
     hass: HomeAssistant, entry: SvDashboardConfigEntry
 ) -> bool:
     """Unload a selected vehicle without touching its upstream integration."""
+    coordinator = hass.data[DOMAIN].get(entry.entry_id)
+    if coordinator is not None and coordinator.server_history is not None:
+        coordinator.server_history.async_cancel_background_tasks()
     unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unloaded:
         coordinator = hass.data[DOMAIN][entry.entry_id]

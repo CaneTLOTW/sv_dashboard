@@ -8,6 +8,7 @@ into a charging duration.
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timedelta
 import logging
 import math
@@ -32,7 +33,7 @@ from .server_history_transport import (
     async_fetch_historical_trips,
     historical_transport_available,
 )
-from .upstream_compat import resolve_cached_upstream, select_upstream_client
+from .upstream_compat import resolve_loaded_upstream
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -710,6 +711,9 @@ class ServerHistoryManager:
         self._client = None
         self._vehicle = None
         self._latest_recorder_capacity_samples: list[dict[str, Any]] = []
+        self._initialize_lock = asyncio.Lock()
+        self._reacquire_task: asyncio.Task | None = None
+        self._shutdown_requested = False
 
     @staticmethod
     def _empty_data() -> dict[str, Any]:
@@ -1237,6 +1241,17 @@ class ServerHistoryManager:
         await self.async_initialize(_force_full=True)
 
     async def async_initialize(self, _retry: int = 0, _force_full: bool = False) -> None:
+        """Initialize once and keep unresolved upstream lookup alive."""
+        async with self._initialize_lock:
+            await self._async_initialize_once(_force_full=_force_full)
+        if (
+            not _force_full
+            and not self._shutdown_requested
+            and self.data.get("server_history_reason") == "upstream_vehicle_unavailable"
+        ):
+            self._schedule_reacquisition()
+
+    async def _async_initialize_once(self, _force_full: bool = False) -> None:
         stored = await self._store.async_load()
         if isinstance(stored, dict):
             self._migrate_data(stored)
@@ -1271,8 +1286,8 @@ class ServerHistoryManager:
             )
             self.data["error"] = "upstream_vehicle_unavailable"
             await self._store.async_save(self._persistable_data())
-            if _retry < 3:
-                self.hass.async_create_task(self._retry_initialize(_retry + 1))
+            for entity in self._entities:
+                entity.async_write_ha_state()
             return
 
         self.data["vehicle_info"] = self._public_vehicle_info(self._vehicle)
@@ -1378,11 +1393,33 @@ class ServerHistoryManager:
         for entity in self._entities:
             entity.async_write_ha_state()
 
-    async def _retry_initialize(self, retry: int) -> None:
-        import asyncio
+    def _schedule_reacquisition(self) -> None:
+        """Start at most one cancellable delayed resolver worker."""
+        if self._reacquire_task is not None and not self._reacquire_task.done():
+            return
+        self._reacquire_task = self.hass.async_create_task(self._async_reacquire())
 
-        await asyncio.sleep(5)
-        await self.async_initialize(retry)
+    async def _async_reacquire(self) -> None:
+        """Retry only the cached upstream lookup with bounded backoff."""
+        delay = 5
+        try:
+            while not self._shutdown_requested:
+                await asyncio.sleep(delay)
+                if self._shutdown_requested:
+                    return
+                async with self._initialize_lock:
+                    await self._async_initialize_once()
+                if self.data.get("server_history_reason") != "upstream_vehicle_unavailable":
+                    return
+                delay = min(delay * 2, 300)
+        except asyncio.CancelledError:
+            raise
+
+    def async_cancel_background_tasks(self) -> None:
+        """Cancel delayed reacquisition during config-entry unload."""
+        self._shutdown_requested = True
+        if self._reacquire_task is not None:
+            self._reacquire_task.cancel()
 
     @staticmethod
     def _state_value(state: Any) -> Any:
@@ -1536,24 +1573,29 @@ class ServerHistoryManager:
 
         device_id = self.entry.data.get("vehicle_device_id")
         device = dr.async_get(self.hass).async_get(device_id) if device_id else None
-        if device is None:
-            return None, None
 
-        upstream_entries = getattr(device, "config_entries", ())
         config_entries = getattr(self.hass, "config_entries", None)
-        async_get = getattr(config_entries, "async_get", None)
+        if config_entries is None:
+            return None, None
+        async_entries = getattr(config_entries, "async_entries", None)
+        if not callable(async_entries):
+            return None, None
+        upstream_entries = [
+            upstream_entry
+            for upstream_entry in async_entries(UPSTREAM_DOMAIN)
+            if getattr(upstream_entry, "domain", None) == UPSTREAM_DOMAIN
+        ]
         legacy_clients = self.hass.data.get(UPSTREAM_DOMAIN, {})
-        for upstream_entry_id in upstream_entries:
-            if not callable(async_get):
-                continue
-            upstream_entry = async_get(upstream_entry_id)
-            if upstream_entry is None or getattr(upstream_entry, "domain", None) != UPSTREAM_DOMAIN:
-                continue
-            client = select_upstream_client(upstream_entry, legacy_clients)
-            resolved_client, vehicle = resolve_cached_upstream(client, vin)
-            if resolved_client is not None and vehicle is not None:
-                return resolved_client, vehicle
-        return None, None
+        preferred_entry_ids = set(getattr(device, "config_entries", ()) or ())
+        primary_entry_id = getattr(device, "primary_config_entry", None)
+        if primary_entry_id:
+            preferred_entry_ids.add(primary_entry_id)
+        return resolve_loaded_upstream(
+            upstream_entries,
+            vin,
+            legacy_clients,
+            preferred_entry_ids,
+        )
 
     @staticmethod
     def _public_vehicle_info(vehicle: dict[str, Any]) -> dict[str, Any]:
