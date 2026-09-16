@@ -15,9 +15,14 @@ from typing import Any
 _ODOMETER_TOLERANCE_KM = 0.2
 _LOCAL_START_TOLERANCE_KM = 1.0
 _LOCAL_TIME_TOLERANCE_SECONDS = 20 * 60
+_LOCAL_DISTANCE_TOLERANCE_KM = 2.0
 _MAX_TRIP_DISTANCE_KM = 1000.0
 _MAX_TRIP_DURATION_SECONDS = 24 * 60 * 60
 _MAX_TRIP_SPEED_KMH = 300.0
+# Local SV observations are used as corroborating/backfill evidence, not as
+# canonical truth. Keep this threshold deliberately conservative so a stale
+# odometer composite cannot inject energy into an otherwise valid server trip.
+_MAX_LOCAL_BACKFILL_SPEED_KMH = 220.0
 
 _REPAIRABLE_SOURCE_FLAGS = {
     "missing_or_non_positive_distance",
@@ -64,6 +69,70 @@ def _trip_sort_key(trip: dict[str, Any]) -> tuple[str, str]:
         str(trip.get("start_time") or trip.get("startedAt") or ""),
         str(trip.get("id") or trip.get("server_id") or ""),
     )
+
+
+def _local_trip_backfill_quality(row: dict[str, Any]) -> tuple[bool, list[str]]:
+    """Classify local SV trip evidence before it may feed canonical backfill.
+
+    Local rows are assembled from live Home Assistant observations. A stale
+    odometer update can therefore create a composite distance that is internally
+    impossible even though the record has otherwise useful SOC values. Such a
+    row must never be used to backfill canonical server energy.
+    """
+    flags: list[str] = []
+    distance = _number(row.get("distance_km"))
+    start_mileage = _number(row.get("start_mileage"))
+    end_mileage = _number(row.get("end_mileage"))
+
+    if distance is None or distance <= 0:
+        flags.append("local_missing_or_non_positive_distance")
+    elif distance > _MAX_TRIP_DISTANCE_KM:
+        flags.append("local_distance_outlier")
+
+    if start_mileage is None or start_mileage < 0:
+        flags.append("local_missing_start_odometer")
+    if (
+        start_mileage is not None
+        and end_mileage is not None
+        and distance is not None
+        and abs((end_mileage - start_mileage) - distance) > _LOCAL_DISTANCE_TOLERANCE_KM
+    ):
+        flags.append("local_odometer_distance_mismatch")
+
+    duration = _number(row.get("duration_seconds"))
+    if duration is None:
+        start_time, end_time = _time(row.get("start_time")), _time(row.get("end_time"))
+        if start_time is not None and end_time is not None:
+            try:
+                duration = (end_time - start_time).total_seconds()
+            except TypeError:
+                duration = None
+    if duration is not None:
+        if duration <= 0 or duration > _MAX_TRIP_DURATION_SECONDS:
+            flags.append("local_duration_outlier")
+        elif distance is not None and distance > 0:
+            speed = distance / (duration / 3600)
+            if speed > _MAX_LOCAL_BACKFILL_SPEED_KMH:
+                flags.append("local_speed_outlier")
+
+    return not flags, flags
+
+
+def _validated_local_rows(
+    local_trips: list[dict[str, Any]] | None,
+) -> list[dict[str, Any]]:
+    """Return only physically defensible local rows and annotate all candidates."""
+    rows = [row for row in (local_trips or []) if isinstance(row, dict)]
+    validated: list[dict[str, Any]] = []
+    for row in rows:
+        usable, flags = _local_trip_backfill_quality(row)
+        row["backfill_eligible"] = usable
+        if flags:
+            existing = list(row.get("quality_flags") or [])
+            row["quality_flags"] = list(dict.fromkeys([*existing, *flags]))
+        if usable:
+            validated.append(row)
+    return validated
 
 
 def _plausible_anchor_end(trip: dict[str, Any]) -> float | None:
@@ -165,9 +234,16 @@ def repair_trip_odometer_continuity(
     of the corroborating sources produce a positive, speed-plausible distance,
     the row is left untouched and remains invalid. Raw server payloads are never
     mutated.
+
+    The supplied ``local_trips`` list is a caller-owned working copy in
+    ``server_history._rebuild_canonical``. It is intentionally narrowed in
+    place to validated evidence so the immediately following energy-backfill
+    step cannot consume a stale/physically impossible composite row.
     """
     ordered = sorted(trips, key=_trip_sort_key)
-    local_rows = [row for row in (local_trips or []) if isinstance(row, dict)]
+    local_rows = _validated_local_rows(local_trips)
+    if local_trips is not None:
+        local_trips[:] = local_rows
     previous_end: float | None = None
 
     for index, trip in enumerate(ordered):

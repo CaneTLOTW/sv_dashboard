@@ -1,5 +1,6 @@
 import { LitElement, html, css, nothing } from "./vendor-lit.js?v=0.6.0-beta.7";
-import { localeFor, textFor } from "./i18n.js?v=0.6.0-beta.10";
+import { localeFor, textFor } from "./i18n.js?v=issue52.1";
+import { insertOdometerGapRows, semanticTripTime, tripFilterTime } from "./trip-gap-core.js?v=issue52.1";
 
 /**
  * Standalone Lovelace card for the historic Stellantis "last trip" sensor.
@@ -41,6 +42,8 @@ class CodexStellantisTripHistoryCardV4 extends LitElement {
         .trip-table td { border-top: 1px solid var(--divider-color); padding: 9px 8px 9px 0; vertical-align: top; white-space: nowrap; }
         .trip-table td:first-child { white-space: normal; }
         .trip-row { cursor: pointer; }
+        .trip-row.reconstructed td { font-style: italic; color: var(--secondary-text-color); }
+        .trip-row.reconstructed td:nth-child(3) { color: var(--primary-text-color); font-weight: 600; }
         .trip-row:hover td, .trip-row:focus td { background: color-mix(in srgb, var(--primary-color) 8%, transparent); }
         .trip-row:focus { outline: 2px solid var(--primary-color); outline-offset: -2px; }
         .trip-details td { padding: 0 0 10px 0; border-top: 0; white-space: normal; }
@@ -139,24 +142,29 @@ class CodexStellantisTripHistoryCardV4 extends LitElement {
                     }))
                     : (serverState.attributes.zero_distance_events ?? []);
                 const allServerTrips = [
-                    ...serverTrips,
+                    ...insertOdometerGapRows(serverTrips),
                     ...(this._showZeroEvents ? zeroEvents : []),
                 ];
                 const normalizedTrips = this._filterServerTrips(allServerTrips).map((trip) => ({
                     state: trip.distance_km,
-                    last_updated: trip.end_time || trip.start_time,
+                    last_updated: trip.reconstructed_gap ? undefined : (trip.end_time || trip.start_time),
+                    _sortTime: tripFilterTime(trip),
                     _sourceEntityId: this._config.server_entity,
-                    _rowId: `stellantis|${trip.server_id}`,
+                    _rowId: `${trip.reconstructed_gap ? "odometer-gap" : "stellantis"}|${trip.server_id}`,
                     attributes: {
                         ...trip,
                         id: trip.server_id,
                         start_time: trip.start_time,
                         end_time: trip.end_time,
                         start_mileage: trip.start_mileage,
+                        end_mileage: trip.end_mileage,
                         duration_seconds: trip.duration_seconds,
                         energy_kwh: trip.energy_kwh,
                         energy_per_100_km: trip.energy_per_100_km,
                         avg_speed: trip.average_speed,
+                        reconstructed_gap: Boolean(trip.reconstructed_gap),
+                        gap_after_time: trip.gap_after_time,
+                        gap_before_time: trip.gap_before_time,
                         valid_for_statistics: trip.valid_for_statistics,
                         quality_flags: trip.quality_flags,
                     },
@@ -191,7 +199,7 @@ class CodexStellantisTripHistoryCardV4 extends LitElement {
                 let carriedAttributes = {};
                 return rawStates
                     .map((raw) => this._normalizeState(raw))
-                    .sort((a, b) => new Date(a.last_updated).getTime() - new Date(b.last_updated).getTime())
+                    .sort((a, b) => new Date(semanticTripTime(a) || 0).getTime() - new Date(semanticTripTime(b) || 0).getTime())
                     .map((state) => {
                         carriedAttributes = {
                             ...carriedAttributes,
@@ -203,7 +211,7 @@ class CodexStellantisTripHistoryCardV4 extends LitElement {
             const enrichedStates = tripEntityIds
                 .flatMap((entityId) => enrichAttributes(statesFor(entityId))
                     .map((state) => ({ ...state, _sourceEntityId: entityId })))
-                .sort((a, b) => new Date(a.last_updated).getTime() - new Date(b.last_updated).getTime());
+                .sort((a, b) => new Date(semanticTripTime(a) || 0).getTime() - new Date(semanticTripTime(b) || 0).getTime());
             const parseNumber = (value) => Number.parseFloat(String(value ?? "").replace(",", "."));
             const durationSeconds = (value) => {
                 const text = String(value ?? "");
@@ -222,7 +230,7 @@ class CodexStellantisTripHistoryCardV4 extends LitElement {
                     ...state,
                     _rowId: [
                         state._sourceEntityId,
-                        state.last_updated ?? state.last_changed ?? "",
+                        semanticTripTime(state) ?? "",
                         state.state,
                         state.attributes?.start_time ?? "",
                         state.attributes?.end_time ?? "",
@@ -244,8 +252,8 @@ class CodexStellantisTripHistoryCardV4 extends LitElement {
                 const rightDuration = durationSeconds(rightAttributes.duration);
                 if (!Number.isFinite(leftDuration) || !Number.isFinite(rightDuration) || leftDuration !== rightDuration) return false;
                 if (!isLocal) return true;
-                const leftTime = Date.parse(left.last_updated || "");
-                const rightTime = Date.parse(right.last_updated || "");
+                const leftTime = Date.parse(semanticTripTime(left) || "");
+                const rightTime = Date.parse(semanticTripTime(right) || "");
                 return Number.isFinite(leftTime) && Number.isFinite(rightTime) && Math.abs(leftTime - rightTime) <= 90 * 1000;
             };
             const uniquePerSource = (trips) => trips.reduce((result, trip) => {
@@ -274,10 +282,10 @@ class CodexStellantisTripHistoryCardV4 extends LitElement {
                     Math.abs(nativeDuration - localDuration) <= 120;
             });
             const uniqueTrips = [...localTrips, ...nativeTrips.filter((trip) => !isNativeDuplicateOfLocal(trip))]
-                .sort((a, b) => new Date(a.last_updated).getTime() - new Date(b.last_updated).getTime());
+                .sort((a, b) => new Date(semanticTripTime(a) || 0).getTime() - new Date(semanticTripTime(b) || 0).getTime());
             const normalizedTrips = uniqueTrips
                 .map((trip) => {
-                    const tripTime = new Date(trip.last_updated).getTime();
+                    const tripTime = new Date(semanticTripTime(trip) || 0).getTime();
                     const tripDistance = Number.parseFloat(trip.state);
                     const result = energyResults
                         .map((energy) => ({
@@ -323,7 +331,10 @@ class CodexStellantisTripHistoryCardV4 extends LitElement {
     }
 
     _formatDate(value) {
-        return new Date(value).toLocaleString(this._locale(), { dateStyle: "short", timeStyle: "short" });
+        const timestamp = Date.parse(value || "");
+        return Number.isFinite(timestamp)
+            ? new Date(timestamp).toLocaleString(this._locale(), { dateStyle: "short", timeStyle: "short" })
+            : "—";
     }
 
     _filterServerTrips(trips) {
@@ -331,7 +342,7 @@ class CodexStellantisTripHistoryCardV4 extends LitElement {
         const cutoff = Number.isFinite(days) && days > 0 ? Date.now() - days * 86400000 : null;
         return trips.filter((trip) => {
             const distance = Number(trip.distance_km);
-            const timestamp = Date.parse(trip.end_time || trip.start_time || "");
+            const timestamp = Date.parse(tripFilterTime(trip) || "");
             if (cutoff && (!Number.isFinite(timestamp) || timestamp < cutoff)) return false;
             if (!this._showZeroEvents && distance === 0) return false;
             if (this._hideShortTrips && distance > 0 && distance <= 1) return false;
@@ -371,15 +382,19 @@ class CodexStellantisTripHistoryCardV4 extends LitElement {
     }
 
     _tripKey(trip, index) {
-        return trip._rowId || `${trip._sourceEntityId ?? "trip"}|${trip.last_updated ?? trip.last_changed}|${trip.state}|${index}`;
+        return trip._rowId || `${trip._sourceEntityId ?? "trip"}|${semanticTripTime(trip) ?? trip._sortTime ?? ""}|${trip.state}|${index}`;
     }
 
     _toggleTrip(key) {
         this._expandedTripKey = this._expandedTripKey === key ? undefined : key;
     }
 
+    _isReconstructedGap(trip) {
+        return Boolean(trip.attributes?.reconstructed_gap);
+    }
+
     _isInvalidTrip(trip) {
-        return trip.attributes?.valid_for_statistics === false;
+        return !this._isReconstructedGap(trip) && trip.attributes?.valid_for_statistics === false;
     }
 
     _formatMileage(value) {
@@ -390,7 +405,11 @@ class CodexStellantisTripHistoryCardV4 extends LitElement {
     }
 
     _formatDuration(trip) {
-        const seconds = Number(trip.attributes?.duration_seconds);
+        if (this._isReconstructedGap(trip)) return "—";
+        const rawSeconds = trip.attributes?.duration_seconds;
+        const seconds = rawSeconds === null || rawSeconds === undefined || rawSeconds === ""
+            ? Number.NaN
+            : Number(rawSeconds);
         const raw = String(trip.attributes?.duration ?? "");
         const clock = raw.match(/^(\d+):(\d{2})(?::(\d{2}))?/);
         const fromRaw = clock
@@ -412,7 +431,7 @@ class CodexStellantisTripHistoryCardV4 extends LitElement {
     }
 
     _formatSpeed(trip) {
-        if (this._isInvalidTrip(trip)) return "—";
+        if (this._isReconstructedGap(trip) || this._isInvalidTrip(trip)) return "—";
         const numeric = Number.parseFloat(String(trip.attributes?.average_speed ?? trip.attributes?.avg_speed ?? "").replace(",", "."));
         return Number.isFinite(numeric)
             ? `${numeric.toLocaleString(this._locale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km/h`
@@ -471,26 +490,28 @@ class CodexStellantisTripHistoryCardV4 extends LitElement {
                             <tbody>${trips.map((trip, index) => {
                                 const key = this._tripKey(trip, index);
                                 const expanded = this._expandedTripKey === key;
+                                const reconstructed = this._isReconstructedGap(trip);
                                 const invalid = this._isInvalidTrip(trip);
-                                return html`<tr class="trip-row" tabindex="0" role="button" aria-expanded=${expanded} @click=${() => this._toggleTrip(key)} @keydown=${(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); this._toggleTrip(key); } }}>
-                                <td>${this._formatDate(trip.last_updated ?? trip.last_changed)}</td>
+                                return html`<tr class=${reconstructed ? "trip-row reconstructed" : "trip-row"} tabindex="0" role="button" aria-expanded=${expanded} @click=${() => this._toggleTrip(key)} @keydown=${(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); this._toggleTrip(key); } }}>
+                                <td>${reconstructed ? text.reconstructedGap : this._formatDate(semanticTripTime(trip))}</td>
                                 <td>${this._formatDuration(trip)}</td>
                                 <td>${this._formatDistance(trip)}</td>
                                 <td>${this._formatSpeed(trip)}</td>
                                 ${hybridLayout ? html`
-                                    <td>${invalid ? "—" : this._value(trip.attributes?.energy_per_100_km)}</td>
-                                    <td>${invalid ? "—" : this._value(trip.attributes?.fuel_consumption_l_100km)}</td>
-                                    <td><span class="trip-type">${({ ev: "EV", hybrid: "Hybrid", ice: "ICE" })[trip.attributes?.trip_type] || "—"}</span></td>
+                                    <td>${invalid || reconstructed ? "—" : this._value(trip.attributes?.energy_per_100_km)}</td>
+                                    <td>${invalid || reconstructed ? "—" : this._value(trip.attributes?.fuel_consumption_l_100km)}</td>
+                                    <td><span class="trip-type">${reconstructed ? "—" : (({ ev: "EV", hybrid: "Hybrid", ice: "ICE" })[trip.attributes?.trip_type] || "—")}</span></td>
                                 ` : html`
-                                    ${hasEnergy ? html`<td>${this._value(trip.attributes?.energy_kwh)}</td><td>${invalid ? "—" : this._value(trip.attributes?.energy_per_100_km)}</td>` : nothing}
-                                    ${hasFuel ? html`<td>${invalid ? "—" : this._value(trip.attributes?.fuel_consumption_l_100km)}</td>` : nothing}
-                                    ${hasMaxSpeed ? html`<td>${invalid ? "—" : this._value(trip.attributes?.max_speed)}</td>` : nothing}
+                                    ${hasEnergy ? html`<td>${reconstructed ? "—" : this._value(trip.attributes?.energy_kwh)}</td><td>${invalid || reconstructed ? "—" : this._value(trip.attributes?.energy_per_100_km)}</td>` : nothing}
+                                    ${hasFuel ? html`<td>${invalid || reconstructed ? "—" : this._value(trip.attributes?.fuel_consumption_l_100km)}</td>` : nothing}
+                                    ${hasMaxSpeed ? html`<td>${invalid || reconstructed ? "—" : this._value(trip.attributes?.max_speed)}</td>` : nothing}
                                 `}
                             </tr>${expanded ? html`<tr class="trip-details">
                                 <td colspan=${columnCount}>
                                     <div class="trip-details-content">
+                                        ${reconstructed ? html`<span class="quality-warning">${text.reconstructedGap}</span>` : nothing}
                                         ${invalid ? html`<span class="quality-warning">${text.invalidServerTrip}</span>` : nothing}
-                                        ${showTripType ? html`<span><strong>${dashboardText.powertrain}:</strong> <span class="trip-type">${({ ev: "EV", hybrid: "Hybrid", ice: "ICE" })[trip.attributes?.trip_type] || "—"}</span></span>` : nothing}
+                                        ${showTripType && !reconstructed ? html`<span><strong>${dashboardText.powertrain}:</strong> <span class="trip-type">${({ ev: "EV", hybrid: "Hybrid", ice: "ICE" })[trip.attributes?.trip_type] || "—"}</span></span>` : nothing}
                                         <span><strong>${text.startMileage}:</strong> ${this._formatMileage(trip.attributes?.start_mileage)}</span>
                                         <span><strong>${text.endMileage}:</strong> ${this._formatMileage(this._endMileage(trip))}</span>
                                         ${(trip.attributes?.soc_start !== null && trip.attributes?.soc_start !== undefined) || (trip.attributes?.soc_end !== null && trip.attributes?.soc_end !== undefined) ? html`<span><strong>${text.socStart} / ${text.socEnd}:</strong> ${this._value(trip.attributes?.soc_start)} % → ${this._value(trip.attributes?.soc_end)} %</span>` : nothing}
@@ -498,7 +519,7 @@ class CodexStellantisTripHistoryCardV4 extends LitElement {
                                         ${(trip.attributes?.fuel_level_start !== null && trip.attributes?.fuel_level_start !== undefined) || (trip.attributes?.fuel_level_end !== null && trip.attributes?.fuel_level_end !== undefined) ? html`<span><strong>${dashboardText.fuel}:</strong> ${this._value(trip.attributes?.fuel_level_start)} % → ${this._value(trip.attributes?.fuel_level_end)} %</span>` : nothing}
                                         ${(trip.attributes?.fuel_range_start_km !== null && trip.attributes?.fuel_range_start_km !== undefined) || (trip.attributes?.fuel_range_end_km !== null && trip.attributes?.fuel_range_end_km !== undefined) ? html`<span><strong>${dashboardText.fuelRange}:</strong> ${this._value(trip.attributes?.fuel_range_start_km)} km → ${this._value(trip.attributes?.fuel_range_end_km)} km</span>` : nothing}
                                         ${trip.attributes?.fuel_consumption_l !== null && trip.attributes?.fuel_consumption_l !== undefined ? html`<span><strong>${dashboardText.fuelConsumption}:</strong> ${this._value(trip.attributes?.fuel_consumption_l)} l · ${this._value(trip.attributes?.fuel_consumption_l_100km)} l/100 km</span>` : nothing}
-                                        ${hasMaxSpeed ? html`<span><strong>${text.maximum}:</strong> ${invalid ? "—" : this._value(trip.attributes?.max_speed)} km/h</span>` : nothing}
+                                        ${hasMaxSpeed ? html`<span><strong>${text.maximum}:</strong> ${invalid || reconstructed ? "—" : this._value(trip.attributes?.max_speed)} km/h</span>` : nothing}
                                     </div>
                                 </td>
                             </tr>` : nothing}`;

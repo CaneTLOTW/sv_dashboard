@@ -5,6 +5,7 @@ import test from "node:test";
 const read = (path) => fs.readFileSync(new URL(path, import.meta.url), "utf8");
 const trip = read("../custom_components/sv_dashboard/static/trip-history-card.js");
 const history = read("../custom_components/sv_dashboard/server_history.py");
+const repair = read("../custom_components/sv_dashboard/trip_repair.py");
 
 test("single-energy trip history omits redundant powertrain column", () => {
   assert.match(trip, /const showTripType = hybridLayout/);
@@ -25,4 +26,14 @@ test("canonical server trips recover only missing positive local electric energy
   assert.match(history, /distance_delta > 2\.0/);
   assert.match(history, /"energy_source"\] = "sv_local_trip_soc_delta"/);
   assert.match(history, /trips = enrich_trips_with_local_energy\(trips, local_trips\)/);
+  assert.match(repair, /local_trips\[:\] = local_rows/);
+  assert.match(repair, /local_speed_outlier/);
+});
+
+test("trip history inserts provenance-only odometer gaps and uses semantic trip time", () => {
+  assert.match(trip, /insertOdometerGapRows\(serverTrips\)/);
+  assert.match(trip, /tripFilterTime\(trip\)/);
+  assert.match(trip, /semanticTripTime\(trip\)/);
+  assert.match(trip, /text\.reconstructedGap/);
+  assert.doesNotMatch(trip, /_formatDate\(trip\.last_updated \?\? trip\.last_changed\)/);
 });

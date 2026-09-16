@@ -91,3 +91,25 @@ print(json.dumps({"same": encoded_first == json.dumps(second, sort_keys=True)}))
 `);
   assert.deepEqual(JSON.parse(output), { same: true });
 });
+
+test("stale high-speed local composite is flagged and removed from backfill evidence", () => {
+  const output = runPython(String.raw`
+import importlib.util, json, sys
+spec = importlib.util.spec_from_file_location("trip_repair", sys.argv[1])
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+trips = [
+  {"id":"server","start_time":"2026-09-15T10:33:10+00:00","end_time":"2026-09-15T10:38:40+00:00","duration_seconds":330,"distance_km":4,"start_mileage":1872,"end_mileage":1876,"valid_for_statistics":True,"quality_flags":[]},
+]
+invalid = {"id":"stale","start_time":"2026-09-15T06:00:00+00:00","end_time":"2026-09-15T06:06:02+00:00","duration_seconds":362,"start_mileage":1851,"end_mileage":1876,"distance_km":25,"energy_kwh":3.4,"quality_flags":[]}
+valid = {"id":"good","start_time":"2026-09-14T15:30:00+00:00","end_time":"2026-09-14T15:50:00+00:00","duration_seconds":1200,"start_mileage":1832,"end_mileage":1851,"distance_km":19,"energy_kwh":3.3,"quality_flags":[]}
+local = [invalid, valid]
+mod.repair_trip_odometer_continuity(trips, local)
+print(json.dumps({"remaining":[row["id"] for row in local],"invalid":invalid,"valid":valid}, sort_keys=True))
+`);
+  const result = JSON.parse(output);
+  assert.deepEqual(result.remaining, ["good"]);
+  assert.equal(result.invalid.backfill_eligible, false);
+  assert.ok(result.invalid.quality_flags.includes("local_speed_outlier"));
+  assert.equal(result.valid.backfill_eligible, true);
+});

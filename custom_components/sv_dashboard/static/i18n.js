@@ -25,6 +25,36 @@ for (const catalog of [WESTERN_ADVANCED, NORTHERN_ADVANCED, EASTERN_ADVANCED]) {
   }
 }
 
+// Odometer-gap rows are a frontend-only provenance representation. They carry
+// distance proven by adjacent canonical odometer anchors, but deliberately no
+// invented trip timestamp, duration, SOC, energy or consumption.
+const TRIP_HISTORY_GAP_TEXT = {
+  de: "Rekonstruierte Kilometerlücke",
+  en: "Reconstructed odometer gap",
+  fr: "Écart kilométrique reconstruit",
+  it: "Lacuna chilometrica ricostruita",
+  es: "Salto de kilometraje reconstruido",
+  pt: "Lacuna de quilometragem reconstruída",
+  nl: "Gereconstrueerd kilometerstandsgat",
+  da: "Rekonstrueret kilometertællergab",
+  nb: "Rekonstruert kilometerstandsgap",
+  sv: "Rekonstruerat mätarställningsgap",
+  fi: "Rekonstruoitu matkamittariväli",
+  pl: "Zrekonstruowana luka przebiegu",
+  cs: "Rekonstruovaná mezera nájezdu",
+  sk: "Rekonštruovaná medzera nájazdu",
+  hu: "Rekonstruált kilométeróra-rés",
+  ro: "Gol de kilometraj reconstruit",
+  sl: "Rekonstruirana vrzel kilometrine",
+  hr: "Rekonstruirani jaz kilometraže",
+};
+
+for (const [language, label] of Object.entries(TRIP_HISTORY_GAP_TEXT)) {
+  if (FRONTEND_TEXT.tripHistory?.[language]) {
+    FRONTEND_TEXT.tripHistory[language].reconstructedGap = label;
+  }
+}
+
 // Public Home Assistant card-picker names are intentionally owned by the
 // shared i18n layer. Keep the compact universal overview clearly distinct from
 // the wide Battery + Fuel / Dual-Energy overview in every supported language.

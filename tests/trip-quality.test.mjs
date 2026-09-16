@@ -40,6 +40,7 @@ test("packed trip attributes preserve quality metadata for the frontend", () => 
 test("implausible server rows stay visible as diagnostics but suppress fake values", () => {
   assert.match(tripCard, /_isInvalidTrip\(trip\)/);
   assert.match(tripCard, /if \(this\._isInvalidTrip\(trip\)\) return "—"/);
-  assert.match(tripCard, /invalid \? "—" : this\._value\(trip\.attributes\?\.energy_per_100_km\)/);
+  assert.match(tripCard, /invalid \|\| reconstructed \? "—" : this\._value\(trip\.attributes\?\.energy_per_100_km\)/);
+  assert.match(tripCard, /_isReconstructedGap\(trip\)/);
   assert.match(tripCard, /text\.invalidServerTrip/);
 });
