@@ -27,7 +27,9 @@ const LANGUAGES = [
 ];
 const EXTRA_LANGUAGES = LANGUAGES.filter((language) => !["de", "en", "fr"].includes(language));
 const NAMESPACES = ["tripHistory", "chargeHistory", "vehicleOverview", "dashboard", "dualEnergyOverview", "fuelHistory"];
-const CAPABILITY_EXCEPTIONS = {};
+// reconstructedGap is intentionally composed in i18n.js because it is a
+// frontend-only provenance label shared by all 18 languages in one place.
+const CAPABILITY_EXCEPTIONS = { tripHistory: new Set(["reconstructedGap"]) };
 const baseCatalogs = Object.assign({}, WESTERN_TEXT, NORTHERN_TEXT, EASTERN_TEXT);
 const advancedCatalogs = Object.assign({}, WESTERN_ADVANCED, NORTHERN_ADVANCED, EASTERN_ADVANCED);
 
@@ -158,6 +160,7 @@ test("trip and charge cards use HA locale when language is automatic", () => {
 test("localized custom cards consume catalog keys instead of hard-coded German UI text", () => {
   assert.match(trip, /text\.compactFilterNote/);
   assert.match(trip, /text\.visibleTrips/);
+  assert.match(trip, /text\.reconstructedGap/);
   assert.match(charge, /text\.batteryEnergy/);
   assert.match(charge, /text\.reconstructedHint/);
   assert.match(vehicle, /textFor\(hass, "vehicleOverview"\)/);
