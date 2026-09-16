@@ -28,6 +28,9 @@ jobs:
       - name: Compile Python
         run: python3 -m py_compile custom_components/sv_dashboard/*.py
 
+      - name: Run history transport contract tests
+        run: python3 tests/server_history_transport_test.py
+
       - name: Check frontend JavaScript
         run: |
           node --check custom_components/sv_dashboard/static/frontend.js
