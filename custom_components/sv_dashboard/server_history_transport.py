@@ -1,9 +1,18 @@
 """Compatibility adapter for the authenticated upstream historical trips API.
 
 SV Dashboard owns the historical aggregation contract, but never owns
-Stellantis authentication or an HTTP session.  This module discovers the
+Stellantis authentication or an HTTP session. This module discovers the
 already-loaded upstream transport helpers from the resolved client and keeps
 all version-specific coupling in one place.
+
+The upstream integration currently has one lifecycle edge case: an already
+closed ``ClientSession`` can remain referenced because ``close_session()``
+returns early when ``session.closed`` is true, while ``start_session()`` only
+creates a replacement when ``_session`` is falsey. Until upstream fixes that
+lifecycle contract, this adapter performs a deliberately narrow compatibility
+repair: only a demonstrably dead shared transport is cleared/closed, then the
+upstream client's own request machinery recreates and owns the replacement.
+SV never creates or retains its own Stellantis HTTP session.
 """
 
 from __future__ import annotations
@@ -95,6 +104,85 @@ def _next_page_token(payload: Any) -> str | None:
     return _page_token(next_link)
 
 
+def _closed_transport_error(error: BaseException) -> bool:
+    """Recognize the narrow aiohttp closed-session/connector failure family."""
+    pending: list[BaseException] = [error]
+    seen: set[int] = set()
+    messages: list[str] = []
+    while pending:
+        current = pending.pop()
+        if id(current) in seen:
+            continue
+        seen.add(id(current))
+        messages.append(str(current).lower())
+        for linked in (getattr(current, "__cause__", None), getattr(current, "__context__", None)):
+            if isinstance(linked, BaseException):
+                pending.append(linked)
+    text = " | ".join(messages)
+    return any(
+        marker in text
+        for marker in (
+            "connector is closed",
+            "session is closed",
+            "closed connector",
+        )
+    )
+
+
+async def _prepare_upstream_transport(client: Any) -> None:
+    """Repair only a demonstrably dead upstream-owned HTTP transport.
+
+    The compatibility write to ``_session`` is intentionally limited to the
+    exact upstream bug where the referenced ClientSession is already closed.
+    There is nothing left to close or preserve in that object. A connector-only
+    failure is instead handed to upstream ``close_session()`` first so normal
+    ownership/cleanup semantics remain in charge.
+    """
+    if getattr(client, "_shutting_down", False):
+        raise HistoricalTripsTransportUnavailable("upstream_client_shutting_down")
+
+    try:
+        session = getattr(client, "_session")
+    except AttributeError:
+        return
+    if session is None:
+        return
+
+    session_closed = bool(getattr(session, "closed", False))
+    connector = getattr(session, "connector", None)
+    connector_closed = bool(connector is not None and getattr(connector, "closed", False))
+    if not session_closed and not connector_closed:
+        return
+
+    if session_closed:
+        # Upstream close_session() currently returns before clearing this exact
+        # stranded reference. Clearing it lets upstream start_session() create
+        # the replacement on the next normal authenticated request.
+        if getattr(client, "_session", None) is session:
+            client._session = None
+        return
+
+    close_session = getattr(client, "close_session", None)
+    if not callable(close_session):
+        raise HistoricalTripsTransportUnavailable("upstream_closed_connector_unrecoverable")
+    await close_session()
+
+
+async def _request_page(client: Any, request: Any, url: str, headers: dict[str, Any]) -> Any:
+    """Make one upstream-owned request with one closed-transport recovery retry."""
+    await _prepare_upstream_transport(client)
+    try:
+        return await request(url, method="GET", headers=headers)
+    except Exception as error:
+        if not _closed_transport_error(error):
+            raise
+        # make_http_request() may already have closed/cleared the failed
+        # transport. Preparing again is therefore safe whether the dead object
+        # is still referenced or has already become None. Retry exactly once.
+        await _prepare_upstream_transport(client)
+        return await request(url, method="GET", headers=headers)
+
+
 async def async_fetch_historical_trips(
     client: Any,
     vehicle: Any,
@@ -121,7 +209,7 @@ async def async_fetch_historical_trips(
             page_url = _append_query(page_url, {"timestamps": f"{since}/"})
         if token is not None:
             page_url = _append_query(page_url, {"pageToken": token})
-        payload = await request(page_url, method="GET", headers=headers)
+        payload = await _request_page(client, request, page_url, headers)
         for trip in _page_trips(payload):
             trips_by_id[str(trip["id"])] = trip
 
