@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import Any, Iterator
 
 
@@ -43,6 +44,39 @@ def _client_shutting_down(client: Any) -> bool:
     return bool(client is not None and getattr(client, "_shutting_down", False))
 
 
+def _coordinator_for_vin(client: Any, target_vin: str) -> Any:
+    """Return the already-loaded upstream coordinator for one VIN, if available."""
+    if not client or not target_vin or _client_shutting_down(client):
+        return None
+
+    lookup = getattr(client, "async_get_coordinator_by_vin", None)
+    if not callable(lookup):
+        return None
+    try:
+        return lookup(target_vin)
+    except Exception:
+        return None
+
+
+def get_upstream_coordinator_data(client: Any, target_vin: str) -> dict[str, Any] | None:
+    """Return an isolated snapshot of the upstream coordinator's current data.
+
+    Stellantis Vehicles 2026.9.3 made ``coordinator.data`` the single source of
+    current vehicle status.  SV Dashboard keeps Home Assistant entities as its
+    public product data contract, but this optional snapshot is useful for
+    compatibility checks and diagnostics while already operating on the loaded
+    upstream runtime.  It never performs network discovery and never exposes a
+    mutable reference to the upstream coordinator's live dictionary.
+    """
+    coordinator = _coordinator_for_vin(client, target_vin)
+    if coordinator is None:
+        return None
+    data = getattr(coordinator, "data", None)
+    if not isinstance(data, dict):
+        return None
+    return deepcopy(data)
+
+
 def select_upstream_client(upstream_entry: Any, legacy_clients: Any) -> Any:
     """Prefer ConfigEntry.runtime_data, then use the legacy hass.data cache.
 
@@ -70,14 +104,7 @@ def resolve_cached_upstream(client: Any, target_vin: str) -> tuple[Any, dict[str
     if not client or not target_vin or _client_shutting_down(client):
         return None, None
 
-    coordinator = None
-    lookup = getattr(client, "async_get_coordinator_by_vin", None)
-    if callable(lookup):
-        try:
-            coordinator = lookup(target_vin)
-        except Exception:
-            coordinator = None
-
+    coordinator = _coordinator_for_vin(client, target_vin)
     for candidate in _cached_candidates(client, coordinator):
         vehicle = _valid_vehicle(candidate, target_vin)
         if vehicle is not None:
