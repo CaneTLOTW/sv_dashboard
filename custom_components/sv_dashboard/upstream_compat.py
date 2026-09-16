@@ -38,14 +38,26 @@ def _cached_candidates(client: Any, coordinator: Any) -> Iterator[Any]:
                 yield from value
 
 
+def _client_shutting_down(client: Any) -> bool:
+    """Return whether the upstream runtime is already being torn down."""
+    return bool(client is not None and getattr(client, "_shutting_down", False))
+
+
 def select_upstream_client(upstream_entry: Any, legacy_clients: Any) -> Any:
-    """Prefer ConfigEntry.runtime_data, then use the legacy hass.data cache."""
+    """Prefer ConfigEntry.runtime_data, then use the legacy hass.data cache.
+
+    A runtime object that is already shutting down is intentionally rejected.
+    Reacquisition can bind to the replacement ``runtime_data`` after the
+    upstream config entry finishes reloading, rather than reusing a stale
+    client whose shared HTTP/MQTT transports are being destroyed.
+    """
     client = getattr(upstream_entry, "runtime_data", None)
     if client is not None:
-        return client
+        return None if _client_shutting_down(client) else client
     entry_id = getattr(upstream_entry, "entry_id", None)
     if isinstance(legacy_clients, dict) and entry_id:
-        return legacy_clients.get(entry_id)
+        client = legacy_clients.get(entry_id)
+        return None if _client_shutting_down(client) else client
     return None
 
 
@@ -55,7 +67,7 @@ def resolve_cached_upstream(client: Any, target_vin: str) -> tuple[Any, dict[str
     ``async_get_coordinator_by_vin`` is the upstream's local coordinator lookup;
     this adapter deliberately never calls a vehicle-list or network method.
     """
-    if not client or not target_vin:
+    if not client or not target_vin or _client_shutting_down(client):
         return None, None
 
     coordinator = None
