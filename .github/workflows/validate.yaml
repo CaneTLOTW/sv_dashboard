@@ -28,8 +28,10 @@ jobs:
       - name: Compile Python
         run: python3 -m py_compile custom_components/sv_dashboard/*.py
 
-      - name: Run history transport contract tests
-        run: python3 tests/server_history_transport_test.py
+      - name: Run history and upstream compatibility contract tests
+        run: |
+          python3 tests/server_history_transport_test.py
+          python3 tests/upstream_vehicle_resolution_test.py
 
       - name: Check frontend JavaScript
         run: |
