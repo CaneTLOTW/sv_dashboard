@@ -2,6 +2,19 @@
 
 This file is a compact operating guide for AI-assisted and automated changes. It complements, rather than replaces, [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## Codex handoff default
+
+- ChatGPT → Codex handoffs are **Issue-driven by default**. When the complete task/runbook already exists in a GitHub Issue, the user-facing handoff must normally contain **only the full repository name and the Issue number**.
+- Canonical short handoff form:
+
+  ```text
+  Repository: CaneTLOTW/sv_dashboard
+  Issue: #55
+  ```
+
+- Do **not** duplicate the Issue body, runbook, SHA list, acceptance criteria or prohibitions into the chat handoff. Codex must open the referenced Issue itself and follow the latest applicable `## ChatGPT → Codex Handoff` or `## ChatGPT Review / Next Step` comment.
+- Expand the chat handoff only when no canonical Issue exists yet or when an additional fact is required to disambiguate the task. An Issue number without the full repository name is never sufficient.
+
 ## Branch and deployment workflow
 
 - Develop **all** features, fixes, documentation, tests, dependency changes and candidate version bumps on `develop`. Do not commit product feature/fix work directly to `main`.
@@ -43,16 +56,8 @@ Full rationale: [Branch and deployment workflow](docs/BRANCH_AND_DEPLOYMENT_WORK
 - Codex may fix a **small, obvious and local defect** needed for the handed-off acceptance, on `develop`, with focused tests and explicit reporting.
 - Larger contract/architecture changes are handed back instead of being redesigned during execution.
 - Use Issue comments headed `## ChatGPT → Codex Handoff`, `## Codex → ChatGPT Ergebnis`, and `## ChatGPT Review / Next Step`.
-- Handoffs reference exact branch/SHA, scope, runbook, acceptance criteria and prohibited changes.
-- A Codex handoff may be deliberately short when the full task already exists in a GitHub Issue or handoff comment. Even then, the handoff **must start with the full repository reference** before any Issue/PR/comment reference; an Issue number by itself is never sufficient because Issue IDs are only unique inside one repository.
-- Canonical short handoff form:
-
-  ```text
-  Repository: CaneTLOTW/sv_dashboard
-  Task: See Issue #47 and follow the latest `## ChatGPT → Codex Handoff` comment.
-  ```
-
-- ChatGPT responses intended to be copied into Codex must use the same repository-qualified form. Never hand off only `Issue #47`, `#47`, `PR #...`, or `see comment ...` without naming `CaneTLOTW/sv_dashboard` first.
+- Handoffs reference exact branch/SHA, scope, runbook, acceptance criteria and prohibited changes **inside the canonical Issue**.
+- Chat handoffs should use the short repository-qualified form defined at the top of this file whenever the Issue already contains the complete task.
 - Keep an Issue open until its acceptance/runtime criteria are actually complete.
 
 ## Scope and architecture
