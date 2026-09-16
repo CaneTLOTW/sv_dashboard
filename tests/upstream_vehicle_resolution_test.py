@@ -10,6 +10,7 @@ MODULE_PATH = Path(__file__).parents[1] / "custom_components" / "sv_dashboard" /
 SPEC = importlib.util.spec_from_file_location("sv_dashboard_upstream_compat", MODULE_PATH)
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
+get_upstream_coordinator_data = MODULE.get_upstream_coordinator_data
 resolve_cached_upstream = MODULE.resolve_cached_upstream
 resolve_loaded_upstream = MODULE.resolve_loaded_upstream
 select_upstream_client = MODULE.select_upstream_client
@@ -72,6 +73,26 @@ def main():
     # Current layout: client comes from ConfigEntry.runtime_data and the
     # coordinator still owns the selected _vehicle cache.
     check("runtime_data _vehicle", Client(Coordinator(_vehicle=vehicle())))
+
+    # Stellantis Vehicles 2026.9.3 exposes current status through
+    # coordinator.data.  Treat it as an optional isolated diagnostic snapshot,
+    # not as replacement vehicle metadata or a network-backed lookup.
+    live_data = {
+        "updatedAt": "2026-09-16T18:00:00+00:00",
+        "lastPosition": {"geometry": {"coordinates": [8.0, 51.0]}},
+        "odometer": {"mileage": 1500},
+    }
+    data_client = Client(Coordinator(_vehicle=vehicle(), data=live_data))
+    snapshot = get_upstream_coordinator_data(data_client, VIN)
+    assert snapshot == live_data
+    assert snapshot is not live_data
+    snapshot["updatedAt"] = "mutated"
+    snapshot["lastPosition"]["geometry"]["coordinates"][0] = 99.0
+    assert live_data["updatedAt"] == "2026-09-16T18:00:00+00:00"
+    assert live_data["lastPosition"]["geometry"]["coordinates"][0] == 8.0
+    assert data_client.fetches == 0
+    assert get_upstream_coordinator_data(Client(Coordinator(data=None)), VIN) is None
+    assert get_upstream_coordinator_data(Client(), VIN) is None
 
     # Older/public candidate attribute remains supported.
     check("public vehicle_info", Client(Coordinator(vehicle_info=vehicle())))
