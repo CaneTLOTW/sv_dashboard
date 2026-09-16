@@ -6,6 +6,7 @@ const read = (path) => fs.readFileSync(new URL(`../${path}`, import.meta.url), "
 const history = read("custom_components/sv_dashboard/server_history.py");
 const init = read("custom_components/sv_dashboard/__init__.py");
 const compat = read("custom_components/sv_dashboard/upstream_compat.py");
+const transport = read("custom_components/sv_dashboard/server_history_transport.py");
 const unload = init.slice(init.indexOf("async def async_unload_entry"));
 
 test("resolution prefers device-linked entries and falls back to loaded caches", () => {
@@ -15,6 +16,22 @@ test("resolution prefers device-linked entries and falls back to loaded caches",
   assert.match(history, /async_entries\(UPSTREAM_DOMAIN\)/);
   assert.doesNotMatch(history, /if device is None:\n\s+return None, None/);
   assert.doesNotMatch(history, /get_user_vehicles/);
+});
+
+test("resolution never reuses an upstream runtime that is already shutting down", () => {
+  assert.match(compat, /def _client_shutting_down\(client: Any\)/);
+  assert.match(compat, /return None if _client_shutting_down\(client\) else client/);
+  assert.match(compat, /not target_vin or _client_shutting_down\(client\)/);
+});
+
+test("history transport has a narrow closed-session compatibility repair", () => {
+  assert.match(transport, /async def _prepare_upstream_transport\(client: Any\)/);
+  assert.match(transport, /if session_closed:/);
+  assert.match(transport, /client\._session = None/);
+  assert.match(transport, /await close_session\(\)/);
+  assert.match(transport, /async def _request_page\(/);
+  assert.match(transport, /if not _closed_transport_error\(error\):/);
+  assert.match(transport, /return await request\(url, method="GET", headers=headers\)/);
 });
 
 test("unresolved startup uses one cancellable bounded reacquisition worker", () => {
