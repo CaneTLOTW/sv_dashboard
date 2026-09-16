@@ -2,16 +2,22 @@
 
 ## Unreleased
 
-- Keep server-history upstream resolution alive after startup ordering misses by
-  retrying loaded runtime/cache objects with bounded backoff and strict VIN
-  matching, while preserving the local fallback until a normal sync succeeds.
-- Cancel that background worker only after a confirmed successful config-entry
-  unload, so a failed platform unload can continue recovery during the same HA
-  uptime.
+No changes yet.
 
 All notable user-facing changes to SV Dashboard are recorded here.
 
 SV Dashboard uses semantic package versions. `develop` is the integration/acceptance branch; `main` represents the last explicitly accepted publishable state.
+
+## 0.6.0-beta.14 server-history lifecycle candidate
+
+- Adds the SV-owned historical `/trips` transport on top of the already loaded Stellantis Vehicles authenticated client/session instead of relying on a missing upstream history method or introducing a second auth stack.
+- Makes upstream vehicle resolution resilient to Home Assistant startup ordering with strict VIN matching, loaded-runtime preference and bounded background reacquisition while local history remains available as fallback.
+- Rejects upstream runtime objects already marked `_shutting_down` so SV Dashboard does not bind to stale clients during Stellantis Vehicles reload/unload.
+- Adds a temporary, narrowly scoped compatibility recovery for stranded closed upstream HTTP sessions/connectors: an already-dead session reference can be cleared so upstream recreates its own session, connector-only closure uses upstream cleanup, and explicit closed-session/connector failures get at most one request retry.
+- Preserves upstream ownership of OAuth, credentials and the long-lived HTTP session; SV Dashboard does not create a parallel Stellantis authentication/session stack.
+- Adds focused Python transport/runtime-resolution contract tests and executes the history transport contract suite in the normal Validate workflow.
+- Keeps the frontend module content keys from beta.13/beta.12/beta.10/beta.7 because this candidate changes backend/history lifecycle code only; the package version itself advances to `0.6.0-beta.14` for an immutable HACS/runtime candidate.
+- Remains a prerelease on `develop`; `main` stays unchanged until exact beta.14 runtime acceptance is complete.
 
 ## 0.6.0-beta.13 trip-history EV cleanup and energy recovery
 
