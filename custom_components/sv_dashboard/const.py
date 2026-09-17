@@ -13,6 +13,7 @@ MIN_UPSTREAM_VERSION = "2026.7.2"
 CONF_VEHICLE_DEVICE_ID = "vehicle_device_id"
 CONF_VEHICLE_SLUG = "vehicle_slug"
 CONF_BATTERY_CAPACITY_KWH = "battery_capacity_kwh"
+CONF_TANK_CAPACITY_L = "tank_capacity_l"
 CONF_VEHICLE_VIN = "vehicle_vin"
 CONF_POWERTRAIN_OVERRIDE = "powertrain_override"
 
