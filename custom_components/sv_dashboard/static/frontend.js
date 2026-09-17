@@ -19,6 +19,7 @@ const INTERNAL_CARD_TYPES = new Set([
   "sv-dashboard-charge-curve-browser-card",
   "sv-dashboard-gps-date-card",
   "sv-dashboard-gps-map-card",
+  "sv-dashboard-fuel-history-card",
 ]);
 
 const waitForElement = async ([tag, name]) => {
