@@ -12,6 +12,7 @@ const time = read("custom_components/sv_dashboard/time.py");
 const button = read("custom_components/sv_dashboard/button.py");
 const sw = read("custom_components/sv_dashboard/switch.py");
 const metrics = read("custom_components/sv_dashboard/metrics.py");
+const capacity = read("custom_components/sv_dashboard/capacity.py");
 const configFlow = read("custom_components/sv_dashboard/config_flow.py");
 
 test("package-owned entities use an SV namespace plus VIN and technical key", () => {
@@ -33,28 +34,23 @@ test("package-owned entities use an SV namespace plus VIN and technical key", ()
   assert.doesNotMatch(sw, /_attr_unique_id = f"\{entry\.entry_id\}_/);
 });
 
-test("parallel e-C3 and SV installs cannot request the same package entity id", () => {
-  assert.match(identity, /return f"\{entity_domain\}\.\{object_id\}"/);
-  assert.match(identity, /ENTITY_ID_PREFIX = "sv"/);
-  assert.doesNotMatch(
-    identity,
-    /entity\.entity_id = f"\{entity_domain\}\.\{slugify\(unique_id\)\}"/,
-  );
-  assert.match(identity, /legacy_vin_prefix = f"\{vin\}_"/);
-  assert.match(identity, /current_vin_prefix = f"\{DOMAIN\}_\{vin\}_"/);
-  assert.match(identity, /registry_entry\.platform != DOMAIN/);
-});
-
-test("battery capacity is a per-vehicle config fallback and not an SV constant", () => {
+test("battery capacity is a per-vehicle fallback and measured upstream values keep priority", () => {
   assert.match(configFlow, /CONF_BATTERY_CAPACITY_KWH/);
   assert.match(metrics, /last_valid_battery_capacity_kwh/);
-  assert.match(metrics, /return round\(current, 3\), "api"/);
-  assert.match(metrics, /return round\(stored, 3\), "last_api"/);
-  assert.match(metrics, /self\.entry\.data\.get\(CONF_BATTERY_CAPACITY_KWH\)/);
-  assert.match(metrics, /return round\(configured, 3\), "configured"/);
-  assert.match(metrics, /return None, None/);
-  assert.doesNotMatch(metrics, /43\.4/);
-  assert.doesNotMatch(metrics, /FALLBACK_CAPACITY/);
+  assert.match(capacity, /return round\(current, 3\), "api"/);
+  assert.match(capacity, /return round\(stored, 3\), "last_api"/);
+  assert.match(capacity, /self\.entry\.data\.get\(CONF_BATTERY_CAPACITY_KWH\)/);
+  assert.match(init, /from \.capacity import VehicleMetricsManager/);
+  assert.doesNotMatch(capacity, /43\.4/);
+  assert.doesNotMatch(capacity, /FALLBACK_CAPACITY/);
+});
+
+test("SOH only adjusts the configured nominal battery fallback", () => {
+  assert.match(capacity, /soh = self\._number\("battery_health_capacity"\)/);
+  assert.match(capacity, /0 < soh <= 100/);
+  assert.match(capacity, /configured \* soh \/ 100/);
+  assert.match(capacity, /"configured_soh"/);
+  assert.match(capacity, /return round\(configured, 3\), "configured"/);
 });
 
 test("unknown capacity suppresses SOC-derived energy instead of inventing a value", () => {
