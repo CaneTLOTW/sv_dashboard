@@ -18,7 +18,7 @@ const languages = ["de", "en", "fr", "it", "es", "pt", "nl", "da", "nb", "sv", "
 
 test("canonical trips preserve independent fuel telemetry", () => {
   assert.match(history, /_energy_entry\(raw\.get\("energyConsumptions"\), "Fuel"\)/);
-  for (const key of ["fuel_level_start", "fuel_level_end", "fuel_range_start_km", "fuel_range_end_km", "fuel_consumption_l", "fuel_consumption_l_100km", "trip_type"]) {
+  for (const key of ["electric_range_start_km", "electric_range_end_km", "fuel_level_start", "fuel_level_end", "fuel_range_start_km", "fuel_range_end_km", "fuel_consumption_l", "fuel_consumption_l_100km", "trip_type"]) {
     assert.match(history, new RegExp(`"${key}"`));
     assert.match(sensor, new RegExp(`"${key}"`));
   }
@@ -52,6 +52,9 @@ test("hybrid trip history uses the compact six-column table and non-redundant pa
   assert.match(trip, /<strong>\$\{dashboardText\.fuelConsumption\}:<\/strong> \$\{this\._value\(trip\.attributes\?\.fuel_consumption_l\)\} l<\/span>/);
   assert.doesNotMatch(trip, /energy_kwh\)\} kWh ·/);
   assert.doesNotMatch(trip, /fuel_consumption_l\)\} l ·/);
+  assert.match(trip, /dualEnergyText\.electricRange/);
+  assert.match(trip, /electric_range_start_km/);
+  assert.match(trip, /electric_range_end_km/);
   assert.match(trip, /dashboardText\.fuelRange/);
 });
 
@@ -121,7 +124,7 @@ test("temperature badge indicates recent upstream vehicle payload without claimi
   assert.match(dualHero, /attributes\.updatedAt/);
   assert.match(dualHero, /temperature-badge\.fresh/);
   assert.match(dualHero, /var\(--primary-color\)/);
-  assert.doesNotMatch(dualHero, /connected|disconnected/i);
+  assert.doesNotMatch(dualHero, /dashboardText\.(connected|disconnected)|text\.(connected|disconnected)/i);
 });
 
 test("charging state does not redundantly append plugged-in status", () => {
@@ -156,6 +159,9 @@ test("fuel history renders canonical restart-safe backend events with explicit e
   assert.match(fuelHistoryBackend, /"liters_source": liters_source/);
   assert.match(fuelHistoryBackend, /"odometer_km": round\(mileage/);
   assert.match(fuelHistoryBackend, /_same_refuel/);
+  assert.match(fuelHistoryBackend, /"driving_time_seconds": round\(duration\)/);
+  assert.match(fuelHistory, /summary\.driving_time_seconds/);
+  assert.match(fuelHistory, /tripText\.duration/);
 });
 
 test("new card strings cover 18 languages", () => {
