@@ -9,7 +9,13 @@ const statusCandidates = (hass, entryId) => Object.entries(hass?.states || {}).f
   const attributes = state?.attributes || {};
   return entityId.startsWith("sensor.") && attributes.integration_domain === STATUS_DOMAIN && typeof attributes.entity_mapping === "object" && (!entryId || attributes.entry_id === entryId);
 });
-const candidateLabel = (hass, candidate, index = 0) => { const a = candidate?.[1]?.attributes || {}; const vehicle = a.entity_mapping?.vehicle ? hass?.states?.[a.entity_mapping.vehicle] : undefined; return String(vehicle?.attributes?.friendly_name || a.vehicle_slug || `Vehicle ${index + 1}`); };
+const candidateLabel = (hass, candidate, index = 0) => {
+  const attributes = candidate?.[1]?.attributes || {};
+  const vehicle = attributes.entity_mapping?.vehicle ? hass?.states?.[attributes.entity_mapping.vehicle] : undefined;
+  const overviewText = textFor(hass || {}, "vehicleOverview");
+  const fallback = String(overviewText.vehicleFallback || "{number}").replace("{number}", String(index + 1));
+  return String(vehicle?.attributes?.friendly_name || attributes.vehicle_slug || fallback);
+};
 const numeric = (value) => { const parsed = Number.parseFloat(String(value ?? "").replace(",", ".")); return Number.isFinite(parsed) ? parsed : null; };
 
 class SvDashboardFuelHistoryCard extends LitElement {
