@@ -305,6 +305,7 @@ class FuelHistoryManager:
             "source_time": event.get("source_time"),
             "odometer_km": event_mileage,
             "distance_km": distance_since,
+            "driving_time_seconds": round(duration) if duration > 0 else None,
             "average_speed_kmh": round(distance / (duration / 3600), 2) if duration > 0 else None,
             "fuel_consumption_l_100km": round(fuel_liters / distance * 100, 2) if fuel_complete and distance > 0 else None,
             "trip_count": trip_count,
