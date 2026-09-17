@@ -15,7 +15,8 @@
         "data": {
           "vehicle_device_id": "Vehículo Stellantis",
           "vehicle_slug": "Identificador del vehículo (opcional)",
-          "battery_capacity_kwh": "Capacidad de batería alternativa"
+          "battery_capacity_kwh": "Capacidad de batería alternativa",
+          "tank_capacity_l": "Capacidad del depósito de combustible alternativa"
         }
       }
     },
@@ -38,6 +39,7 @@
         "data": {
           "dashboard_name": "Nombre visible del panel (vacío = automático)",
           "battery_capacity_kwh": "Capacidad de batería alternativa",
+          "tank_capacity_l": "Capacidad del depósito de combustible alternativa",
           "trips": "Historial de viajes",
           "charging": "Historial y curvas de carga",
           "gps": "Historial GPS",
