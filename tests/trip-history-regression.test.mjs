@@ -8,14 +8,14 @@ const history = read("../custom_components/sv_dashboard/server_history.py");
 const repair = read("../custom_components/sv_dashboard/trip_repair.py");
 
 test("single-energy trip history omits redundant powertrain column", () => {
-  assert.match(trip, /const showTripType = hybridLayout/);
-  assert.match(trip, /const columnCount = hybridLayout \? 7 : 4 \+ \(hasEnergy \? 2 : 0\) \+ \(hasFuel \? 1 : 0\) \+ \(hasMaxSpeed \? 1 : 0\)/);
-  assert.doesNotMatch(trip, /hasTripType/);
+  assert.match(trip, /const columnCount = hybridLayout \? 6 : 4 \+ \(hasEnergy \? 2 : 0\) \+ \(hasFuel \? 1 : 0\) \+ \(hasMaxSpeed \? 1 : 0\)/);
+  assert.doesNotMatch(trip, /hasTripType|showTripType/);
 });
 
-test("dual-energy trip history keeps per-trip powertrain classification", () => {
-  assert.match(trip, /hybridLayout \? html`<th>\$\{text\.consumption\}<\/th><th>l\/100 km<\/th><th>\$\{dashboardText\.powertrain\}<\/th>`/);
-  assert.match(trip, /ev: "EV", hybrid: "Hybrid", ice: "ICE"/);
+test("dual-energy trip history keeps the compact six-column primary row", () => {
+  assert.match(trip, /hybridLayout \? html`<th>\$\{text\.consumption\}<\/th><th>l\/100 km<\/th>`/);
+  assert.doesNotMatch(trip, /dashboardText\.powertrain/);
+  assert.doesNotMatch(trip, /trip\.attributes\?\.trip_type/);
 });
 
 test("canonical server trips recover only missing positive local electric energy", () => {
