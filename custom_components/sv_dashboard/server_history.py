@@ -200,7 +200,12 @@ def normalize_trip(raw: dict[str, Any], capacity_kwh: Any = None) -> dict[str, A
     distance = _number(raw.get("distance"))
     start_mileage = _number(raw.get("startMileage"))
     end_mileage = start_mileage + distance if start_mileage is not None and distance is not None else None
-    start_soc, end_soc = _trip_soc(raw, "startEnergies"), _trip_soc(raw, "endEnergies")
+    start_electric = _energy_entry(raw.get("startEnergies"), "Electric")
+    end_electric = _energy_entry(raw.get("endEnergies"), "Electric")
+    start_soc = _number(start_electric.get("level")) if start_electric else None
+    end_soc = _number(end_electric.get("level")) if end_electric else None
+    electric_range_start_km = _number(start_electric.get("autonomy")) if start_electric else None
+    electric_range_end_km = _number(end_electric.get("autonomy")) if end_electric else None
     start_fuel = _energy_entry(raw.get("startEnergies"), "Fuel")
     end_fuel = _energy_entry(raw.get("endEnergies"), "Fuel")
     fuel_level_start = _number(start_fuel.get("level")) if start_fuel else None
@@ -293,6 +298,8 @@ def normalize_trip(raw: dict[str, Any], capacity_kwh: Any = None) -> dict[str, A
         "end_mileage": round(end_mileage, 3) if end_mileage is not None else None,
         "soc_start": start_soc,
         "soc_end": end_soc,
+        "electric_range_start_km": electric_range_start_km,
+        "electric_range_end_km": electric_range_end_km,
         "fuel_level_start": fuel_level_start,
         "fuel_level_end": fuel_level_end,
         "fuel_range_start_km": fuel_range_start_km,
