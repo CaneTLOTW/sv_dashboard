@@ -376,6 +376,10 @@ class CodexStellantisTripHistoryCardV4 extends LitElement {
         return textFor(this._i18nContext(), "dashboard");
     }
 
+    _dualEnergyText() {
+        return textFor(this._i18nContext(), "dualEnergyOverview");
+    }
+
     _value(value, fallback = "—") {
         return value === undefined || value === null || value === "" ? fallback : value;
     }
@@ -451,6 +455,7 @@ class CodexStellantisTripHistoryCardV4 extends LitElement {
         if (!this._config) return nothing;
         const text = this._text();
         const dashboardText = this._dashboardText();
+        const dualEnergyText = this._dualEnergyText();
         const trips = this._trips ?? [];
         const hasMoreTrips = (this._allTrips?.length ?? 0) > trips.length;
         const hybridLayout = Boolean(this._config.hybrid_layout);
@@ -511,6 +516,7 @@ class CodexStellantisTripHistoryCardV4 extends LitElement {
                                         <span><strong>${dashboardText.mileage}:</strong> ${this._formatMileage(trip.attributes?.start_mileage)} → ${this._formatMileage(this._endMileage(trip))}</span>
                                         ${(trip.attributes?.soc_start !== null && trip.attributes?.soc_start !== undefined) || (trip.attributes?.soc_end !== null && trip.attributes?.soc_end !== undefined) ? html`<span><strong>${text.socStart} / ${text.socEnd}:</strong> ${this._value(trip.attributes?.soc_start)} % → ${this._value(trip.attributes?.soc_end)} %</span>` : nothing}
                                         ${trip.attributes?.energy_kwh !== null && trip.attributes?.energy_kwh !== undefined ? html`<span><strong>${text.energy}:</strong> ${this._value(trip.attributes?.energy_kwh)} kWh</span>` : nothing}
+                                        ${(trip.attributes?.electric_range_start_km !== null && trip.attributes?.electric_range_start_km !== undefined) || (trip.attributes?.electric_range_end_km !== null && trip.attributes?.electric_range_end_km !== undefined) ? html`<span><strong>${dualEnergyText.electricRange}:</strong> ${this._value(trip.attributes?.electric_range_start_km)} km → ${this._value(trip.attributes?.electric_range_end_km)} km</span>` : nothing}
                                         ${(trip.attributes?.fuel_level_start !== null && trip.attributes?.fuel_level_start !== undefined) || (trip.attributes?.fuel_level_end !== null && trip.attributes?.fuel_level_end !== undefined) ? html`<span><strong>${dashboardText.fuel}:</strong> ${this._value(trip.attributes?.fuel_level_start)} % → ${this._value(trip.attributes?.fuel_level_end)} %</span>` : nothing}
                                         ${(trip.attributes?.fuel_range_start_km !== null && trip.attributes?.fuel_range_start_km !== undefined) || (trip.attributes?.fuel_range_end_km !== null && trip.attributes?.fuel_range_end_km !== undefined) ? html`<span><strong>${dashboardText.fuelRange}:</strong> ${this._value(trip.attributes?.fuel_range_start_km)} km → ${this._value(trip.attributes?.fuel_range_end_km)} km</span>` : nothing}
                                         ${trip.attributes?.fuel_consumption_l !== null && trip.attributes?.fuel_consumption_l !== undefined ? html`<span><strong>${dashboardText.fuelConsumption}:</strong> ${this._value(trip.attributes?.fuel_consumption_l)} l</span>` : nothing}
