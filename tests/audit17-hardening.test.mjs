@@ -35,7 +35,7 @@ test("hybrid hardening contracts are present", () => {
   assert.match(metrics, /def current_trip_consumption/);
   assert.match(metrics, /def current_trip_energy/);
   assert.match(notifications, /fuel_consumption_l_100km/);
-  assert.match(dual, /current_trip_energy/);
+  assert.doesNotMatch(dual, /current_trip_energy/);
   assert.doesNotMatch(dual, /current_trip_consumption/);
   assert.match(dual, /fuel_consumption_instant/);
 });
