@@ -6,6 +6,22 @@ No changes yet.
 
 All notable user-facing changes to SV Dashboard are recorded here.
 
+## 0.6.0-beta.15 DS4 tester-feedback hardening candidate
+
+- Unifies the Dual-Energy Hero into one stacked Battery/Fuel layout at all card widths and keeps both electric and fuel ranges permanently visible.
+- Extends the Hero climate control into a guarded, upstream-confirmed START/STOP state machine: START cannot be immediately toggled back, active climate enables STOP only after confirmation, and STOP uses a distinct pending state until the vehicle reports inactive.
+- Removes redundant `Charging · Plugged in` wording, keeps live EV efficiency estimates out of the Hero, and only shows live fuel consumption when a fresh upstream `fuel_consumption_instant` value exists.
+- Uses the temperature badge as a recent-vehicle-data freshness indicator rather than claiming a persistent Stellantis connection state.
+- Applies SOH to the configured nominal traction-battery fallback when no trustworthy upstream capacity exists and adds an optional per-vehicle nominal fuel-tank fallback for fuel-capable vehicles.
+- Reworks Hybrid Trip History to the compact six-column primary table, removes redundant motorization details, groups start/end mileage, SOC, electric range, fuel level and fuel range, and keeps absolute kWh/l in expanded details without repeating normalized consumption.
+- Adds restart-safe canonical fuel/refuel history with semantic deduplication, stable source timestamps, odometer-at-refuel, direct-or-estimated refill liters with provenance, and a since-last-refuel summary for distance, driving time, average speed and guarded average fuel consumption.
+- Hardens charging reconstruction against transient out-of-sequence SOC drops such as `67 → 0 → 68` so rejected samples cannot poison canonical session SOC/energy.
+- Keeps only the compact and Dual-Energy Hero cards visible in Home Assistant's Add Card picker while internal Trip/Charge/GPS/Fuel cards remain available to the generated dashboard.
+- Completes the tank-capacity translation additions across the full 18-language Home Assistant catalog and fixes the Italian catalog JSON structure.
+- Adds and updates regression coverage for the DS4 Hybrid fixture, electric/fuel endpoint detail data, refuel summaries, Hero behavior, capability-driven configuration and beta.15 frontend cache/version contracts.
+- Bumps package and consolidated frontend resources to `0.6.0-beta.15`; all changed frontend modules and shared localization dependencies use beta.15 cache keys.
+- Remains a prerelease on `develop`; `main` stays unchanged until exact-candidate runtime acceptance is complete.
+
 SV Dashboard uses semantic package versions. `develop` is the integration/acceptance branch; `main` represents the last explicitly accepted publishable state.
 
 ## 0.6.0-beta.14 server-history lifecycle candidate
