@@ -15,6 +15,15 @@ This file is a compact operating guide for AI-assisted and automated changes. It
 - Do **not** duplicate the Issue body, runbook, SHA list, acceptance criteria or prohibitions into the chat handoff. Codex must open the referenced Issue itself and follow the latest applicable `## ChatGPT → Codex Handoff` or `## ChatGPT Review / Next Step` comment.
 - Expand the chat handoff only when no canonical Issue exists yet or when an additional fact is required to disambiguate the task. An Issue number without the full repository name is never sufficient.
 
+## Vehicle capability evidence matrix
+
+- Read and maintain [`docs/VEHICLE_CAPABILITY_MATRIX.md`](docs/VEHICLE_CAPABILITY_MATRIX.md) whenever work touches vehicle-specific data, controls, capability discovery, fallbacks, LIVE metrics or external vehicle testing.
+- New real-vehicle evidence must update the matrix in the same workstream when it materially changes what SV knows about a model year/powertrain/API capability.
+- Record observed evidence as `confirmed`, `absent`, `reported-historical`, or `unknown`; never infer support merely from brand, platform, related model or previous model year.
+- Prefer capability-gated behavior. Introduce model-/vehicle-class-specific behavior only when repeated evidence shows capability discovery cannot express the difference safely.
+- Keep current/live API values separate from completed-trip/history values; availability of one never proves availability of the other.
+- Do not commit private raw exports, VINs, locations or account data to support the matrix; reference sanitized fixtures and canonical Issues instead.
+
 ## Branch and deployment workflow
 
 - Develop **all** features, fixes, documentation, tests, dependency changes and candidate version bumps on `develop`. Do not commit product feature/fix work directly to `main`.
