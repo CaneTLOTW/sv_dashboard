@@ -29,7 +29,7 @@ class SvDashboardFuelHistoryCard extends LitElement {
     ha-card { overflow:hidden; }
     .content { padding:14px 16px 16px; }
     .hint { color:var(--secondary-text-color); font-size:12px; line-height:1.4; margin:0 0 12px; }
-    .summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:0 0 14px; }
+    .summary { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin:0 0 14px; }
     .summary-item { border:1px solid var(--divider-color); border-radius:12px; padding:9px 10px; background:color-mix(in srgb,var(--primary-color) 4%,var(--card-background-color)); min-width:0; }
     .summary-label { color:var(--secondary-text-color); font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .summary-value { color:var(--primary-text-color); font-size:18px; font-weight:650; margin-top:2px; white-space:nowrap; }
@@ -97,6 +97,7 @@ class SvDashboardFuelHistoryCard extends LitElement {
 
   _date(value) { const parsed = new Date(value); if (Number.isNaN(parsed.getTime())) return "—"; return new Intl.DateTimeFormat(localeFor(this._hass), { dateStyle:"medium", timeStyle:"short" }).format(parsed); }
   _num(value, digits = 0) { const parsed = numeric(value); return parsed === null ? "—" : new Intl.NumberFormat(localeFor(this._hass), { minimumFractionDigits:digits, maximumFractionDigits:digits }).format(parsed); }
+  _duration(seconds) { const parsed = numeric(seconds); if (parsed === null || parsed < 0) return "—"; const hours = Math.floor(parsed / 3600); const minutes = Math.floor((parsed % 3600) / 60); return `${hours}:${String(minutes).padStart(2, "0")} h`; }
   _liters(event) { if (event?.liters === null || event?.liters === undefined) return "—"; const prefix = event.liters_estimated ? "≈ " : ""; return `${prefix}${this._num(event.liters, 1)} l`; }
 
   render() {
@@ -115,6 +116,7 @@ class SvDashboardFuelHistoryCard extends LitElement {
       <p class="hint">${text.hint}</p>
       ${summary ? html`<div class="summary">
         <div class="summary-item"><div class="summary-label">${tripText.distance}</div><div class="summary-value">${summary.distance_km === null || summary.distance_km === undefined ? "—" : `${this._num(summary.distance_km,1)} km`}</div></div>
+        <div class="summary-item"><div class="summary-label">${tripText.duration}</div><div class="summary-value">${this._duration(summary.driving_time_seconds)}</div></div>
         <div class="summary-item"><div class="summary-label">${tripText.average}</div><div class="summary-value">${summary.average_speed_kmh === null || summary.average_speed_kmh === undefined ? "—" : `${this._num(summary.average_speed_kmh,1)} km/h`}</div></div>
         <div class="summary-item"><div class="summary-label">${dashboardText.fuelConsumption}</div><div class="summary-value">${summary.fuel_consumption_l_100km === null || summary.fuel_consumption_l_100km === undefined ? "—" : `${this._num(summary.fuel_consumption_l_100km,1)} l/100 km`}</div></div>
       </div>` : nothing}
