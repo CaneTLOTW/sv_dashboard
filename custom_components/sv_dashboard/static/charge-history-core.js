@@ -41,6 +41,57 @@ function stateAt(states, timestamp) {
     return states.find((item) => numericState(item.state) !== null) ?? null;
 }
 
+function validSoc(item) {
+    const value = numericState(item?.state);
+    return value !== null && value >= 0 && value <= 100 ? value : null;
+}
+
+/**
+ * Build the SOC timeline used for charging calculations without destroying the
+ * raw Recorder history. While the charging binary sensor is on, a large SOC
+ * decrease is not a credible charging transition. Stellantis has occasionally
+ * published a transient 0 % between otherwise monotonic values (for example
+ * 67 -> 0 -> 68). Such samples remain in Recorder, but are excluded from
+ * session start/end, energy and curve calculations and reported through a
+ * quality flag.
+ */
+export function validateChargingSocTimeline(rawStates, start, end, maxDropPercent = 5) {
+    const states = normalizedStates(rawStates);
+    return validateNormalizedChargingSocTimeline(states, start, end, maxDropPercent);
+}
+
+function validateNormalizedChargingSocTimeline(states, start, end, maxDropPercent = 5) {
+    const previous = [...states]
+        .reverse()
+        .find((item) => item.timestamp < start && validSoc(item) !== null);
+    const interval = states.filter(
+        (item) => item.timestamp >= start && item.timestamp <= end && validSoc(item) !== null
+    );
+    const candidates = previous
+        ? [{ state: previous.state, timestamp: start, _baseline: true }, ...interval]
+        : interval;
+
+    const accepted = [];
+    const rejected = [];
+    for (const item of candidates) {
+        const value = validSoc(item);
+        if (value === null) continue;
+        const prior = accepted.at(-1);
+        const priorValue = validSoc(prior);
+        if (prior && priorValue !== null && value < priorValue - maxDropPercent) {
+            rejected.push({ ...item, reason: "charging_soc_drop" });
+            continue;
+        }
+        accepted.push(item);
+    }
+
+    return {
+        states: accepted,
+        rejected,
+        quality_flags: rejected.length ? ["soc_outlier_rejected"] : [],
+    };
+}
+
 function normalizeChargeType(value) {
     const normalized = String(value ?? "").trim().toLowerCase();
     if (["ac", "slow", "normal", "standard"].includes(normalized)) return "AC";
@@ -187,6 +238,7 @@ export function buildLocalChargeSessions(resultStates = []) {
             samples: Array.isArray(attrs.samples) ? attrs.samples : [],
             has_charge_curve: Array.isArray(attrs.samples) && attrs.samples.length >= 2,
             estimated: attrs.estimated !== false,
+            quality_flags: Array.isArray(attrs.quality_flags) ? attrs.quality_flags : [],
         }))
         .filter((session) => Number.isFinite(timestampValue(session.start)) && Number.isFinite(timestampValue(session.end)));
 }
@@ -249,16 +301,26 @@ export function buildChargeCurve({
         return { points: [], charge_type: "—" };
     }
 
-    const soc = normalizedStates(socStates);
+    const rawSoc = normalizedStates(socStates);
+    const validated = validateNormalizedChargingSocTimeline(rawSoc, startTimestamp, endTimestamp);
+    const soc = validated.states;
     const modes = normalizedStates(modeStates);
-    const startState = stateAt(soc, startTimestamp);
-    const startSoc = numericState(startState?.state);
+    const startSoc = validSoc(soc[0]);
+    const endSoc = validSoc(soc.at(-1));
     const chargeType = chargeTypeForInterval(modes, startTimestamp, endTimestamp);
-    if (startSoc === null) return { points: [], charge_type: chargeType };
+    if (startSoc === null) {
+        return { points: [], charge_type: chargeType, quality_flags: validated.quality_flags };
+    }
 
     const capacity = positiveCapacity(capacityKwh);
     if (capacity === null) {
-        return { points: [], start_soc: startSoc, end_soc: startSoc, charge_type: chargeType };
+        return {
+            points: [],
+            start_soc: startSoc,
+            end_soc: endSoc ?? startSoc,
+            charge_type: chargeType,
+            quality_flags: validated.quality_flags,
+        };
     }
 
     const points = [];
@@ -266,7 +328,7 @@ export function buildChargeCurve({
 
     for (const item of soc) {
         if (item.timestamp <= startTimestamp || item.timestamp > endTimestamp) continue;
-        const currentSoc = numericState(item.state);
+        const currentSoc = validSoc(item);
         if (currentSoc === null || currentSoc <= previous.soc) continue;
 
         const durationSeconds = (item.timestamp - previous.timestamp) / 1000;
@@ -275,8 +337,9 @@ export function buildChargeCurve({
             ? (deltaSoc * capacity / 100) / (durationSeconds / 3600)
             : null;
 
-        // Reject implausible outliers, but retain the SOC point as the new
-        // reference so a malformed report cannot poison the next segment.
+        // Reject implausible power segments. The validated SOC timeline is
+        // still used as the next reference, so one bad timing interval cannot
+        // inflate a following segment.
         if (Number.isFinite(powerKw) && powerKw >= 0 && powerKw <= 350) {
             points.push({
                 timestamp: previous.timestamp,
@@ -295,8 +358,9 @@ export function buildChargeCurve({
     return {
         points,
         start_soc: startSoc,
-        end_soc: previous.soc,
+        end_soc: endSoc ?? previous.soc,
         charge_type: chargeType,
+        quality_flags: validated.quality_flags,
     };
 }
 
@@ -311,7 +375,7 @@ export function buildChargeSessions({
     includeActive = false,
 }) {
     const charging = normalizedStates(chargingStates);
-    const soc = normalizedStates(socStates);
+    const rawSoc = normalizedStates(socStates);
     const power = normalizedStates(powerStates);
     const modes = normalizedStates(modeStates);
     const capacities = normalizedStates(capacityStates);
@@ -320,11 +384,11 @@ export function buildChargeSessions({
     );
 
     return intervals.map((interval) => {
-        const startState = stateAt(soc, interval.start);
-        const endState = stateAt(soc, interval.end);
+        const validated = validateNormalizedChargingSocTimeline(rawSoc, interval.start, interval.end);
+        const soc = validated.states;
+        const startSoc = validSoc(soc[0]);
+        const endSoc = validSoc(soc.at(-1));
         const capacityState = stateAt(capacities, interval.start);
-        const startSoc = numericState(startState?.state);
-        const endSoc = numericState(endState?.state);
         const measuredCapacity = positiveCapacity(capacityState?.state);
         const capacity = measuredCapacity ?? positiveCapacity(fallbackCapacity);
         const durationSeconds = (interval.end - interval.start) / 1000;
@@ -358,6 +422,8 @@ export function buildChargeSessions({
             maximum_power_kw: maximumPower,
             charge_type: chargeTypeForInterval(modes, interval.start, interval.end),
             estimated: energy !== null,
+            quality_flags: validated.quality_flags,
+            rejected_soc_samples: validated.rejected.length,
         };
     });
 }
