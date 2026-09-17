@@ -32,6 +32,7 @@ from .entity_identity import (
     async_repair_vehicle_reference,
     vehicle_vin,
 )
+from .fuel_history import FuelHistoryManager, async_register_fuel_history_websocket
 from .notifications import VehicleNotificationManager
 from .server_history import ServerHistoryManager
 
@@ -114,6 +115,7 @@ async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
     )
     await _async_register_frontend_resource(hass)
     hass.data[DOMAIN] = {}
+    async_register_fuel_history_websocket(hass)
     return True
 
 
@@ -175,6 +177,12 @@ async def async_setup_entry(
     coordinator.server_history = server_history
     metrics.server_history = server_history
 
+    fuel_history = FuelHistoryManager(
+        hass, entry, coordinator.data["entity_mapping"], metrics
+    )
+    coordinator.fuel_history = fuel_history
+    await fuel_history.async_initialize()
+
     server_history_task = hass.async_create_task(server_history.async_initialize())
     entry.async_on_unload(server_history_task.cancel)
     entry.async_on_unload(server_history.async_cancel_background_tasks)
@@ -210,6 +218,7 @@ async def async_unload_entry(
         coordinator = hass.data[DOMAIN][entry.entry_id]
         if coordinator.server_history is not None:
             coordinator.server_history.async_cancel_background_tasks()
+        await coordinator.fuel_history.async_shutdown()
         await coordinator.notifications.async_shutdown()
         await coordinator.metrics.async_shutdown()
         hass.data[DOMAIN].pop(entry.entry_id, None)
@@ -225,6 +234,7 @@ async def async_remove_entry(
     await Store(hass, 1, f"{DOMAIN}_{slug}_server_history").async_remove()
     await Store(hass, 1, f"{DOMAIN}_{slug}_charge_curves").async_remove()
     await Store(hass, 1, f"{DOMAIN}_{slug}_notifications").async_remove()
+    await Store(hass, 1, f"{DOMAIN}_{slug}_fuel_history").async_remove()
     await async_remove_dashboard_marker(hass, entry.entry_id)
 
 
