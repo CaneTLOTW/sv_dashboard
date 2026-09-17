@@ -13,6 +13,7 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.storage import Store
 
+from .capacity import VehicleMetricsManager
 from .const import (
     CONF_VEHICLE_DEVICE_ID,
     CONF_VEHICLE_SLUG,
@@ -31,7 +32,6 @@ from .entity_identity import (
     async_repair_vehicle_reference,
     vehicle_vin,
 )
-from .metrics import VehicleMetricsManager
 from .notifications import VehicleNotificationManager
 from .server_history import ServerHistoryManager
 
@@ -101,9 +101,6 @@ async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
         return True
 
     static_dir = Path(__file__).parent / "static"
-    # Every bundled JavaScript module must be reachable below /sv_dashboard/.
-    # Keep this directory-driven so adding a new local ES-module dependency can
-    # never silently omit its Home Assistant static route.
     static_paths = sorted(path.name for path in static_dir.glob("*.js"))
     await hass.http.async_register_static_paths(
         [
@@ -158,10 +155,6 @@ async def async_setup_entry(
 ) -> bool:
     """Set up one selected upstream Stellantis vehicle."""
     async_repair_vehicle_reference(hass, entry)
-
-    # Normalize only package-owned registry rows before platform setup. This
-    # gives existing test installs the same VIN + technical-key identity that a
-    # fresh install receives, without touching any Stellantis Vehicles entity.
     async_migrate_package_entity_ids(hass, entry)
 
     coordinator = SvDashboardCoordinator(hass, entry)
@@ -182,11 +175,6 @@ async def async_setup_entry(
     coordinator.server_history = server_history
     metrics.server_history = server_history
 
-    # Server/maintenance history is optional enrichment.  It can involve a slow
-    # upstream HTTP request through Stellantis Vehicles and must therefore never
-    # hold the config-entry/bootstrap path open.  Start it in the background;
-    # the history entities read the manager state and are refreshed when the
-    # background initialization completes.
     server_history_task = hass.async_create_task(server_history.async_initialize())
     entry.async_on_unload(server_history_task.cancel)
     entry.async_on_unload(server_history.async_cancel_background_tasks)
@@ -200,11 +188,6 @@ async def async_setup_entry(
     hass.data[DOMAIN][entry.entry_id] = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    # Never use ``hass.async_block_till_done()`` from config-entry setup.  That
-    # waits for unrelated global Home Assistant tasks and can turn a slow
-    # background integration into a bootstrap-stage timeout.  Publish once now
-    # and once again shortly afterwards so Number/Time registry entries are
-    # visible to the dashboard strategy without blocking startup.
     await notifications.async_refresh_entities()
 
     async def _refresh_control_mapping(_now: Any) -> None:
@@ -213,9 +196,6 @@ async def async_setup_entry(
     entry.async_on_unload(async_call_later(hass, 1, _refresh_control_mapping))
 
     coordinator.data["dashboard_url_path"] = await async_ensure_dashboard(hass, entry)
-    # The status sensor is already registered at this point. Publish the actual
-    # package/user-managed dashboard path so compact-card navigation never has
-    # to reconstruct a URL from an SV-specific slug.
     await notifications.async_refresh_entities()
     entry.async_on_unload(entry.add_update_listener(_async_reload_entry))
     return True
