@@ -9,6 +9,7 @@ const sensor = read("../custom_components/sv_dashboard/sensor.py");
 const trip = read("../custom_components/sv_dashboard/static/trip-history-card.js");
 const chargeHistory = read("../custom_components/sv_dashboard/static/charge-history-card.js");
 const fuelHistory = read("../custom_components/sv_dashboard/static/fuel-history-card.js");
+const fuelHistoryBackend = read("../custom_components/sv_dashboard/fuel_history.py");
 const dualHero = read("../custom_components/sv_dashboard/static/dual-energy-overview-card.js");
 const frontend = read("../custom_components/sv_dashboard/static/frontend.js");
 const strategy = read("../custom_components/sv_dashboard/static/sv_dashboard.js");
@@ -40,15 +41,18 @@ test("real DS4 Hybrid fixture covers electric SOC use and fuel-only telemetry wi
   assert.match(history, /not_reliable_short_or_no_soc_change/);
 });
 
-test("hybrid trip history keeps the main table compact and moves extra telemetry into details", () => {
+test("hybrid trip history uses the compact six-column table and non-redundant paired details", () => {
   assert.match(trip, /const hybridLayout = Boolean\(this\._config\.hybrid_layout\)/);
-  assert.match(trip, /const columnCount = hybridLayout \? 7/);
-  assert.match(trip, /hybridLayout \? html`<th>\$\{text\.consumption\}<\/th><th>l\/100 km<\/th><th>\$\{dashboardText\.powertrain\}<\/th>`/);
-  assert.match(trip, /trip\.attributes\?\.energy_kwh/);
+  assert.match(trip, /const columnCount = hybridLayout \? 6/);
+  assert.match(trip, /hybridLayout \? html`<th>\$\{text\.consumption\}<\/th><th>l\/100 km<\/th>`/);
+  assert.doesNotMatch(trip, /dashboardText\.powertrain/);
+  assert.doesNotMatch(trip, /trip\.attributes\?\.trip_type/);
+  assert.match(trip, /<strong>\$\{dashboardText\.mileage\}:<\/strong> \$\{this\._formatMileage\(trip\.attributes\?\.start_mileage\)\} → \$\{this\._formatMileage\(this\._endMileage\(trip\)\)\}/);
+  assert.match(trip, /<strong>\$\{text\.energy\}:<\/strong> \$\{this\._value\(trip\.attributes\?\.energy_kwh\)\} kWh<\/span>/);
+  assert.match(trip, /<strong>\$\{dashboardText\.fuelConsumption\}:<\/strong> \$\{this\._value\(trip\.attributes\?\.fuel_consumption_l\)\} l<\/span>/);
+  assert.doesNotMatch(trip, /energy_kwh\)\} kWh ·/);
+  assert.doesNotMatch(trip, /fuel_consumption_l\)\} l ·/);
   assert.match(trip, /dashboardText\.fuelRange/);
-  assert.match(trip, /ev: "EV", hybrid: "Hybrid", ice: "ICE"/);
-  assert.match(trip, /text\.startMileage/);
-  assert.match(trip, /text\.endMileage/);
 });
 
 test("generated dashboard selects the Hero from vehicle capabilities", () => {
@@ -143,11 +147,15 @@ test("charge history details expose canonical mileage and avoid duplicate unavai
   assert.doesNotMatch(chargeHistory, /<strong>\$\{text\.type\}:<\/strong> —/);
 });
 
-test("fuel history does not invent refill liters", () => {
-  assert.match(fuelHistory, /increase < minimum/);
-  assert.match(fuelHistory, /fuel_refill_amount/);
-  assert.doesNotMatch(fuelHistory, /fuel_consumption_total/);
-  assert.match(fuelHistory, /event\.liters === null \? "—"/);
+test("fuel history renders canonical restart-safe backend events with explicit estimate provenance", () => {
+  assert.match(fuelHistory, /callWS\(\{ type: `\$\{STATUS_DOMAIN\}\/fuel_history`/);
+  assert.match(fuelHistory, /event\.liters_estimated \? "≈ " : ""/);
+  assert.match(fuelHistory, /event\.odometer_km/);
+  assert.doesNotMatch(fuelHistory, /history\/history_during_period/);
+  assert.match(fuelHistoryBackend, /class FuelHistoryManager/);
+  assert.match(fuelHistoryBackend, /"liters_source": liters_source/);
+  assert.match(fuelHistoryBackend, /"odometer_km": round\(mileage/);
+  assert.match(fuelHistoryBackend, /_same_refuel/);
 });
 
 test("new card strings cover 18 languages", () => {
