@@ -7,6 +7,7 @@ const {
     buildLocalChargeSessions,
     findChargeSession,
     mergeChargeSessions,
+    validateChargingSocTimeline,
 } = await import(`data:text/javascript,${encodeURIComponent(source)}`);
 
 const state = (value, timestamp, attributes = undefined) => ({
@@ -76,5 +77,37 @@ assert.equal(findChargeSession(localMerged, localOnly[0].id)?.id, localOnly[0].i
 assert.equal(matched?.start, "2026-08-14T08:02:00Z");
 assert.equal(mergeChargeSessions(rawSessions, []).at(0).start, "2026-08-14T12:00:00.000Z", "without a selection the newest session is first");
 assert.equal(findChargeSession(merged, "charge-does-not-exist"), null, "unknown selections must not silently resolve to another session");
+
+const anomalousSoc = [
+    state(67, "2026-09-10T07:59:00Z"),
+    state(0, "2026-09-10T08:01:00Z"),
+    state(68, "2026-09-10T08:05:00Z"),
+    state(80, "2026-09-10T08:30:00Z"),
+    state(99, "2026-09-10T09:00:00Z"),
+];
+const validated = validateChargingSocTimeline(
+    anomalousSoc,
+    Date.parse("2026-09-10T08:00:00Z"),
+    Date.parse("2026-09-10T09:00:00Z"),
+);
+assert.deepEqual(validated.states.map((item) => Number(item.state)), [67, 68, 80, 99]);
+assert.equal(validated.rejected.length, 1);
+assert.deepEqual(validated.quality_flags, ["soc_outlier_rejected"]);
+
+const anomalySession = buildChargeSessions({
+    chargingStates: [
+        state("off", "2026-09-10T07:59:00Z"),
+        state("on", "2026-09-10T08:00:00Z"),
+        state("off", "2026-09-10T09:00:00Z"),
+    ],
+    socStates: anomalousSoc,
+    fallbackCapacity: 42.2,
+});
+assert.equal(anomalySession.length, 1);
+assert.equal(anomalySession[0].soc_start, 67, "transient 0 % must not replace the real charging baseline");
+assert.equal(anomalySession[0].soc_end, 99);
+assert.equal(anomalySession[0].rejected_soc_samples, 1);
+assert.deepEqual(anomalySession[0].quality_flags, ["soc_outlier_rejected"]);
+assert.ok(Math.abs(anomalySession[0].energy_kwh - 13.504) < 0.001, "energy must use the validated 67 -> 99 % delta");
 
 console.log("charge-history-core tests passed");
