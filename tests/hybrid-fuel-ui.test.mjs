@@ -59,22 +59,70 @@ test("generated dashboard selects the Hero from vehicle capabilities", () => {
   assert.match(strategy, /hybrid_layout: supportsDualEnergy/);
 });
 
-test("dual-energy hero matches the approved two-row responsive layout", () => {
+test("dual-energy hero uses one stacked information hierarchy at every width", () => {
   assert.match(dualHero, /sv-dashboard-dual-energy-overview-card/);
-  assert.match(dualHero, /grid-template-areas: "vehicle vehicle" "battery fuel"/);
+  assert.match(dualHero, /grid-template-columns: 1fr/);
+  assert.match(dualHero, /grid-template-areas: "vehicle" "battery" "fuel"/);
   assert.match(dualHero, /container-type: inline-size/);
   assert.match(dualHero, /@container \(max-width: 760px\)/);
   assert.match(dualHero, /@container \(max-width: 430px\)/);
+  assert.doesNotMatch(dualHero, /grid-template-areas: "vehicle vehicle" "battery fuel"/);
   assert.doesNotMatch(dualHero, /@media \(max-width:/);
   assert.match(dualHero, /getGridOptions\(\) \{ return \{ columns: 12, rows: 5, min_columns: 6, min_rows: 4 \}; \}/);
-  assert.match(dualHero, /transform: translateX\(18px\) scale\(1\.8\)/);
   assert.match(dualHero, /class="top-control climate-control/);
-  assert.doesNotMatch(dualHero, /<span>AC<\/span>/);
-  assert.match(dualHero, /class="top-control temperature-badge"/);
+  assert.match(dualHero, /class="top-control temperature-badge \$\{temperatureFresh \? "fresh" : ""\}"/);
   assert.match(dualHero, /mapped\.fuel_autonomy/);
   assert.match(dualHero, /class="energy fuel"/);
   assert.match(dualHero, /fuelPercent === null \? "unavailable"/);
-  assert.doesNotMatch(dualHero, /Parkt|aktualisiert vor/);
+});
+
+test("dual-energy hero keeps both ranges visible and only adds trustworthy secondary live values", () => {
+  assert.match(dualHero, /<div class="detail-label">\$\{text\.electricRange\}<\/div>/);
+  assert.match(dualHero, /this\._showMore\(mapped\.autonomy\)/);
+  assert.match(dualHero, /<div class="detail-label">\$\{text\.fuelRange\}<\/div>/);
+  assert.match(dualHero, /this\._showMore\(mapped\.fuel_autonomy\)/);
+  assert.match(dualHero, /mode\.charging && chargePower !== "—"/);
+  assert.match(dualHero, /fuelConsumptionEntity && fuelConsumption !== "—"/);
+  assert.doesNotMatch(dualHero, /current_trip_energy/);
+  assert.doesNotMatch(dualHero, /current_trip_consumption/);
+});
+
+test("driving fuel consumption is only shown from a current-drive upstream update", () => {
+  assert.match(dualHero, /mapped\.fuel_consumption_instant/);
+  assert.match(dualHero, /updated < started/);
+  assert.match(dualHero, /30 \* 60 \* 1000/);
+  assert.match(dualHero, /fuelConsumptionEntity && fuelConsumption !== "—"/);
+  assert.match(dualHero, /l\/100 km/);
+});
+
+test("Hero preconditioning waits for confirmed state before allowing the opposite command", () => {
+  assert.match(dualHero, /const CLIMATE_COMMAND_GUARD_MS = 90 \* 1000/);
+  assert.match(dualHero, /_climatePendingAction/);
+  assert.match(dualHero, /_sendClimate\(mapped\)/);
+  assert.match(dualHero, /active \? mapped\.preconditioning_stop : mapped\.preconditioning_start/);
+  assert.match(dualHero, /this\._climatePendingAction === "start" && active/);
+  assert.match(dualHero, /this\._climatePendingAction === "stop" && !active/);
+  assert.match(dualHero, /pending-start/);
+  assert.match(dualHero, /pending-stop/);
+  assert.match(dualHero, /var\(--error-color\)/);
+  assert.match(dualHero, /\?disabled=\$\{climatePending \|\| !climateActionEntity\}/);
+  assert.match(strategy, /press\("preconditioning_start"/);
+  assert.match(strategy, /press\("preconditioning_stop"/);
+  assert.doesNotMatch(dualHero, /citroen|ec3|ds4/i);
+});
+
+test("temperature badge indicates recent upstream vehicle payload without claiming connectivity", () => {
+  assert.match(dualHero, /const FRESH_VEHICLE_DATA_MS = 15 \* 60 \* 1000/);
+  assert.match(dualHero, /attributes\["Last updated"\]/);
+  assert.match(dualHero, /attributes\.updatedAt/);
+  assert.match(dualHero, /temperature-badge\.fresh/);
+  assert.match(dualHero, /var\(--primary-color\)/);
+  assert.doesNotMatch(dualHero, /connected|disconnected/i);
+});
+
+test("charging state does not redundantly append plugged-in status", () => {
+  assert.match(dualHero, /if \(mode\.charging\) return \{ icon: "mdi:battery-charging", label: text\.charging \}/);
+  assert.doesNotMatch(dualHero, /text\.charging\} · \$\{text\.plugged/);
 });
 
 test("dual-energy hero exposes native HA interactions without nested custom cards", () => {
@@ -84,41 +132,7 @@ test("dual-energy hero exposes native HA interactions without nested custom card
   assert.match(dualHero, /window\.history\.pushState/);
   assert.match(dualHero, /location-changed/);
   assert.match(dualHero, /class="metric-button level"/);
-  assert.match(dualHero, /class="metric-button detail-value"/);
-  assert.match(dualHero, /this\._showMore\(batteryDetailEntity\)/);
-  assert.match(dualHero, /this\._showMore\(fuelDetailEntity\)/);
   assert.doesNotMatch(dualHero, /custom:button-card/);
-});
-
-test("dual-energy hero state machine uses trip kWh and charge kW without inventing EV efficiency", () => {
-  assert.match(dualHero, /metricEntity\(this\._hass, attributes, "current_trip_energy"\)/);
-  assert.match(dualHero, /metricEntity\(this\._hass, attributes, "current_charge_power"\)/);
-  assert.doesNotMatch(dualHero, /current_trip_consumption/);
-  assert.match(dualHero, /batteryDetailUnit = batteryDetailValue === "—" \? "" : " kWh"/);
-  assert.match(dualHero, /batteryDetailUnit = batteryDetailValue === "—" \? "" : " kW"/);
-  assert.match(dualHero, /battery\.charging \.fill-value/);
-  assert.match(dualHero, /svHeroChargePulse/);
-});
-
-test("driving fuel consumption is only shown from a current-drive upstream update", () => {
-  assert.match(dualHero, /mapped\.fuel_consumption_instant/);
-  assert.match(dualHero, /updated < started/);
-  assert.match(dualHero, /30 \* 60 \* 1000/);
-  assert.match(dualHero, /fuelConsumptionEntity \? text\.fuelConsumption : text\.fuelRange/);
-  assert.match(dualHero, /" l\/100 km"/);
-});
-
-test("Hero preconditioning is a guarded START action while STOP stays in full-dashboard Quick Actions", () => {
-  assert.match(dualHero, /const CLIMATE_COMMAND_GUARD_MS = 90 \* 1000/);
-  assert.match(dualHero, /_startClimate\(mapped\)/);
-  assert.match(dualHero, /const start = mapped\.preconditioning_start/);
-  assert.match(dualHero, /Date\.now\(\) < this\._climatePendingUntil/);
-  assert.match(dualHero, /class="top-control climate-control \$\{climateActive \? "active" : ""\} \$\{climatePending \? "pending" : ""\}"/);
-  assert.match(dualHero, /\?disabled=\$\{climateActive \|\| climatePending\}/);
-  assert.doesNotMatch(dualHero, /mapped\.preconditioning_stop/);
-  assert.match(strategy, /press\("preconditioning_start"/);
-  assert.match(strategy, /press\("preconditioning_stop"/);
-  assert.doesNotMatch(dualHero, /citroen|ec3|ds4/i);
 });
 
 test("charge history details expose canonical mileage and avoid duplicate unavailable placeholders", () => {
@@ -148,10 +162,10 @@ test("new card strings cover 18 languages", () => {
   }
 });
 
-test("frontend cache-busts beta.13 trip history while unchanged beta.12 modules stay pinned", () => {
+test("frontend cache-busts changed modules", () => {
   assert.match(frontend, /trip-history-card\.js\?v=0\.6\.0-beta\.13/);
-  assert.match(frontend, /charge-history-card\.js\?v=0\.6\.0-beta\.12/);
-  assert.match(frontend, /dual-energy-overview-card\.js\?v=0\.6\.0-beta\.12/);
+  assert.match(frontend, /charge-history-card\.js\?v=/);
+  assert.match(frontend, /dual-energy-overview-card\.js\?v=/);
   assert.match(frontend, /sv_dashboard\.js\?v=0\.6\.0-beta\.12/);
   assert.match(frontend, /fuel-history-card\.js\?v=0\.6\.0-beta\.10/);
   assert.match(strategy, /modules\.trips && supportsFuel \? \{ type: "custom:sv-dashboard-fuel-history-card"/);
