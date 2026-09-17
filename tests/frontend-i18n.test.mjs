@@ -174,9 +174,10 @@ test("dual-energy hero follows the shared 18-language runtime contract", () => {
   assert.match(dualEnergy, /localeFor\(this\._i18nContext\(\)\)/);
   assert.match(dualEnergy, /dashboardText\.startClimate/);
   assert.match(dualEnergy, /const fallback = \(index\) => `\$\{text\.vehicle\} \$\{index \+ 1\}`/);
-  for (const key of ["battery", "fuel", "electricRange", "fuelRange", "tripEnergy", "chargePower", "fuelConsumption", "charging", "driving", "plugged"]) {
+  for (const key of ["battery", "fuel", "electricRange", "fuelRange", "chargePower", "fuelConsumption", "charging", "driving", "plugged"]) {
     assert.match(dualEnergy, new RegExp(`text\\.${key}`), `dual energy card does not consume ${key}`);
   }
+  assert.doesNotMatch(dualEnergy, /text\.tripEnergy/);
   assert.doesNotMatch(dualEnergy, /aria-label="AC"|title="AC"|`Vehicle \$\{index \+ 1\}`/);
   assert.doesNotMatch(dualEnergy, /E-Reichweite|Tankreichweite|Ladeleistung|Kraftstoffverbrauch|In Fahrt|Eingesteckt/);
 });
