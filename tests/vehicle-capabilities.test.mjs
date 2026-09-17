@@ -20,7 +20,8 @@ test("backend publishes powertrain capability contract without requiring a batte
 });
 
 test("config flow only prompts for traction capacity on capable vehicles", () => {
-  assert.match(configFlow, /needs_capacity = capabilities\.get\("battery_capacity", False\)/);
+  assert.match(configFlow, /needs_battery = capabilities\.get\("battery_capacity", False\)/);
+  assert.match(configFlow, /needs_tank = capabilities\.get\("fuel", False\)/);
   assert.match(configFlow, /if capabilities\.get\("battery_capacity", False\):/);
   assert.doesNotMatch(configFlow, /\{"vehicle", "battery", "mileage"\}\.issubset/);
 });
