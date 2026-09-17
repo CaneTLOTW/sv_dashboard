@@ -6,7 +6,7 @@ import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.components.lovelace.const import LOVELACE_DATA
-from homeassistant.const import UnitOfEnergy
+from homeassistant.const import UnitOfEnergy, UnitOfVolume
 from homeassistant.core import callback
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
@@ -25,6 +25,7 @@ from .compatibility import async_check_upstream_compatibility
 from .const import (
     CONF_BATTERY_CAPACITY_KWH,
     CONF_POWERTRAIN_OVERRIDE,
+    CONF_TANK_CAPACITY_L,
     CONF_VEHICLE_DEVICE_ID,
     CONF_VEHICLE_VIN,
     CONF_VEHICLE_SLUG,
@@ -87,13 +88,26 @@ def _battery_capacity_selector() -> selector.NumberSelector:
     )
 
 
+def _tank_capacity_selector() -> selector.NumberSelector:
+    """Return the per-vehicle nominal fuel-tank fallback selector."""
+    return selector.NumberSelector(
+        selector.NumberSelectorConfig(
+            min=1,
+            max=200,
+            step=0.5,
+            unit_of_measurement=UnitOfVolume.LITERS,
+            mode=selector.NumberSelectorMode.BOX,
+        )
+    )
+
+
 class SvDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Set up a dashboard entry for exactly one upstream vehicle."""
 
     VERSION = 2
 
     async def async_step_user(self, user_input=None):
-        """Select one vehicle; request traction capacity only when relevant."""
+        """Select one vehicle and request only relevant per-vehicle fallbacks."""
         if not self.context.get("dashboard_card_preflight_seen"):
             return await self.async_step_dashboard_cards()
 
@@ -129,10 +143,12 @@ class SvDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
                 if CONF_VEHICLE_SLUG not in errors:
                     capabilities = _vehicle_capabilities_for_device(self.hass, device_id)
-                    needs_capacity = capabilities.get("battery_capacity", False)
-                    if needs_capacity and self.context.get("capacity_prompt_for") != device_id:
-                        self.context["capacity_prompt_for"] = device_id
-                        self.context["capacity_prompt_slug"] = vehicle_slug
+                    needs_battery = capabilities.get("battery_capacity", False)
+                    needs_tank = capabilities.get("fuel", False)
+                    needs_details = needs_battery or needs_tank
+                    if needs_details and self.context.get("details_prompt_for") != device_id:
+                        self.context["details_prompt_for"] = device_id
+                        self.context["details_prompt_slug"] = vehicle_slug
                     else:
                         data = {
                             CONF_VEHICLE_DEVICE_ID: device_id,
@@ -140,26 +156,32 @@ class SvDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         }
                         if vin:
                             data[CONF_VEHICLE_VIN] = vin
-                        if needs_capacity:
-                            capacity = user_input.get(CONF_BATTERY_CAPACITY_KWH)
-                            if capacity is not None:
-                                data[CONF_BATTERY_CAPACITY_KWH] = float(capacity)
+                        capacity = user_input.get(CONF_BATTERY_CAPACITY_KWH)
+                        if needs_battery and capacity is not None:
+                            data[CONF_BATTERY_CAPACITY_KWH] = float(capacity)
+                        tank_capacity = user_input.get(CONF_TANK_CAPACITY_L)
+                        if needs_tank and tank_capacity is not None:
+                            data[CONF_TANK_CAPACITY_L] = float(tank_capacity)
                         return self.async_create_entry(
                             title=self._vehicle_name(device_id),
                             data=data,
                         )
 
-        prompt_device = self.context.get("capacity_prompt_for")
+        prompt_device = self.context.get("details_prompt_for")
         fields = {}
         if prompt_device:
+            capabilities = _vehicle_capabilities_for_device(self.hass, prompt_device)
             fields[vol.Required(CONF_VEHICLE_DEVICE_ID, default=prompt_device)] = selector.DeviceSelector(
                 selector.DeviceSelectorConfig(integration=UPSTREAM_DOMAIN)
             )
             fields[vol.Optional(
                 CONF_VEHICLE_SLUG,
-                default=self.context.get("capacity_prompt_slug", ""),
+                default=self.context.get("details_prompt_slug", ""),
             )] = str
-            fields[vol.Optional(CONF_BATTERY_CAPACITY_KWH)] = _battery_capacity_selector()
+            if capabilities.get("battery_capacity", False):
+                fields[vol.Optional(CONF_BATTERY_CAPACITY_KWH)] = _battery_capacity_selector()
+            if capabilities.get("fuel", False):
+                fields[vol.Optional(CONF_TANK_CAPACITY_L)] = _tank_capacity_selector()
         else:
             fields[vol.Required(CONF_VEHICLE_DEVICE_ID)] = selector.DeviceSelector(
                 selector.DeviceSelectorConfig(integration=UPSTREAM_DOMAIN)
@@ -266,7 +288,7 @@ class SvDashboardOptionsFlow(config_entries.OptionsFlow):
     """Configure one vehicle dashboard without changing its identity."""
 
     async def async_step_init(self, user_input=None):
-        """Configure title, capacity fallback and portable modules."""
+        """Configure title, vehicle fallbacks and portable modules."""
         device_id = self.config_entry.data[CONF_VEHICLE_DEVICE_ID]
         mapping = mapping_from_registry_entries(_upstream_vehicle_entries(self.hass, device_id))
         auto_powertrain = powertrain_from_mapping(self.hass, mapping)
@@ -280,10 +302,8 @@ class SvDashboardOptionsFlow(config_entries.OptionsFlow):
                 normalized.get(OPTION_DASHBOARD_NAME, "")
             ).strip()
 
-            # Battery capacity is vehicle setup data, not a runtime module
-            # toggle. Keep one canonical value in ConfigEntry.data while still
-            # allowing an existing entry to maintain or clear it from Options.
             capacity = normalized.pop(CONF_BATTERY_CAPACITY_KWH, None)
+            tank_capacity = normalized.pop(CONF_TANK_CAPACITY_L, None)
             powertrain_override = normalized.pop(CONF_POWERTRAIN_OVERRIDE, None)
             entry_data = dict(self.config_entry.data)
             if auto_powertrain == POWERTRAIN_UNKNOWN:
@@ -293,12 +313,15 @@ class SvDashboardOptionsFlow(config_entries.OptionsFlow):
                 else:
                     entry_data.pop(CONF_POWERTRAIN_OVERRIDE, None)
             else:
-                # Automatic detection always wins and stale fallbacks disappear.
                 entry_data.pop(CONF_POWERTRAIN_OVERRIDE, None)
             if capacity is None:
                 entry_data.pop(CONF_BATTERY_CAPACITY_KWH, None)
             else:
                 entry_data[CONF_BATTERY_CAPACITY_KWH] = float(capacity)
+            if tank_capacity is None:
+                entry_data.pop(CONF_TANK_CAPACITY_L, None)
+            else:
+                entry_data[CONF_TANK_CAPACITY_L] = float(tank_capacity)
             if entry_data != dict(self.config_entry.data):
                 self.hass.config_entries.async_update_entry(
                     self.config_entry,
@@ -329,6 +352,12 @@ class SvDashboardOptionsFlow(config_entries.OptionsFlow):
             if current_capacity is not None
             else vol.Optional(CONF_BATTERY_CAPACITY_KWH)
         )
+        current_tank_capacity = self.config_entry.data.get(CONF_TANK_CAPACITY_L)
+        tank_capacity_key = (
+            vol.Optional(CONF_TANK_CAPACITY_L, default=float(current_tank_capacity))
+            if current_tank_capacity is not None
+            else vol.Optional(CONF_TANK_CAPACITY_L)
+        )
         fields = {
             vol.Optional(
                 OPTION_DASHBOARD_NAME,
@@ -355,6 +384,8 @@ class SvDashboardOptionsFlow(config_entries.OptionsFlow):
         capabilities = capability_map(effective_powertrain, mapping)
         if capabilities.get("battery_capacity", False):
             fields[capacity_key] = _battery_capacity_selector()
+        if capabilities.get("fuel", False):
+            fields[tank_capacity_key] = _tank_capacity_selector()
         fields.update(
             {
                 vol.Required(OPTION_TRIPS, default=options[OPTION_TRIPS]): bool,
