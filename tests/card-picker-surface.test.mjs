@@ -17,12 +17,12 @@ const internalTypes = [
   "sv-dashboard-charge-curve-browser-card",
   "sv-dashboard-gps-date-card",
   "sv-dashboard-gps-map-card",
+  "sv-dashboard-fuel-history-card",
 ];
 
 const publicTypes = [
   "sv-dashboard-vehicle-overview-card",
   "sv-dashboard-dual-energy-overview-card",
-  "sv-dashboard-fuel-history-card",
 ];
 
 test("internal dashboard components are removed from Home Assistant's Add-card picker", () => {
