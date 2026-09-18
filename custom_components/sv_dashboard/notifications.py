@@ -87,11 +87,19 @@ class VehicleNotificationManager:
     package switches.
     """
 
-    def __init__(self, hass: HomeAssistant, entry, mapping: dict[str, str], metrics) -> None:
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        entry,
+        mapping: dict[str, str],
+        metrics,
+        server_history=None,
+    ) -> None:
         self.hass = hass
         self.entry = entry
         self.mapping = mapping
         self.metrics = metrics
+        self.server_history = server_history
         self.capabilities = dict(getattr(metrics, "capabilities", {}) or {})
         slug = entry.data[CONF_VEHICLE_SLUG]
         self._store = Store(hass, _STORE_VERSION, f"{DOMAIN}_{slug}_notifications")
@@ -763,8 +771,32 @@ class VehicleNotificationManager:
         )
 
     def _heartbeat(self):
-        """Use a proven changing payload, rather than a static mapped entity."""
-        for key in ("temperature", "vehicle"):
+        """Return the freshest proven vehicle-data heartbeat available locally.
+
+        The loaded upstream coordinator's source timestamps are authoritative
+        because they can advance even when a sensor value (notably ambient
+        temperature) remains numerically unchanged. No network request is made.
+        """
+        if self.server_history is not None:
+            stamp = self.server_history.current_upstream_heartbeat()
+            if stamp is not None:
+                return stamp, "upstream_payload_timestamp"
+
+        # Compatibility fallback for startup/reload windows where the upstream
+        # runtime cache is not yet resolvable. HA last_updated is deliberately
+        # used only for mapped vehicle-data entities whose state/attributes
+        # actually changed; a command accepted/forwarded state is never used.
+        for key in (
+            "temperature",
+            "mileage",
+            "battery",
+            "autonomy",
+            "range",
+            "service_battery",
+            "fuel",
+            "fuel_autonomy",
+            "vehicle",
+        ):
             entity_id = self._entity(key)
             state = self.hass.states.get(entity_id) if entity_id else None
             if state is None or state.state in {"unknown", "unavailable"}:
