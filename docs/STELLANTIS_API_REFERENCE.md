@@ -154,8 +154,7 @@ Current Stellantis Vehicles does not expose the Alerts collection as a normal
 Home Assistant entity and SV Dashboard does not create a second background
 poller or monitor/session stack. The Phase A Vehicle API audit therefore probes
 the advertised `alerts` relation **on demand and read-only** through the
-already-authenticated upstream transport. beta.20 adds an `alert_evidence`
-summary containing probe status and collection count.
+already-authenticated upstream transport. beta.20 added an `alert_evidence` summary containing probe status and collection count. beta.21 also retains a privacy-sanitized probe error class, HTTP status when available, and bounded error text so a failed Alerts probe can be diagnosed without a second request.
 
 An empty or unavailable Alerts response is not evidence that no warning was
 shown locally in the vehicle. API data remains conditional on the vehicle
