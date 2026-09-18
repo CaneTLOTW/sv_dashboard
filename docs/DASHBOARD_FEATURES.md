@@ -140,13 +140,15 @@ Derived power/energy values are **battery-side estimates**, not wallbox/EVSE/gri
 
 Depending on available data, Statistics can include:
 
-- mileage and driven distance;
+- package-owned **Canonical mileage** and driven distance;
 - trailing consumption;
 - fuel-consumption metrics;
 - SOH capacity/resistance;
 - Home Assistant long-term statistics.
 
-SV Dashboard does not silently rewrite malformed stored LTS history. The dedicated LTS investigation is tracked in issue #4.
+The LIVE/current mileage display can still use the raw upstream odometer. Statistics use the monotonic Canonical mileage sensor instead: raw rollback/unavailable samples cannot reset its counter, and canonical server-trip odometer anchors may reconcile missed distance forward. The generated driven-distance bar is a real **monthly** `change` graph; week/year analysis is available from the same total-increasing Home Assistant entity.
+
+SV Dashboard does not silently rewrite malformed stored LTS history. One-time migration/repair of pre-beta.18 mileage statistics is handled separately through Home Assistant's supported Recorder statistics APIs and tracked in issue #71.
 
 ## Trips
 
