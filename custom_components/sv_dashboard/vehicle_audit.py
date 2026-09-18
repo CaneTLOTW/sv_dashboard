@@ -269,6 +269,17 @@ def _trip_rows(payload: Any) -> list[dict[str, Any]]:
     return _embedded_items(payload, "trips")
 
 
+def _collection_summary(payload: Any, key: str) -> dict[str, Any]:
+    """Return structural collection evidence without interpreting alert semantics."""
+    items = _embedded_items(payload, key)
+    total = payload.get("total") if isinstance(payload, dict) else None
+    return {
+        "available": payload not in (None, {}, []),
+        "count": total if isinstance(total, int) and total >= 0 else len(items),
+        "embedded_items": len(items),
+    }
+
+
 def _relation_href(payload: Any, relation: str) -> str | None:
     if not isinstance(payload, dict):
         return None
@@ -836,6 +847,15 @@ async def async_build_vehicle_audit(hass: HomeAssistant, coordinator: Any) -> di
         "probe_results": probes,
         "status_path_inventory": status_inventory,
         "trip_query_audit": trip_query_audit,
+        "alert_evidence": {
+            **_collection_summary(raw.get("hal_alerts"), "alerts"),
+            "probe_status": (probes.get("hal_alerts") or {}).get("status"),
+            "documented_pull_endpoint": True,
+            "note": (
+                "The Stellantis alerts endpoint is server-side pull evidence. "
+                "An empty result does not prove that no vehicle-local warning occurred."
+            ),
+        },
         "unmapped_candidate_fields": _unmapped_candidates(status_inventory),
         "privacy_redaction_summary": {
             "redactions": dict(sorted(counts.items())),
