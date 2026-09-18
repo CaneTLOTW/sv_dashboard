@@ -32,6 +32,8 @@ from .server_history_transport import (
     HistoricalTripsTransportUnavailable,
     async_fetch_historical_trips,
     historical_transport_available,
+    historical_transport_retryable,
+    server_history_retry_allowed,
 )
 from .upstream_compat import resolve_loaded_upstream
 
@@ -1215,7 +1217,11 @@ class ServerHistoryManager:
         }
 
     def _mark_server_history_unavailable(
-        self, reason: str, *, capability: str | None = None
+        self,
+        reason: str,
+        *,
+        capability: str | None = None,
+        retryable: bool = False,
     ) -> None:
         """Keep archived rows while making the current server source unavailable."""
         self.data["server_history_ready"] = False
@@ -1226,6 +1232,7 @@ class ServerHistoryManager:
         )
         self.data["server_history_reason"] = reason
         self.data["server_history_source"] = "local_fallback"
+        self.data["server_history_retryable"] = retryable
 
     def _mark_server_history_ready(self) -> None:
         self.data["server_history_ready"] = True
@@ -1233,6 +1240,7 @@ class ServerHistoryManager:
         self.data["server_history_reason"] = "sync_succeeded"
         self.data["server_history_source"] = "server"
         self.data["server_history_error"] = None
+        self.data["server_history_retryable"] = False
 
     async def async_full_sync(self) -> None:
         """Refresh all server pages without deleting rows before success."""
@@ -1254,7 +1262,10 @@ class ServerHistoryManager:
         if (
             not _force_full
             and not self._shutdown_requested
-            and self.data.get("server_history_reason") == "upstream_vehicle_unavailable"
+            and server_history_retry_allowed(
+                self.data.get("server_history_reason"),
+                bool(self.data.get("server_history_retryable")),
+            )
         ):
             self._schedule_reacquisition()
 
@@ -1290,6 +1301,7 @@ class ServerHistoryManager:
             self._mark_server_history_unavailable(
                 "upstream_vehicle_unavailable",
                 capability="unresolved",
+                retryable=True,
             )
             self.data["error"] = "upstream_vehicle_unavailable"
             await self._store.async_save(self._persistable_data())
@@ -1385,18 +1397,32 @@ class ServerHistoryManager:
         except Exception as err:  # Existing canonical data survives API failure.
             self.data["error"] = str(err)
             self.data["server_history_error"] = str(err)
+            transient_upstream_unload = (
+                isinstance(err, HistoricalTripsTransportUnavailable)
+                and str(err) == "upstream_client_shutting_down"
+            )
+            retryable = transient_upstream_unload or historical_transport_retryable(err)
             reason = (
-                "unsupported_upstream_capability"
-                if isinstance(err, HistoricalTripsTransportUnavailable)
-                else "sync_failed"
+                "upstream_vehicle_unavailable"
+                if transient_upstream_unload
+                else (
+                    "unsupported_upstream_capability"
+                    if isinstance(err, HistoricalTripsTransportUnavailable)
+                    else "sync_failed"
+                )
             )
             self._mark_server_history_unavailable(
                 reason,
                 capability=(
-                    "unsupported"
-                    if isinstance(err, HistoricalTripsTransportUnavailable)
-                    else "authenticated_trips_transport"
+                    "unresolved"
+                    if transient_upstream_unload
+                    else (
+                        "unsupported"
+                        if isinstance(err, HistoricalTripsTransportUnavailable)
+                        else "authenticated_trips_transport"
+                    )
                 ),
+                retryable=retryable,
             )
             _LOGGER.warning("Server trip history unavailable: %s", err)
             await self._store.async_save(self._persistable_data())
@@ -1420,7 +1446,10 @@ class ServerHistoryManager:
                     return
                 async with self._initialize_lock:
                     await self._async_initialize_once()
-                if self.data.get("server_history_reason") != "upstream_vehicle_unavailable":
+                if not server_history_retry_allowed(
+                    self.data.get("server_history_reason"),
+                    bool(self.data.get("server_history_retryable")),
+                ):
                     return
                 delay = min(delay * 2, 300)
         except asyncio.CancelledError:
