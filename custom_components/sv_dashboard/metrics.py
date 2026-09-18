@@ -19,6 +19,7 @@ from .const import (
     CONF_VEHICLE_SLUG,
     DEFAULT_OPTIONS,
     DOMAIN,
+    METRIC_CANONICAL_MILEAGE,
     METRIC_CURRENT_CHARGE_POWER,
     METRIC_CURRENT_TRIP_CONSUMPTION,
     METRIC_CURRENT_TRIP_ENERGY,
@@ -28,6 +29,7 @@ from .const import (
     METRIC_TRAILING_CONSUMPTION,
     OPTION_HISTORY_HOURS,
 )
+from .distance import canonical_server_mileage, monotonic_mileage
 
 _LOGGER = logging.getLogger(__name__)
 _FINALIZE_DELAY = timedelta(minutes=5)
@@ -67,6 +69,9 @@ class VehicleMetricsManager:
             "last_charge": None,
             "current_charge_power_kw": None,
             "last_valid_battery_capacity_kwh": None,
+            "canonical_mileage_km": None,
+            "canonical_mileage_source": None,
+            "canonical_mileage_source_time": None,
             "updated_at": None,
         }
         self._entities: list[Any] = []
@@ -99,6 +104,47 @@ class VehicleMetricsManager:
         rows = self.canonical_charges()
         return rows[-1] if rows else self.data.get("last_charge")
 
+    def canonical_mileage(self) -> float | None:
+        """Return the persistent monotonic package-owned odometer."""
+        return self._as_float(self.data.get("canonical_mileage_km"))
+
+    async def async_capture_canonical_mileage(
+        self,
+        candidate: Any,
+        *,
+        source: str,
+        source_time: Any = None,
+        max_forward_jump_km: float | None = 1000.0,
+    ) -> bool:
+        """Advance canonical mileage while rejecting rollback/unavailable noise."""
+        current = self.canonical_mileage()
+        updated = monotonic_mileage(
+            current,
+            candidate,
+            max_forward_jump_km=max_forward_jump_km,
+        )
+        if updated is None or updated == current:
+            return False
+        self.data["canonical_mileage_km"] = updated
+        self.data["canonical_mileage_source"] = source
+        self.data["canonical_mileage_source_time"] = (
+            source_time.isoformat() if isinstance(source_time, datetime) else source_time
+        )
+        await self._save_and_refresh()
+        return True
+
+    async def async_reconcile_canonical_mileage(self, trips: Any) -> bool:
+        """Allow trustworthy canonical server-trip anchors to advance mileage."""
+        anchor = canonical_server_mileage(trips)
+        if not anchor:
+            return False
+        return await self.async_capture_canonical_mileage(
+            anchor["mileage_km"],
+            source="canonical_server_trip",
+            source_time=anchor.get("source_time"),
+            max_forward_jump_km=None,
+        )
+
     async def async_initialize(self) -> None:
         """Restore state and subscribe to upstream state changes."""
         stored = await self._store.async_load()
@@ -125,6 +171,10 @@ class VehicleMetricsManager:
         self._normalise_trips()
         self._normalise_charges()
         await self._async_capture_capacity()
+        await self.async_capture_canonical_mileage(
+            self._number("mileage"),
+            source="upstream_odometer",
+        )
 
         watched = [
             self.mapping.get("engine"),
@@ -208,6 +258,13 @@ class VehicleMetricsManager:
             self.hass.async_create_task(self._async_capture_capacity())
         elif entity_id == self.mapping.get("mileage"):
             self.hass.async_create_task(self.async_capture_pending_trip_mileage(new_state.state))
+            self.hass.async_create_task(
+                self.async_capture_canonical_mileage(
+                    new_state.state,
+                    source="upstream_odometer",
+                    source_time=getattr(new_state, "last_updated", None),
+                )
+            )
         elif entity_id == self.mapping.get("last_trip"):
             self.hass.async_create_task(self.async_reconcile_pending_trip(new_state))
         elif self.data.get("active_trip") and entity_id in {
@@ -941,6 +998,7 @@ class VehicleMetricsManager:
 
 METRIC_INFO = {
     METRIC_TRAILING_CONSUMPTION: "trailing_consumption",
+    METRIC_CANONICAL_MILEAGE: "canonical_mileage",
     METRIC_DISTANCE_SINCE_CHARGE: "distance_since_charge",
     METRIC_CURRENT_TRIP_ENERGY: "current_trip_energy",
     METRIC_CURRENT_TRIP_CONSUMPTION: "current_trip_consumption",
