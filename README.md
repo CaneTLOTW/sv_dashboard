@@ -218,6 +218,7 @@ SV Dashboard is an independent community project and is not affiliated with or e
 - [Vehicle validation guide](docs/VEHICLE_VALIDATION.en.md)
 - [Community guide](docs/COMMUNITY.en.md)
 - [Concept](docs/CONCEPT.md)
+- [Stellantis API reference and runtime findings](docs/STELLANTIS_API_REFERENCE.md)
 - [Dashboard features](docs/DASHBOARD_FEATURES.md)
 - [Entity catalog](docs/ENTITY_CATALOG.md)
 - [Localisation](docs/LOCALISATION.en.md)
