@@ -72,6 +72,64 @@ def historical_transport_available(client: Any) -> bool:
     return _transport_parts(client) is not None
 
 
+def historical_transport_retryable(error: BaseException) -> bool:
+    """Return whether a failed read-only history request is safe to retry later.
+
+    Keep the classifier transport-focused: timeouts, connection lifecycle
+    failures and retryable HTTP statuses may recover without any credential or
+    vehicle mutation. Authentication/authorization and malformed-data failures
+    are deliberately not retried forever.
+    """
+    pending: list[BaseException] = [error]
+    seen: set[int] = set()
+    messages: list[str] = []
+    while pending:
+        current = pending.pop()
+        if id(current) in seen:
+            continue
+        seen.add(id(current))
+        if isinstance(current, (TimeoutError, ConnectionError)):
+            return True
+        status = getattr(current, "status", None)
+        if isinstance(status, int) and (
+            status in {408, 425, 429} or 500 <= status <= 599
+        ):
+            return True
+        messages.append(str(current).lower())
+        for linked in (
+            getattr(current, "__cause__", None),
+            getattr(current, "__context__", None),
+        ):
+            if isinstance(linked, BaseException):
+                pending.append(linked)
+
+    text = " | ".join(messages)
+    return any(
+        marker in text
+        for marker in (
+            "request timeout",
+            "timed out",
+            "timeout",
+            "temporarily unavailable",
+            "server disconnected",
+            "connection reset",
+            "connection refused",
+            "cannot connect",
+            "connector is closed",
+            "session is closed",
+            "closed connector",
+            "upstream_client_shutting_down",
+        )
+    )
+
+
+def server_history_retry_allowed(reason: str | None, retryable: bool) -> bool:
+    """Return whether the bounded background worker should keep trying."""
+    return reason == "upstream_vehicle_unavailable" or (
+        reason == "sync_failed" and retryable
+    )
+
+
 def upstream_transport_constant(client: Any, name: str) -> Any:
     """Return one loaded upstream transport constant for diagnostic adapters."""
     return _module_value(client, name)
