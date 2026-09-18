@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from datetime import datetime, timedelta, timezone
 from typing import Any, Iterator
 
 
@@ -75,6 +76,50 @@ def get_upstream_coordinator_data(client: Any, target_vin: str) -> dict[str, Any
     if not isinstance(data, dict):
         return None
     return deepcopy(data)
+
+
+def freshest_upstream_timestamp(
+    payload: Any,
+    *,
+    now: datetime | None = None,
+    max_future_skew: timedelta = timedelta(minutes=5),
+) -> datetime | None:
+    """Return the newest trustworthy source timestamp from cached vehicle data.
+
+    Only source metadata fields are considered. This deliberately ignores
+    command-history/status timestamps and performs no network I/O.
+    """
+    reference = now or datetime.now(timezone.utc)
+    candidates: list[datetime] = []
+
+    def visit(value: Any) -> None:
+        if isinstance(value, dict):
+            for key, child in value.items():
+                normalized = str(key).replace("_", "").casefold()
+                if normalized in {"createdat", "updatedat"}:
+                    parsed = None
+                    if isinstance(child, datetime):
+                        parsed = child
+                    elif child:
+                        text = str(child).strip().replace("Z", "+00:00")
+                        try:
+                            parsed = datetime.fromisoformat(text)
+                        except ValueError:
+                            parsed = None
+                    if parsed is not None:
+                        if parsed.tzinfo is None:
+                            parsed = parsed.replace(tzinfo=timezone.utc)
+                        else:
+                            parsed = parsed.astimezone(timezone.utc)
+                        if parsed <= reference + max_future_skew:
+                            candidates.append(parsed)
+                visit(child)
+        elif isinstance(value, (list, tuple)):
+            for child in value:
+                visit(child)
+
+    visit(payload)
+    return max(candidates) if candidates else None
 
 
 def select_upstream_client(upstream_entry: Any, legacy_clients: Any) -> Any:
