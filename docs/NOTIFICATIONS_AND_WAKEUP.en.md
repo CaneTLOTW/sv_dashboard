@@ -32,12 +32,15 @@ Settings are native `sv_dashboard` Number/Time entities and persist per config e
 | Stale threshold away/active | 2 h |
 | Reachability probe wait | 15 min |
 | Charge-start notification delay | 10 min |
+| Periodic wake-up interval | 60 min (30–360 min) |
 | Quiet-hours start | 22:00 |
 | Quiet-hours end | 07:00 |
 
 Warning/reset pairs retain valid hysteresis. Changing a setting does not intentionally reset existing episode markers.
 
 Electric/home-charge settings are only meaningful where the selected vehicle exposes the required electric/charging capabilities.
+
+Home presence is configured with one or more existing Home Assistant `zone.*` entities in the integration options. `zone.home` remains the portable default; no household zone helper or friendly name is hard-coded.
 
 ## Notification topics
 
@@ -62,7 +65,9 @@ SOC-derived energy/power values remain battery-side estimates and are not meter 
 
 A parked vehicle can legitimately keep the same SOC, mileage, range or location for hours. Unchanged values are not generic proof of connection.
 
-SV Dashboard prefers a proven fresh vehicle/temperature source heartbeat and exposes the selected heartbeat in diagnostics.
+SV Dashboard first reads the newest trustworthy `createdAt` / `updatedAt` timestamp from the already-loaded Stellantis Vehicles coordinator payload for the exact selected VIN. This is local cached data: it performs no extra REST request and no wake-up. It fixes the important case where a fresh payload returns the same ambient-temperature value and the upstream Home Assistant temperature entity therefore does not change.
+
+If that loaded payload is temporarily unavailable during startup/reload, SV falls back to the freshest timestamp across several mapped vehicle-data entities rather than trusting temperature alone. Command-history/action timestamps are explicitly excluded.
 
 A Stellantis command status such as `accepted` or `forwarded` proves only that the command path accepted the request. It does **not** prove that the vehicle returned fresh telemetry.
 
@@ -98,7 +103,7 @@ SV Dashboard uses a strict hierarchy:
 2. otherwise use the valid configured upstream charge limit when active and above current SOC;
 3. otherwise use 100 % as target SOC;
 4. estimate remaining time only from recent positive plausible power samples;
-5. if neither upstream end time nor a defensible estimate exists, omit the precise finish time.
+5. if neither upstream end time nor a defensible estimate exists, still send the truthful charge-start report but omit the precise finish time.
 
 No fixed battery capacity or hard-coded 80 % target is used.
 
@@ -107,9 +112,10 @@ No fixed battery capacity or hard-coded 80 % target is used.
 The Wake-up view can include:
 
 - **Wake vehicle now**;
-- **Hourly wake-up**;
+- **Periodic wake-up** with a configurable 30–360 minute interval (default 60 min);
 - **Wake-up while charging** where relevant;
-- **Availability wake-up probe**.
+- **Availability wake-up probe**;
+- package-owned last wake-up, wake-ups-today and bounded 24-hour wake-up activity diagnostics.
 
 Automatic switches start off.
 
@@ -137,10 +143,12 @@ Diagnostics should explain behavior without exposing raw private stores or upstr
 
 ## Persistence
 
-Notification switches, settings, episode markers, last-notification diagnostics and wake-up counters are stored per SV Dashboard config entry and survive Home Assistant restarts.
+Notification switches, settings, episode markers, logical trip/charge notification IDs, last-notification diagnostics, wake-up counters and bounded wake-up activity are stored per SV Dashboard config entry and survive Home Assistant restarts.
+
+The **Restore notification defaults** action resets only package-owned Number/Time settings. It never opts in the master switch, topic switches, recipients or wake-up switches.
 
 ## Current QA status
 
 The migrated SV implementation contains the notification/wake-up contract above, but focused real-event runtime acceptance is still open.
 
-Recipient delivery, quiet-hours deferral, heartbeat outage/recovery and charge-start hierarchy are tracked in **SV Dashboard issue #3**. The project does not manufacture disruptive vehicle states solely for testing.
+Recipient delivery, quiet-hours deferral, heartbeat outage/recovery and real trip/charge reports are tracked in **SV Dashboard issue #3**. Source behavior is hardened for beta.20, but active wake-up/recovery acceptance waits for a naturally connected vehicle; the project does not manufacture disruptive vehicle states solely for testing.
