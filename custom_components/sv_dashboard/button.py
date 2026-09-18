@@ -19,6 +19,7 @@ async def async_setup_entry(
     async_add_entities([
         SvActionButton(coordinator, entry, "manual_wakeup", "mdi:car-key"),
         SvActionButton(coordinator, entry, "test_notification", "mdi:message-alert-outline"),
+        SvActionButton(coordinator, entry, "reset_notification_defaults", "mdi:restore"),
         SvActionButton(coordinator, entry, "sync_server_history", "mdi:database-sync"),
     ])
     await coordinator.notifications.async_refresh_entities()
@@ -41,10 +42,12 @@ class SvActionButton(ButtonEntity):
     async def async_press(self) -> None:
         if self.key == "manual_wakeup":
             await self.coordinator.notifications.async_manual_wakeup()
+        elif self.key == "test_notification":
+            await self.coordinator.notifications.async_test_notification()
+        elif self.key == "reset_notification_defaults":
+            await self.coordinator.notifications.async_reset_settings()
         elif self.key == "sync_server_history":
             await self.coordinator.server_history.async_full_sync()
-        else:
-            await self.coordinator.notifications.async_test_notification()
 
     @property
     def device_info(self) -> DeviceInfo:
