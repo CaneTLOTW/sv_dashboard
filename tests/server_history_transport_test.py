@@ -52,7 +52,8 @@ class FakeClient:
         self.close_calls = 0
 
     def apply_query_params(self, url, params, vehicle):
-        return f"{url}?client_id=resolved&vehicle_id={vehicle['vehicle_id']}"
+        resolved_url = url.replace("{#vehicle_id#}", vehicle["vehicle_id"])
+        return f"{resolved_url}?client_id=resolved&vehicle_id={vehicle['vehicle_id']}"
 
     def apply_dict_params(self, headers):
         return {**headers, "Authorization": "Bearer [filtered]"}
