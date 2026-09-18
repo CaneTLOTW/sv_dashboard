@@ -1365,6 +1365,10 @@ class ServerHistoryManager:
             raw_by_id.update({item["id"]: item for item in incoming})
             self.data["server_trips_raw"] = sorted(raw_by_id.values(), key=_trip_sort_key)
             self._rebuild_canonical()
+            if self.metrics:
+                await self.metrics.async_reconcile_canonical_mileage(
+                    self.data.get("trips", [])
+                )
             now = dt_util.utcnow().isoformat()
             mode = "incremental" if since else "full"
             self.data.update(
