@@ -86,6 +86,27 @@ _CHARGE_END_START_TOLERANCE = timedelta(minutes=5)
 _MAX_NOTIFIED_EVENTS = 100
 
 
+def available_notification_recipients(hass: HomeAssistant) -> list[str]:
+    """Return portable notify entities plus legacy notify service actions.
+
+    Modern Home Assistant integrations expose notification destinations as
+    notify entities consumed through notify.send_message. Keep legacy
+    notify.<service> actions discoverable as a compatibility fallback.
+    """
+    entity_recipients = {
+        state.entity_id
+        for state in hass.states.async_all()
+        if state.entity_id.startswith("notify.")
+    }
+    services = hass.services.async_services().get("notify", {})
+    legacy_service_recipients = {
+        f"notify.{service_name}"
+        for service_name in services
+        if service_name not in {"notify", "send_message"}
+    }
+    return sorted(entity_recipients | legacy_service_recipients)
+
+
 class VehicleNotificationManager:
     """Own optional notification state without creating user helpers.
 
@@ -173,12 +194,7 @@ class VehicleNotificationManager:
         only recipients whose legacy package switch had already been explicitly
         enabled. Merely discovering a notify service never opts it in.
         """
-        services = self.hass.services.async_services().get("notify", {})
-        discovered = sorted(
-            f"notify.{service_name}"
-            for service_name in services
-            if service_name not in {"notify", "send_message"}
-        )
+        discovered = available_notification_recipients(self.hass)
         configured = self.entry.options.get(OPTION_NOTIFICATION_RECIPIENTS)
         if configured is None:
             switches = self.data.get("switches", {})
@@ -274,6 +290,7 @@ class VehicleNotificationManager:
             text(self.hass, "test_message"),
             "test",
             required_category=None,
+            bypass_master=True,
         )
 
     @callback
@@ -742,11 +759,13 @@ class VehicleNotificationManager:
         message: str,
         notification_type: str,
         required_category: str | None,
+        *,
+        bypass_master: bool = False,
     ) -> bool:
         # Eligibility is evaluated before quiet-hour deferral. An installation
         # with notifications/categories/recipients disabled must not accumulate
         # a pending warning merely because the vehicle is stale overnight.
-        if not self.is_enabled(SWITCH_NOTIFICATIONS):
+        if not bypass_master and not self.is_enabled(SWITCH_NOTIFICATIONS):
             return False
         if required_category and not self.is_enabled(required_category):
             return False
@@ -760,17 +779,31 @@ class VehicleNotificationManager:
 
         sent_recipients: list[str] = []
         for recipient in recipients:
-            service_name = recipient.removeprefix("notify.")
             try:
-                # Recipients are discovered from the notify service registry,
-                # therefore invoke the selected service directly. A failure of
-                # one destination must not prevent the other selected targets.
-                await self.hass.services.async_call(
-                    "notify",
-                    service_name,
-                    {"title": title, "message": message},
-                    blocking=False,
-                )
+                if self.hass.states.get(recipient) is not None:
+                    # Modern HA notification target: call the generic action
+                    # against the concrete notify entity. This works across
+                    # mobile-app, Telegram and other notify-entity providers.
+                    await self.hass.services.async_call(
+                        "notify",
+                        "send_message",
+                        {
+                            "entity_id": recipient,
+                            "title": title,
+                            "message": message,
+                        },
+                        blocking=False,
+                    )
+                else:
+                    # Compatibility for integrations that still expose only a
+                    # legacy notify.<service> action.
+                    service_name = recipient.removeprefix("notify.")
+                    await self.hass.services.async_call(
+                        "notify",
+                        service_name,
+                        {"title": title, "message": message},
+                        blocking=False,
+                    )
             except Exception:
                 _LOGGER.warning(
                     "Could not send SV Dashboard notification via %s",
