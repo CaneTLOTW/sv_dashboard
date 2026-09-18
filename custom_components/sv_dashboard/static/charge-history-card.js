@@ -298,12 +298,6 @@ class CodexStellantisChargeHistoryCardV1 extends LitElement {
 }
 
 customElements.define("sv-dashboard-charge-history-card", CodexStellantisChargeHistoryCardV1);
-window.customCards = window.customCards ?? [];
-window.customCards.push({
-    type: "sv-dashboard-charge-history-card",
-    name: "SV Dashboard Charge History",
-    preview: true,
-});
 
 class CodexStellantisChargeCurveCardV1 extends LitElement {
     static properties = {
@@ -544,11 +538,6 @@ class CodexStellantisChargeCurveCardV1 extends LitElement {
 }
 
 customElements.define("sv-dashboard-charge-curve-card", CodexStellantisChargeCurveCardV1);
-window.customCards.push({
-    type: "sv-dashboard-charge-curve-card",
-    name: "SV Dashboard Charge Curve",
-    preview: true,
-});
 
 class CodexStellantisChargeCurveBrowserCardV1 extends LitElement {
     static properties = {
@@ -887,8 +876,3 @@ class CodexStellantisChargeCurveBrowserCardV1 extends LitElement {
 }
 
 customElements.define("sv-dashboard-charge-curve-browser-card", CodexStellantisChargeCurveBrowserCardV1);
-window.customCards.push({
-    type: "sv-dashboard-charge-curve-browser-card",
-    name: "SV Dashboard Charge Curve Browser",
-    preview: true,
-});
