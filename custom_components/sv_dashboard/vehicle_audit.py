@@ -70,6 +70,28 @@ _META_PATH_ENDINGS = (
     ".created_at",
     ".updated_at",
 )
+_INVENTORY_PRIVATE_PATH_TOKENS = {
+    "vin",
+    "token",
+    "secret",
+    "href",
+    "coordinate",
+    "coordinates",
+    "latitude",
+    "longitude",
+    "picture",
+    "pictures",
+    "account",
+    "accountid",
+    "account_id",
+    "customer",
+    "customer_id",
+    "correlation_id",
+    "callback_id",
+    "monitor_id",
+    "remote_id",
+    "vehicle_id",
+}
 _VIN_PATTERN = re.compile(r"\b[A-HJ-NPR-Z0-9]{17}\b", re.IGNORECASE)
 
 
@@ -335,7 +357,24 @@ def _path_is_mapped(path: str, known: set[str]) -> bool:
     return False
 
 
-def _inventory_payload(payload: Any, mapped_paths: set[str]) -> list[dict[str, Any]]:
+def _inventory_path_allows_enum(path: str) -> bool:
+    """Return whether a path may safely retain short observed string values."""
+    segments = {
+        segment.casefold()
+        for segment in re.split(r"[.\[\]]+", path)
+        if segment
+    }
+    if "id" in segments:
+        return False
+    return not bool(segments & _INVENTORY_PRIVATE_PATH_TOKENS)
+
+
+def _inventory_payload(
+    payload: Any,
+    mapped_paths: set[str],
+    secrets: set[str],
+    counts,
+) -> list[dict[str, Any]]:
     rows: dict[str, dict[str, Any]] = {}
 
     def visit(value: Any, path: str) -> None:
@@ -378,10 +417,10 @@ def _inventory_payload(payload: Any, mapped_paths: set[str]) -> list[dict[str, A
             row["types"].add("number")
         elif isinstance(value, str):
             row["types"].add("string")
-            lower_path = path.casefold()
-            if not any(token in lower_path for token in ("vin", "token", "secret", "href", "coordinate", "latitude", "longitude", "picture")):
-                if len(value) <= 80:
-                    row["enum_values"].add(value)
+            if _inventory_path_allows_enum(path) and len(value) <= 80:
+                safe_value = _sanitize_string(value, secrets, counts)
+                if not safe_value.startswith("**REDACTED"):
+                    row["enum_values"].add(safe_value)
             if path.endswith(("createdAt", "updatedAt", "created_at", "updated_at")):
                 parsed = dt_util.parse_datetime(value)
                 if parsed is not None:
@@ -747,7 +786,12 @@ async def async_build_vehicle_audit(hass: HomeAssistant, coordinator: Any) -> di
         probes[name] = probe
         raw[name] = payload
 
-    status_inventory = _inventory_payload(raw.get("status") or {}, known_paths)
+    status_inventory = _inventory_payload(
+        raw.get("status") or {},
+        known_paths,
+        secrets,
+        counts,
+    )
     capabilities_payload = extension_payloads.get("onboardCapabilities")
     advertised_capabilities = _find_key(capabilities_payload, "onboardCapabilities")
     if advertised_capabilities is None:
@@ -824,7 +868,14 @@ async def websocket_vehicle_audit(hass: HomeAssistant, connection, msg) -> None:
         connection.send_error(msg["id"], "unavailable", str(error))
         return
     except Exception as error:
-        connection.send_error(msg["id"], "audit_failed", _safe_error(error, set()))
+        # A top-level failure may occur before we can reconstruct the complete
+        # per-vehicle secret set. Do not echo transport URLs/identifiers into
+        # the browser error surface.
+        connection.send_error(
+            msg["id"],
+            "audit_failed",
+            f"Vehicle audit failed ({error.__class__.__name__})",
+        )
         return
     connection.send_result(msg["id"], report)
 
