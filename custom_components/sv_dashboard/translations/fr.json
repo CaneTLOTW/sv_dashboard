@@ -58,7 +58,7 @@
       "server_charge_history": {"name": "Historique serveur des recharges"},
       "vehicle_info": {"name": "Informations du véhicule"},
       "trailing_consumption_500km": {"name": "Consommation électrique moyenne sur les 500 derniers km"},
-      "distance_since_charge": {"name": "Distance depuis la dernière recharge électrique"},
+      "distance_since_charge": {"name": "Distance depuis la dernière recharge électrique"},"canonical_mileage":{"name":"Kilométrage canonique"},
       "current_trip_energy": {"name": "Énergie électrique consommée depuis le début du trajet"},
       "current_charge_power": {"name": "Puissance de recharge actuelle"},
       "last_trip_result": {"name": "Dernier trajet enregistré par SV Dashboard"},
