@@ -321,11 +321,3 @@ if (!customElements.get(MAP_CARD_TAG)) {
   customElements.define(MAP_CARD_TAG, Ec3GpsMapCard);
 }
 
-window.customCards = window.customCards || [];
-if (!window.customCards.some((card) => card.type === "sv-dashboard-gps-date-card")) {
-  window.customCards.push({
-    type: "sv-dashboard-gps-date-card",
-    name: "SV GPS Date",
-    description: "Home Assistant date-range selector for the SV GPS history",
-  });
-}
