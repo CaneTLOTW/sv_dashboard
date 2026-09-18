@@ -107,6 +107,7 @@ class SvDashboardVehicleAuditCard extends LitElement {
     const environment = report.environment || {};
     const probes = Object.values(report.probe_results || {});
     const probeLines = probes.map((probe) => `| ${probe.name || "—"} | ${probe.status || "—"} |`).join("\n");
+    const alerts = report.alert_evidence || {};
     const candidates = Array.isArray(report.unmapped_candidate_fields) ? report.unmapped_candidate_fields : [];
     const candidateLines = candidates.slice(0, 40).map((path) => `- \`${path}\``).join("\n") || "- none";
     return [
@@ -125,6 +126,13 @@ class SvDashboardVehicleAuditCard extends LitElement {
       "| Probe | Result |",
       "| --- | --- |",
       probeLines,
+      "",
+      "### Alerts endpoint evidence",
+      "",
+      `- Probe: \`${alerts.probe_status || "—"}\``,
+      `- Server-side alert count: \`${Number.isInteger(alerts.count) ? alerts.count : "—"}\``,
+      `- Endpoint advertised/available: \`${alerts.available === true ? "yes" : alerts.available === false ? "no" : "—"}\``,
+      "- An empty result does not prove that no vehicle-local warning occurred.",
       "",
       "### Trip query audit",
       "",
