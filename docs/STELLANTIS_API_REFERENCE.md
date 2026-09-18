@@ -133,6 +133,42 @@ SV Dashboard keeps ownership of:
 
 The optional `since` parameter remains useful for incremental synchronization and is independent of the fixed one-day behavior in upstream `get_vehicle_last_trip()`.
 
+## Alerts, alarms and vehicle warnings
+
+The Stellantis B2C API documents a per-vehicle **Alerts** collection at
+`GET /user/vehicles/{id}/alerts`. The response can be localized with the
+`locale` query parameter. The vehicle HAL document can advertise this
+collection through its `alerts` relation.
+
+This is separate from **alarms**:
+
+- `alerts` are the server-side vehicle alert/warning collection;
+- `alarms` describe the vehicle alarm system and its activation state;
+- neither term should be used as a synonym for the other.
+
+The Monitor API can also include `vehicle.alerts` in callback events. Callback
+delivery is an explicit monitor/callback configuration and is not automatically
+provided merely because a vehicle exposes the Alerts REST endpoint.
+
+Current Stellantis Vehicles does not expose the Alerts collection as a normal
+Home Assistant entity and SV Dashboard does not create a second background
+poller or monitor/session stack. The Phase A Vehicle API audit therefore probes
+the advertised `alerts` relation **on demand and read-only** through the
+already-authenticated upstream transport. beta.20 adds an `alert_evidence`
+summary containing probe status and collection count.
+
+An empty or unavailable Alerts response is not evidence that no warning was
+shown locally in the vehicle. API data remains conditional on the vehicle
+producing the datum, uploading it through an activated service, and authorizing
+it to the requesting application. A dashboard warning such as an electric
+drivetrain/motor fault therefore needs real-vehicle evidence before SV can
+claim that the same fault is observable through `/alerts`.
+
+Stellantis' broader vehicle-data disclosures also describe diagnostic/error
+and malfunction data as data that connected vehicles may generate. That does
+not by itself prove that raw DTC/error-code data are exposed by the current B2C
+credential scope used by Stellantis Vehicles.
+
 ## Vehicle capability API and future audit work
 
 Stellantis documents a vehicle capability/eligibility lookup around `onboardCapabilities`. Capability metadata can indicate datasets and remote operations a vehicle is technically able to support.
