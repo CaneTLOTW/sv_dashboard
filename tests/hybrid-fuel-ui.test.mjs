@@ -84,9 +84,9 @@ test("dual-energy hero uses one stacked information hierarchy at every width", (
 });
 
 test("dual-energy hero keeps both ranges visible and only adds trustworthy secondary live values", () => {
-  assert.match(dualHero, /<div class="detail-label">\$\{text\.electricRange\}<\/div>/);
+  assert.match(dualHero, /<div class="detail-label">\$\{dashboardText\.range\}<\/div>/);
   assert.match(dualHero, /this\._showMore\(mapped\.autonomy\)/);
-  assert.match(dualHero, /<div class="detail-label">\$\{text\.fuelRange\}<\/div>/);
+  assert.match(dualHero, /<div class="detail-label">\$\{dashboardText\.range\}<\/div>/);
   assert.match(dualHero, /this\._showMore\(mapped\.fuel_autonomy\)/);
   assert.match(dualHero, /mode\.charging && chargePower !== "—"/);
   assert.match(dualHero, /fuelConsumptionEntity && fuelConsumption !== "—"/);
@@ -177,9 +177,10 @@ test("new card strings cover 18 languages", () => {
 });
 
 test("frontend cache-busts changed modules", () => {
-  for (const module of ["trip-history-card", "charge-history-card", "gps-history-card", "vehicle-overview-card", "dual-energy-overview-card", "fuel-history-card"]) {
-    assert.match(frontend, new RegExp(`${module}\\.js\\?v=0\\.6\\.0-beta\\.15`));
+  for (const module of ["trip-history-card", "charge-history-card", "gps-history-card", "dual-energy-overview-card", "fuel-history-card"]) {
+    assert.match(frontend, new RegExp(`${module}\\.js\\?v=0\\.6\\.0-beta\\.16`));
   }
+  assert.match(frontend, /vehicle-overview-card\.js\?v=0\.6\.0-beta\.15/);
   assert.match(frontend, /sv_dashboard\.js\?v=0\.6\.0-beta\.15/);
   assert.match(strategy, /modules\.trips && supportsFuel \? \{ type: "custom:sv-dashboard-fuel-history-card"/);
 });
