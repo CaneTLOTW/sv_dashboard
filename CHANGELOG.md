@@ -6,6 +6,15 @@ No changes yet.
 
 All notable user-facing changes to SV Dashboard are recorded here.
 
+## 0.6.0-beta.16 browser picker and Dual-Energy label minifix
+
+- Fixes the real Home Assistant Add Card picker regression found during beta.15 owner browser QA: internal Trip, Charge, Charge Curve, GPS and Fuel History components remain registered as custom elements for the generated dashboard but no longer publish `window.customCards` picker metadata.
+- Keeps the beta.15 top-level picker cleanup as defense-in-depth for an in-session upgrade from an older frontend that already registered internal cards.
+- Shortens the two Dual-Energy Hero range captions to the shared localized **Range** label because the adjacent **Battery** and **Fuel** headings already provide the energy-domain context; this also reduces long-label pressure in languages such as French.
+- Adds regression coverage that internal component modules must never publish picker metadata themselves.
+- Bumps package and consolidated frontend resource to `0.6.0-beta.16` and cache-busts only the frontend modules changed by this minifix.
+- Remains a prerelease on `develop`; `main` stays unchanged until exact-candidate owner browser acceptance is complete.
+
 ## 0.6.0-beta.15 DS4 tester-feedback hardening candidate
 
 - Unifies the Dual-Energy Hero into one stacked Battery/Fuel layout at all card widths and keeps both electric and fuel ranges permanently visible.
