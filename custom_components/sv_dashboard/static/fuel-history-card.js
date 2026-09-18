@@ -155,6 +155,4 @@ class SvDashboardFuelHistoryCardEditor extends HTMLElement {
 
 if (!customElements.get(CARD_TAG)) customElements.define(CARD_TAG,SvDashboardFuelHistoryCard);
 if (!customElements.get(EDITOR_TAG)) customElements.define(EDITOR_TAG,SvDashboardFuelHistoryCardEditor);
-window.customCards=window.customCards||[];
-const registrationText=textFor({locale:{language:typeof navigator!=="undefined"?navigator.language:"en"}},"fuelHistory");
-if(!window.customCards.some(card=>card.type===CARD_TAG)) window.customCards.push({type:CARD_TAG,name:registrationText.cardName,description:registrationText.cardDescription,preview:true});
+
