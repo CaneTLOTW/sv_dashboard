@@ -52,7 +52,7 @@ test("actual dashboard path is published for frontend navigation", () => {
   assert.match(dashboardSource, /return await _async_matching_strategy_url_path/);
 });
 
-test("dashboard display name remains a per-entry option and beta.18 resource version", () => {
+test("dashboard display name remains a per-entry option and beta.20 resource version", () => {
   assert.match(configFlowSource, /OPTION_DASHBOARD_NAME/);
   assert.match(configFlowSource, /normalized\[OPTION_DASHBOARD_NAME\]/);
   assert.match(constSource, /OPTION_DASHBOARD_NAME = "dashboard_name"/);
