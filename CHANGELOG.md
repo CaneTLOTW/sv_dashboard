@@ -6,6 +6,19 @@ No changes yet.
 
 All notable user-facing changes to SV Dashboard are recorded here.
 
+## 0.6.0-beta.17 vehicle capability audit candidate
+
+- Adds an opt-in **Vehicle API audit** to the generated System view for onboarding and comparing real Stellantis vehicles without asking testers for ad-hoc raw logs.
+- Reuses the already-loaded Stellantis Vehicles authenticated transport in read-only mode; the audit creates no second OAuth/session stack and sends no wake-up, MQTT or vehicle-control command.
+- Probes current vehicle/account data, status, maintenance, vehicle extensions such as `onboardCapabilities`, bounded Trips pagination/detail behavior and advertised read-only HAL resources such as telemetry/alerts/collisions/alarms where accessible.
+- Generates a flattened current-status path inventory with observed types/counts/enums/freshness plus a comparison against fields already mapped by the loaded upstream integration.
+- Sanitizes VIN/vehicle/account identifiers, tokens/secrets, exact GPS coordinates, HAL/picture URLs and known identifiers embedded in strings; samples are bounded before export.
+- Adds browser-local **Download JSON** and **Copy Markdown** actions. No public `/config/www` report or persistent audit file is created.
+- Keeps the audit card internal to the generated dashboard so the normal Add Card picker still exposes only the two intended public Hero cards.
+- Adds the new audit UI to the full 18-language frontend catalog and documents the API/reference/evidence contract.
+- Bumps the package and consolidated frontend resource to `0.6.0-beta.17`.
+- Remains a prerelease on `develop`; real Home Assistant runtime/API/privacy acceptance is required before promotion.
+
 ## 0.6.0-beta.16 browser picker and Dual-Energy label minifix
 
 - Fixes the real Home Assistant Add Card picker regression found during beta.15 owner browser QA: internal Trip, Charge, Charge Curve, GPS and Fuel History components remain registered as custom elements for the generated dashboard but no longer publish `window.customCards` picker metadata.
