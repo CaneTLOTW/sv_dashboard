@@ -243,6 +243,7 @@ class VehicleNotificationManager:
             "probe_sent": bool(markers.get("probe_at")),
             "last_wakeup": self.data.get("last_wakeup"),
             "wakeup_count_today": int(self.data.get("wakeup_count_today") or 0),
+            "wakeup_activity": list(self.data.get("wakeup_activity") or []),
             "last_notification": {
                 key: last.get(key) for key in ("type", "title", "message", "time")
             },
@@ -707,8 +708,18 @@ class VehicleNotificationManager:
         except Exception:  # upstream command availability must not break checks
             _LOGGER.debug("SV wake-up request failed", exc_info=True)
             return False
-        self.data["last_wakeup"] = dt_util.utcnow().isoformat()
+        now = dt_util.utcnow()
+        self.data["last_wakeup"] = now.isoformat()
         self.data["wakeup_count_today"] = int(self.data.get("wakeup_count_today") or 0) + 1
+        activity = [
+            item
+            for item in (self.data.get("wakeup_activity") or [])
+            if isinstance(item, dict)
+            and (stamp := self._parse_time(item.get("time"))) is not None
+            and now - stamp <= timedelta(hours=24)
+        ]
+        activity.append({"time": now.isoformat(), "message": message})
+        self.data["wakeup_activity"] = activity[-50:]
         await self._save()
         await self.hass.services.async_call(
             "logbook",
