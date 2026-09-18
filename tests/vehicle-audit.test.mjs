@@ -75,6 +75,10 @@ test("audit sanitizes private identifiers, locations, URLs, and bounded samples"
   assert.match(backend, /"persistent_report_written": False/);
   assert.match(backend, /_SAMPLE_LIST_LIMIT/);
   assert.match(backend, /_SAMPLE_DICT_LIMIT/);
+  assert.match(backend, /_INVENTORY_PRIVATE_PATH_TOKENS/);
+  assert.match(backend, /def _inventory_payload\([\s\S]*secrets: set\[str\]/);
+  assert.match(backend, /_sanitize_string\(value, secrets, counts\)/);
+  assert.match(backend, /Vehicle audit failed \(\{error\.__class__\.__name__\}\)/);
 });
 
 test("audit exports structural capability evidence without model assumptions", () => {
