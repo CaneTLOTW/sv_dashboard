@@ -40,7 +40,7 @@ DEFAULT_OPTIONS = {
 # Home Assistant knows exactly one package-owned Lovelace resource. All other
 # package modules are internal ES modules loaded by this entry point.
 FRONTEND_URL = "/sv_dashboard/frontend.js"
-FRONTEND_VERSION = "0.6.0-beta.17"
+FRONTEND_VERSION = "0.6.0-beta.18"
 STATIC_VERSION = FRONTEND_VERSION
 FRONTEND_RESOURCE_URLS = (FRONTEND_URL,)
 
@@ -65,6 +65,7 @@ REQUIRED_DASHBOARD_CARDS = (
 )
 
 METRIC_TRAILING_CONSUMPTION = "trailing_consumption_500km"
+METRIC_CANONICAL_MILEAGE = "canonical_mileage"
 METRIC_DISTANCE_SINCE_CHARGE = "distance_since_charge"
 METRIC_CURRENT_TRIP_ENERGY = "current_trip_energy"
 METRIC_CURRENT_TRIP_CONSUMPTION = "current_trip_consumption"
@@ -73,6 +74,7 @@ METRIC_CURRENT_CHARGE_POWER = "current_charge_power"
 METRIC_LAST_CHARGE = "last_charge_result"
 METRIC_KEYS = (
     METRIC_TRAILING_CONSUMPTION,
+    METRIC_CANONICAL_MILEAGE,
     METRIC_DISTANCE_SINCE_CHARGE,
     METRIC_CURRENT_TRIP_ENERGY,
     METRIC_CURRENT_TRIP_CONSUMPTION,
