@@ -4,6 +4,16 @@
 
 No changes yet.
 
+## 0.6.0-beta.19 server-history retry recovery candidate
+
+- Fixes a live runtime defect where one transient historical `/trips` failure such as `Request timeout` changed server history to `sync_failed` and permanently stopped the only bounded reacquisition worker for the rest of that Home Assistant uptime.
+- Classifies retryable read-only transport failures conservatively: timeouts, connection lifecycle failures, HTTP 408/425/429/5xx and the known upstream shutdown handoff may retry; auth/permission and malformed-data failures remain fail-closed.
+- Persists the retryability decision alongside server-history state so the existing single bounded-backoff worker can continue after retryable `sync_failed` states without creating duplicate workers.
+- Preserves exact VIN binding, local/archive fallback, upstream ownership of authentication/session state and clean unload cancellation.
+- Adds transport contract tests for retryable vs permanent failures and the retry-state decision.
+- Bumps only the backend package version to `0.6.0-beta.19`; frontend resources remain on their unchanged beta.18 content keys.
+- Runtime acceptance must prove `Request timeout → automatic retry → sync_succeeded` without a manual sync button press.
+
 ## 0.6.0-beta.18 canonical mileage statistics candidate
 
 - Adds a package-owned **Canonical mileage** distance sensor with Home Assistant `total_increasing` semantics.
