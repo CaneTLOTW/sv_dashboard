@@ -74,7 +74,7 @@
       },
       "distance_since_charge": {
         "name": "Distancia desde la última carga"
-      },
+      },"canonical_mileage":{"name":"Kilometraje canónico"},
       "current_trip_energy": {
         "name": "Energía del viaje actual"
       },
