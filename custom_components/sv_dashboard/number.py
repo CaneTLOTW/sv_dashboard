@@ -23,6 +23,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         "stale_home_hours",
         "stale_away_hours",
         "probe_wait_minutes",
+        "wakeup_interval_minutes",
     }
     if electric:
         allowed.update({
