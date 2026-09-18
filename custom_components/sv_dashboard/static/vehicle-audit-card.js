@@ -32,7 +32,7 @@ class SvDashboardVehicleAuditCard extends LitElement {
     .row { display:grid; grid-template-columns:minmax(160px,1fr) auto; gap:12px; align-items:center; padding:8px 0; border-top:1px solid var(--divider-color); }
     .name { overflow-wrap:anywhere; }
     .result { font-weight:600; text-transform:uppercase; font-size:12px; }
-    .ok { color:var(--success-color,#2e7d32); }
+    .pass { color:var(--success-color,#2e7d32); }
     .unavailable { color:var(--secondary-text-color); }
     .forbidden, .error { color:var(--error-color); }
     .meta { color:var(--secondary-text-color); font-size:12px; line-height:1.45; margin-top:10px; }
@@ -157,7 +157,7 @@ class SvDashboardVehicleAuditCard extends LitElement {
   }
 
   _statusClass(status) {
-    return ["ok", "unavailable", "forbidden", "error"].includes(status) ? status : "unavailable";
+    return ["pass", "unavailable", "forbidden", "error"].includes(status) ? status : "unavailable";
   }
 
   render() {
