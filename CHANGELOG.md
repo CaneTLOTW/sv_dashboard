@@ -4,6 +4,23 @@
 
 No changes yet.
 
+## 0.6.0-beta.20 notification and wake-up migration candidate
+
+- Hardens vehicle reachability around the newest trustworthy Stellantis `createdAt` / `updatedAt` timestamp already present in the loaded upstream coordinator payload, so fresh telemetry can be proven even when a value such as ambient temperature remains numerically unchanged.
+- Explicitly excludes command/action lifecycle timestamps from heartbeat recovery; `accepted` / `forwarded` remote-command states remain insufficient proof that the vehicle returned fresh data.
+- Keeps mapped Home Assistant vehicle entities as a startup/reload fallback and chooses the freshest available mapped-data timestamp rather than trusting one temperature entity.
+- Replaces the fixed hourly wake-up cadence with a conservative package-owned periodic interval setting: default 60 minutes, configurable from 30 to 360 minutes. Charging wake-up and the one-probe-per-outage path remain separate explicit opt-ins.
+- Adds portable Home-zone selection from existing Home Assistant `zone.*` entities, defaulting to `zone.home`, without household-specific helpers.
+- Expands the Wake-up view with last wake-up, wake-ups today, selected Home zones, bounded 24-hour wake-up activity, last proven vehicle heartbeat, outage state and last availability probe.
+- Sends a truthful charge-start report even when no defensible ETA exists, while omitting the finish time instead of inventing one or dropping the whole notification.
+- Adds restart-safe logical de-duplication for completed trip/charge notifications.
+- Preserves the first observed charging-OFF boundary through the debounce window and uses that boundary for charge duration/power/reporting instead of extending the charge by the debounce delay.
+- Adds a Restore notification defaults action that resets only package-owned Number/Time settings and never enables notification topics, recipients or wake-up switches.
+- Extends the read-only Vehicle API Audit with structural Stellantis Alerts endpoint evidence. This does not introduce background alert polling, a second authentication/session stack or a Monitor callback.
+- Adds/updates focused regression coverage and the complete 18-language backend/frontend control text for the new notification/wake-up behavior.
+- Bumps package and consolidated frontend resource to `0.6.0-beta.20`; only changed Strategy/i18n/audit resources receive beta.20 cache keys while unchanged internal cards retain their previous content keys.
+- Active wake-up/recovery vehicle acceptance may be deferred while the owner vehicle is intentionally/offline at the workshop; passive stale-state checks, test notifications and read-only API audit remain safe acceptance steps.
+
 ## 0.6.0-beta.19 server-history retry recovery candidate
 
 - Fixes a live runtime defect where one transient historical `/trips` failure such as `Request timeout` changed server history to `sync_failed` and permanently stopped the only bounded reacquisition worker for the rest of that Home Assistant uptime.
