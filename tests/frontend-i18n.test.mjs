@@ -21,12 +21,13 @@ const charge = read("../custom_components/sv_dashboard/static/charge-history-car
 const vehicle = read("../custom_components/sv_dashboard/static/vehicle-overview-card.js");
 const dualEnergy = read("../custom_components/sv_dashboard/static/dual-energy-overview-card.js");
 const strategy = read("../custom_components/sv_dashboard/static/sv_dashboard.js");
+const audit = read("../custom_components/sv_dashboard/static/vehicle-audit-card.js");
 
 const LANGUAGES = [
   "de", "en", "fr", "it", "es", "pt", "nl", "da", "nb", "sv", "fi", "pl", "cs", "sk", "hu", "ro", "sl", "hr",
 ];
 const EXTRA_LANGUAGES = LANGUAGES.filter((language) => !["de", "en", "fr"].includes(language));
-const NAMESPACES = ["tripHistory", "chargeHistory", "vehicleOverview", "dashboard", "dualEnergyOverview", "fuelHistory"];
+const NAMESPACES = ["tripHistory", "chargeHistory", "vehicleOverview", "dashboard", "dualEnergyOverview", "fuelHistory", "vehicleAudit"];
 // reconstructedGap is intentionally composed in i18n.js because it is a
 // frontend-only provenance label shared by all 18 languages in one place.
 const CAPABILITY_EXCEPTIONS = { tripHistory: new Set(["reconstructedGap"]) };
@@ -43,9 +44,9 @@ function canonicalKeys(namespace) {
 
 test("runtime wires all advanced catalogs with the release cache key", () => {
   for (const region of ["west", "north", "east"]) {
-    assert.match(runtimeSource, new RegExp(`i18n-advanced-${region}\\.js\\?v=0\\.6\\.0-beta\\.15`));
+    assert.match(runtimeSource, new RegExp(`i18n-advanced-${region}\\.js\\?v=0\\.6\\.0-beta\\.17`));
   }
-  assert.match(runtimeSource, /i18n-core\.js\?v=0\.6\.0-beta\.15/);
+  assert.match(runtimeSource, /i18n-core\.js\?v=0\.6\.0-beta\.17/);
 });
 
 test("locale resolver accepts regional variants and safe fallbacks", () => {
@@ -106,7 +107,7 @@ test("owner-reviewed German Dual-Energy wording is resolved by the shared i18n l
 });
 
 test("15 extra languages explicitly provide every overlay-owned EN key before runtime fallback", () => {
-  const coreOwnedNamespaces = new Set(["dualEnergyOverview", "fuelHistory"]);
+  const coreOwnedNamespaces = new Set(["dualEnergyOverview", "fuelHistory", "vehicleAudit"]);
   for (const language of EXTRA_LANGUAGES) {
     for (const namespace of NAMESPACES) {
       if (coreOwnedNamespaces.has(namespace)) continue;
@@ -182,6 +183,14 @@ test("dual-energy hero follows the shared 18-language runtime contract", () => {
   assert.doesNotMatch(dualEnergy, /text\.tripEnergy/);
   assert.doesNotMatch(dualEnergy, /aria-label="AC"|title="AC"|`Vehicle \$\{index \+ 1\}`/);
   assert.doesNotMatch(dualEnergy, /E-Reichweite|Tankreichweite|Ladeleistung|Kraftstoffverbrauch|In Fahrt|Eingesteckt/);
+});
+
+test("vehicle audit card consumes its localized namespace", () => {
+  assert.match(audit, /textFor\(this\._hass \|\| \{\}, "vehicleAudit"\)/);
+  assert.match(audit, /text\.run/);
+  assert.match(audit, /text\.download/);
+  assert.match(audit, /text\.copy/);
+  assert.doesNotMatch(audit, /Audit starten|Run audit|Lancer l’audit/);
 });
 
 test("dashboard strategy uses catalog strings without binary German branches", () => {
