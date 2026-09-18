@@ -19,7 +19,7 @@ No changes yet.
 - Extends the read-only Vehicle API Audit with structural Stellantis Alerts endpoint evidence. This does not introduce background alert polling, a second authentication/session stack or a Monitor callback.
 - Adds/updates focused regression coverage and the complete 18-language backend/frontend control text for the new notification/wake-up behavior.
 - Bumps package and consolidated frontend resource to `0.6.0-beta.20`; only changed Strategy/i18n/audit resources receive beta.20 cache keys while unchanged internal cards retain their previous content keys.
-- Active wake-up/recovery vehicle acceptance may be deferred while the owner vehicle is intentionally/offline at the workshop; passive stale-state checks, test notifications and read-only API audit remain safe acceptance steps.
+- Runtime acceptance should exercise the normal notification/wake-up contract without adding vehicle-specific special cases; unavailable vehicles are handled by the same generic stale/outage logic.
 
 ## 0.6.0-beta.19 server-history retry recovery candidate
 
