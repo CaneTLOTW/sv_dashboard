@@ -28,6 +28,7 @@ SV Dashboard currently exposes package-owned `sensor`, `switch`, `button`, `numb
 | **Server charge history** | Canonical/observed charging sessions and compact curve data. | Direct observations where available; reconstructed windows remain estimates. |
 | **Vehicle information** | Brand, powertrain and available vehicle/maintenance information. | Runtime data can contain private vehicle identifiers. |
 | **Trailing consumption (500 km)** | Rolling consumption over qualifying canonical trips. | Derived; electric energy can depend on SOC/capacity estimates. |
+| **Canonical mileage** | Monotonic package-owned odometer for Recorder/LTS distance changes. | Direct/derived high: valid upstream odometer values with rollback/unavailable filtering, reconciled forward by trustworthy canonical server-trip odometer anchors. |
 | **Distance since last charge** | Odometer minus reconciled last-charge baseline. | Direct/high when both values are valid; otherwise unavailable. |
 | **Current trip energy** | Battery-side energy estimate for an observed trip. | Estimated/low. Electric-capability only. |
 | **Last local trip result** | Restart-safe completed local trip result. | Distance may be high quality; electric energy/consumption remains estimated. |
@@ -150,9 +151,9 @@ Current position stays separate from archived history. Straight server lines are
 
 ## Long-term statistics
 
-Statistics views may consume Home Assistant long-term statistics for supported mileage/SOH sources.
+The package-owned **Canonical mileage** sensor uses `total_increasing` and is the statistics source for driven distance. It preserves the raw upstream odometer separately, rejects rollbacks/unavailable samples and can reconcile forward from canonical server-trip odometer anchors.
 
-SV Dashboard does not conceal or directly rewrite malformed existing LTS history. The known mileage-statistics reset investigation is tracked in **issue #4**.
+The generated monthly driven-distance chart uses `change` from Canonical mileage rather than the raw Stellantis mileage entity. Existing malformed pre-migration statistics are not changed by normal integration startup; supported Recorder statistics APIs are used for the one-time repair in **issue #71**.
 
 ## Persistence
 
