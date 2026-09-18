@@ -47,7 +47,7 @@ Choose **Run audit**.
 
 The card shows a result for every bounded probe. A probe can be:
 
-- `ok`;
+- `pass`;
 - `unavailable`;
 - `forbidden`;
 - `error`.
