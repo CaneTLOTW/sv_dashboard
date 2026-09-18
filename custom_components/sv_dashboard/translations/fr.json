@@ -5,7 +5,9 @@
       "dashboard_cards": {
         "title": "Vérification des cartes du tableau de bord",
         "description": "SV Dashboard nécessite Bubble Card, Button Card, ha-map-card et layout-card. Cette vérification des ressources Lovelace enregistrées par Home Assistant est indicative :\n\n{card_status}\n\nUne ressource enregistrée ne prouve pas qu’elle a été chargée par le navigateur. Installez les cartes manquantes avec HACS, vérifiez que chacune est enregistrée comme module JavaScript, puis redémarrez Home Assistant et actualisez le navigateur. Le tableau de bord effectue la vérification finale côté navigateur avant l’affichage.",
-        "data": {"dashboard_cards_confirmed": "J’ai vérifié les cartes requises pour le tableau de bord"}
+        "data": {
+          "dashboard_cards_confirmed": "J’ai vérifié les cartes requises pour le tableau de bord"
+        }
       },
       "user": {
         "title": "Sélectionner un véhicule",
@@ -45,54 +47,139 @@
           "notifications": "Notifications et gestion des destinataires",
           "notification_recipients": "Destinataires Notify sélectionnables",
           "history_hours": "Période d’historique affichée",
-          "powertrain_override": "Motorisation (secours)"
+          "powertrain_override": "Motorisation (secours)",
+          "home_zones": "Zones domicile pour les notifications"
         }
       }
     }
   },
   "entity": {
     "sensor": {
-      "dashboard_status": {"name": "Statut du tableau de bord"},
-      "server_trip_history": {"name": "Historique serveur des trajets"},
-      "server_gps_history": {"name": "Historique GPS serveur"},
-      "server_charge_history": {"name": "Historique serveur des recharges"},
-      "vehicle_info": {"name": "Informations du véhicule"},
-      "trailing_consumption_500km": {"name": "Consommation électrique moyenne sur les 500 derniers km"},
-      "distance_since_charge": {"name": "Distance depuis la dernière recharge électrique"},"canonical_mileage":{"name":"Kilométrage canonique"},
-      "current_trip_energy": {"name": "Énergie électrique consommée depuis le début du trajet"},
-      "current_charge_power": {"name": "Puissance de recharge actuelle"},
-      "last_trip_result": {"name": "Dernier trajet enregistré par SV Dashboard"},
-      "last_charge_result": {"name": "Dernière recharge enregistrée par SV Dashboard"},
-      "current_trip_consumption": {"name": "Consommation électrique du trajet en cours"}
+      "dashboard_status": {
+        "name": "Statut du tableau de bord"
+      },
+      "server_trip_history": {
+        "name": "Historique serveur des trajets"
+      },
+      "server_gps_history": {
+        "name": "Historique GPS serveur"
+      },
+      "server_charge_history": {
+        "name": "Historique serveur des recharges"
+      },
+      "vehicle_info": {
+        "name": "Informations du véhicule"
+      },
+      "trailing_consumption_500km": {
+        "name": "Consommation électrique moyenne sur les 500 derniers km"
+      },
+      "distance_since_charge": {
+        "name": "Distance depuis la dernière recharge électrique"
+      },
+      "canonical_mileage": {
+        "name": "Kilométrage canonique"
+      },
+      "current_trip_energy": {
+        "name": "Énergie électrique consommée depuis le début du trajet"
+      },
+      "current_charge_power": {
+        "name": "Puissance de recharge actuelle"
+      },
+      "last_trip_result": {
+        "name": "Dernier trajet enregistré par SV Dashboard"
+      },
+      "last_charge_result": {
+        "name": "Dernière recharge enregistrée par SV Dashboard"
+      },
+      "current_trip_consumption": {
+        "name": "Consommation électrique du trajet en cours"
+      }
     },
     "number": {
-      "range_warning_km": {"name": "Alerte d’autonomie faible"},
-      "range_reset_km": {"name": "Réarmement de l’alerte d’autonomie faible"},
-      "home_soc_warning": {"name": "Alerte SOC à domicile"},
-      "home_soc_reset": {"name": "Réarmement SOC à domicile"},
-      "home_delay_minutes": {"name": "Délai du rappel de recharge à domicile"},
-      "service_battery_warning": {"name": "Alerte batterie 12 V"},
-      "service_battery_reset": {"name": "Réarmement batterie 12 V"},
-      "stale_home_hours": {"name": "Délai de disponibilité à domicile"},
-      "stale_away_hours": {"name": "Délai de disponibilité hors domicile"},
-      "probe_wait_minutes": {"name": "Attente du test de disponibilité"},
-      "charge_start_delay_minutes": {"name": "Délai de notification du début de recharge"}
+      "range_warning_km": {
+        "name": "Alerte d’autonomie faible"
+      },
+      "range_reset_km": {
+        "name": "Réarmement de l’alerte d’autonomie faible"
+      },
+      "home_soc_warning": {
+        "name": "Alerte SOC à domicile"
+      },
+      "home_soc_reset": {
+        "name": "Réarmement SOC à domicile"
+      },
+      "home_delay_minutes": {
+        "name": "Délai du rappel de recharge à domicile"
+      },
+      "service_battery_warning": {
+        "name": "Alerte batterie 12 V"
+      },
+      "service_battery_reset": {
+        "name": "Réarmement batterie 12 V"
+      },
+      "stale_home_hours": {
+        "name": "Délai de disponibilité à domicile"
+      },
+      "stale_away_hours": {
+        "name": "Délai de disponibilité hors domicile"
+      },
+      "probe_wait_minutes": {
+        "name": "Attente du test de disponibilité"
+      },
+      "charge_start_delay_minutes": {
+        "name": "Délai de notification du début de recharge"
+      },
+      "wakeup_interval_minutes": {
+        "name": "Intervalle de réveil périodique"
+      }
     },
-    "time": {"quiet_start": {"name": "Début des heures silencieuses"}, "quiet_end": {"name": "Fin des heures silencieuses"}},
+    "time": {
+      "quiet_start": {
+        "name": "Début des heures silencieuses"
+      },
+      "quiet_end": {
+        "name": "Fin des heures silencieuses"
+      }
+    },
     "switch": {
-      "notifications": {"name": "Notifications"},
-      "trip_reports": {"name": "Rapports de trajet"},
-      "charge_reports": {"name": "Rapports de recharge"},
-      "alerts": {"name": "Alertes du véhicule"},
-      "wakeup_hourly": {"name": "Réveil horaire"},
-      "wakeup_charging": {"name": "Réveil pendant la recharge"},
-      "wakeup_probe": {"name": "Test de disponibilité avec réveil"},
-      "notify_recipient": {"name": "Notifier le destinataire : {recipient}"}
+      "notifications": {
+        "name": "Notifications"
+      },
+      "trip_reports": {
+        "name": "Rapports de trajet"
+      },
+      "charge_reports": {
+        "name": "Rapports de recharge"
+      },
+      "alerts": {
+        "name": "Alertes du véhicule"
+      },
+      "wakeup_hourly": {
+        "name": "Réveil périodique"
+      },
+      "wakeup_charging": {
+        "name": "Réveil pendant la recharge"
+      },
+      "wakeup_probe": {
+        "name": "Test de disponibilité avec réveil"
+      },
+      "notify_recipient": {
+        "name": "Notifier le destinataire : {recipient}"
+      }
     },
     "button": {
-      "manual_wakeup": {"name": "Réveiller le véhicule maintenant"},
-      "test_notification": {"name": "Tester la notification"},
-      "sync_server_history": {"name": "Synchroniser l’historique serveur"}
+      "manual_wakeup": {
+        "name": "Réveiller le véhicule maintenant"
+      },
+      "test_notification": {
+        "name": "Tester la notification"
+      },
+      "sync_server_history": {
+        "name": "Synchroniser l’historique serveur"
+      },
+      "reset_notification_defaults": {
+        "name": "Restaurer les valeurs par défaut des notifications"
+      }
     }
   }
 }
