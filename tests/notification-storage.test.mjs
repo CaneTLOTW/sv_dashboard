@@ -40,7 +40,7 @@ test("test notification can validate selected recipients before enabling master"
 });
 
 test("quiet-hour outage deferral is eligible-only and cleared on delivery or recovery", () => {
-  const master = source.indexOf("if not self.is_enabled(SWITCH_NOTIFICATIONS):");
+  const master = source.indexOf("if not bypass_master and not self.is_enabled(SWITCH_NOTIFICATIONS):");
   const recipients = source.indexOf("recipients = self._enabled_recipients()", master);
   const quiet = source.indexOf('notification_type == "availability_outage" and self._in_quiet_hours()', recipients);
   assert.ok(master >= 0 && recipients > master && quiet > recipients);
