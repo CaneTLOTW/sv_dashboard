@@ -63,7 +63,7 @@ _SENSITIVE_KEYS = {
     "vehicle_id",
 }
 _LOCATION_KEYS = {"coordinates", "latitude", "longitude"}
-_URL_KEYS = {"href", "picture", "pictures"}
+_URL_KEYS = {"href", "picture", "pictures", "url", "uri", "link"}
 _META_PATH_ENDINGS = (
     ".createdAt",
     ".updatedAt",
@@ -213,7 +213,11 @@ def _sanitize(
             for item in list(value)[:_SAMPLE_LIST_LIMIT]
         ]
     if isinstance(value, str):
-        if normalized_key == "id" and len(value) >= 20:
+        if (
+            normalized_key == "id"
+            and len(value) >= 8
+            and value.casefold() not in {"driver", "passenger", "rearleft", "rearright", "trunk"}
+        ):
             counts["opaque_id"] += 1
             return f"sha256:{_hash_id(value)}"
         return _sanitize_string(value, secrets, counts)
