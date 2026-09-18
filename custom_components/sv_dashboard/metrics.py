@@ -202,13 +202,22 @@ class VehicleMetricsManager:
         if self.data.get("pending_trips"):
             self._schedule_finalize(_RETRY_DELAY)
         if self.data.get("active_charge") and self._is_off("battery_charging"):
-            # After a restart there is no pending final SOC update to wait
-            # for when the upstream sensor is already stably off. Finalize
-            # immediately so a persisted active session cannot keep its last
-            # derived power visible indefinitely.
+            # Preserve an already persisted OFF boundary across a Core restart.
+            # Older stores may not have one; in that case use the restored
+            # charging entity's last_changed as the best local boundary.
+            active_charge = self.data.get("active_charge")
+            if isinstance(active_charge, dict) and not active_charge.get("end_candidate_time"):
+                charging_entity = self.mapping.get("battery_charging")
+                charging_state = self.hass.states.get(charging_entity) if charging_entity else None
+                boundary = getattr(charging_state, "last_changed", None) or dt_util.utcnow()
+                active_charge["end_candidate_time"] = boundary.isoformat()
+                await self._save_and_refresh()
             await self.async_finish_charge()
-        elif self._is_on("battery_charging") and not self.data.get("active_charge"):
-            await self.async_start_charge()
+        elif self._is_on("battery_charging"):
+            if self.data.get("active_charge"):
+                await self._async_clear_charge_end_candidate()
+            else:
+                await self.async_start_charge()
 
         # A fresh installation must not wait for the next journey or charge.
         # Reconcile only from Recorder data that the upstream integration has
@@ -244,14 +253,21 @@ class VehicleMetricsManager:
             elif new_state.state == "off" and old_state is not None and old_state.state == "on":
                 self.hass.async_create_task(self._async_queue_active_trip_for_finalization())
         elif entity_id == self.mapping.get("battery_charging"):
-            if new_state.state == "on" and (old_state is None or old_state.state != "on"):
-                self.hass.async_create_task(self.async_start_charge())
+            if new_state.state == "on":
+                if self._cancel_charge_finalize:
+                    self._cancel_charge_finalize()
+                    self._cancel_charge_finalize = None
+                if self.data.get("active_charge"):
+                    self.hass.async_create_task(self._async_clear_charge_end_candidate())
+                elif old_state is None or old_state.state != "on":
+                    self.hass.async_create_task(self.async_start_charge())
             elif new_state.state == "off" and self.data.get("active_charge"):
-                # The upstream binary sensor can recover from unavailable
-                # directly to off after a restart.  Do not require the old
-                # state to be on, otherwise the active session and its last
-                # derived power remain stuck in the Store indefinitely.
-                self._schedule_charge_finalize(_CHARGE_FINALIZE_DELAY)
+                # Persist the first observed OFF boundary before debounce. The
+                # upstream binary sensor may recover from unavailable directly
+                # to off, so do not require the old state to have been on.
+                self.hass.async_create_task(
+                    self._async_mark_charge_end_candidate(new_state)
+                )
         elif entity_id == self.mapping.get("battery") and self._is_on("battery_charging"):
             self.hass.async_create_task(self.async_track_charge_sample())
         elif entity_id == self.mapping.get("battery_capacity"):
@@ -556,6 +572,28 @@ class VehicleMetricsManager:
         active["samples"] = samples[-_MAX_CHARGE_SAMPLES:]
         await self._save_and_refresh()
 
+    async def _async_mark_charge_end_candidate(self, state: Any) -> None:
+        """Persist the first observed charging-OFF boundary before debounce."""
+        active = self.data.get("active_charge")
+        if not isinstance(active, dict):
+            return
+        if not active.get("end_candidate_time"):
+            boundary = (
+                getattr(state, "last_changed", None)
+                or getattr(state, "last_updated", None)
+                or dt_util.utcnow()
+            )
+            active["end_candidate_time"] = boundary.isoformat()
+            await self._save_and_refresh()
+        self._schedule_charge_finalize(_CHARGE_FINALIZE_DELAY)
+
+    async def _async_clear_charge_end_candidate(self) -> None:
+        """Cancel a transient OFF candidate when charging resumes."""
+        active = self.data.get("active_charge")
+        if not isinstance(active, dict) or not active.pop("end_candidate_time", None):
+            return
+        await self._save_and_refresh()
+
     def _schedule_charge_finalize(self, delay: timedelta) -> None:
         if not self.data.get("active_charge"):
             return
@@ -578,7 +616,12 @@ class VehicleMetricsManager:
         if not isinstance(active, dict):
             return
         start_time = dt_util.parse_datetime(str(active.get("start_time") or "")) or dt_util.utcnow()
-        end_time = dt_util.utcnow()
+        end_time = (
+            dt_util.parse_datetime(str(active.get("end_candidate_time") or ""))
+            or dt_util.utcnow()
+        )
+        if end_time <= start_time:
+            end_time = dt_util.utcnow()
         duration_seconds = max(1, int((end_time - start_time).total_seconds()))
         if duration_seconds > 48 * 3600:
             _LOGGER.warning("Discarding implausible local SV charge candidate")
