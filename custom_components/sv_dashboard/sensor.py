@@ -19,6 +19,7 @@ from .const import (
     DOMAIN,
     METRIC_CURRENT_CHARGE_POWER,
     METRIC_CURRENT_TRIP_CONSUMPTION,
+    METRIC_CANONICAL_MILEAGE,
     METRIC_CURRENT_TRIP_ENERGY,
     METRIC_DISTANCE_SINCE_CHARGE,
     METRIC_LAST_CHARGE,
@@ -232,6 +233,7 @@ async def async_setup_entry(
         SvServerTripHistorySensor(coordinator, entry),
         SvServerGpsHistorySensor(coordinator, entry),
         SvVehicleInfoSensor(coordinator, entry),
+        SvCanonicalMileageSensor(coordinator, entry),
         SvLastTripResultSensor(coordinator, entry),
     ]
     if electric:
@@ -690,6 +692,42 @@ class SvTrailingConsumptionSensor(SvMetricSensor):
             "canonical server trip history"
             if history and getattr(history, "data", {}).get("trips")
             else "local completed trips fallback"
+        )
+        return data
+
+
+class SvCanonicalMileageSensor(SvMetricSensor):
+    """Monotonic package-owned mileage for reliable Recorder statistics."""
+
+    _attr_name = "Canonical mileage"
+    _attr_translation_key = "canonical_mileage"
+    _attr_icon = "mdi:counter"
+    _attr_native_unit_of_measurement = UnitOfLength.KILOMETERS
+    _attr_device_class = SensorDeviceClass.DISTANCE
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+
+    def __init__(self, coordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator, entry, METRIC_CANONICAL_MILEAGE)
+
+    @property
+    def native_value(self) -> float | None:
+        return self.metrics.canonical_mileage()
+
+    @property
+    def available(self) -> bool:
+        return self.native_value is not None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        data = super().extra_state_attributes
+        data.update(
+            {
+                "estimated": False,
+                "canonical": True,
+                "source": self.metrics.data.get("canonical_mileage_source"),
+                "source_time": self.metrics.data.get("canonical_mileage_source_time"),
+                "source_policy": "monotonic upstream odometer plus canonical server-trip anchors",
+            }
         )
         return data
 
