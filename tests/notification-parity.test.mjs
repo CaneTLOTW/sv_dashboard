@@ -27,6 +27,12 @@ test("periodic wake-up is configurable but remains bounded", () => {
   assert.match(strategy, /strings\.periodicWakeup/);
 });
 
+test("recipient options use the shared modern notify discovery contract", () => {
+  assert.match(configFlow, /from \.notifications import available_notification_recipients/);
+  assert.match(configFlow, /notify_recipients = available_notification_recipients\(self\.hass\)/);
+  assert.doesNotMatch(configFlow, /f"notify\.\{service_name\}"[\s\S]{0,300}recipient_selector/);
+});
+
 test("home zones are portable config options, not household helper names", () => {
   assert.match(configFlow, /OPTION_HOME_ZONES/);
   assert.match(configFlow, /state\.entity_id\.startswith\("zone\."\)/);
