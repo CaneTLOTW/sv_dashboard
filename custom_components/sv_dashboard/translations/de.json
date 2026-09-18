@@ -58,7 +58,7 @@
       "server_charge_history": {"name": "Server-Ladehistorie"},
       "vehicle_info": {"name": "Fahrzeuginformationen"},
       "trailing_consumption_500km": {"name": "Ø Verbrauch (500 km)"},
-      "distance_since_charge": {"name": "Seit letzter Ladung"},
+      "distance_since_charge": {"name": "Seit letzter Ladung"},"canonical_mileage":{"name":"Kanonischer Kilometerstand"},
       "current_trip_energy": {"name": "Aktuelle Fahrtenergie"},
       "current_charge_power": {"name": "Aktuelle Ladeleistung"},
       "last_trip_result": {"name": "Letzte lokale Fahrt"},
