@@ -22,6 +22,7 @@ from .capabilities import (
     powertrain_from_mapping,
 )
 from .compatibility import async_check_upstream_compatibility
+from .notifications import available_notification_recipients
 from .const import (
     CONF_BATTERY_CAPACITY_KWH,
     CONF_POWERTRAIN_OVERRIDE,
@@ -333,12 +334,7 @@ class SvDashboardOptionsFlow(config_entries.OptionsFlow):
 
         options = dict(DEFAULT_OPTIONS)
         options.update(self.config_entry.options)
-        notify_services = self.hass.services.async_services().get("notify", {})
-        notify_recipients = sorted(
-            f"notify.{service_name}"
-            for service_name in notify_services
-            if service_name not in {"notify", "send_message"}
-        )
+        notify_recipients = available_notification_recipients(self.hass)
         recipient_selector = selector.SelectSelector(
             selector.SelectSelectorConfig(
                 options=notify_recipients,
