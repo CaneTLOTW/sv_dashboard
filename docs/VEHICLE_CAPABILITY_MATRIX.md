@@ -29,6 +29,7 @@ This matrix records **observed vehicle/API capabilities**, not assumptions based
 4. **SOH is optional.** If a nominal battery-capacity fallback is configured and a trustworthy SOH-capacity percentage exists, SV may apply it to the fallback calculation. Missing SOH must not block the feature.
 5. **Odometer-derived live trip distance is optional.** Do not advertise "distance since trip start" unless mileage is observed to update during the active trip for that vehicle/runtime.
 6. **Alarm values require semantic validation.** Presence of an upstream alarm entity alone is not enough to treat its state as a reliable user-facing alarm indication.
+7. **Raw mileage is source evidence, not the driven-distance LTS contract.** Upstream odometer values can be unavailable or briefly roll back. SV Dashboard keeps them for current-state/provenance use while package-owned Canonical mileage supplies the monotonic Home Assistant statistics counter and reconciles forward from trustworthy server-trip odometer anchors.
 
 ## Open evidence requests
 
