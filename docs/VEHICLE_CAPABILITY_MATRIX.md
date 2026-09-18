@@ -11,6 +11,7 @@ This matrix records **observed vehicle/API capabilities**, not assumptions based
 - A missing capability must make the SV Dashboard degrade safely; it must not be replaced by an invented value.
 - When a feature is based on a fallback/configured nominal value rather than an upstream measurement, say so explicitly.
 - Link the canonical Issue/test source rather than committing private exports, VINs or location data.
+- Prefer the privacy-safe [Vehicle capability audit](VEHICLE_AUDIT.md) for new tester vehicles when available; an audit remains evidence for that exact vehicle/runtime only.
 
 ## Current evidence
 
