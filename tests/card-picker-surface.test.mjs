@@ -10,6 +10,7 @@ const trip = read("static/trip-history-card.js");
 const charge = read("static/charge-history-card.js");
 const gps = read("static/gps-history-card.js");
 const fuel = read("static/fuel-history-card.js");
+const audit = read("static/vehicle-audit-card.js");
 
 const internalTypes = [
   "sv-dashboard-trip-history-card",
@@ -19,6 +20,7 @@ const internalTypes = [
   "sv-dashboard-gps-date-card",
   "sv-dashboard-gps-map-card",
   "sv-dashboard-fuel-history-card",
+  "sv-dashboard-vehicle-audit-card",
 ];
 
 const publicTypes = [
@@ -36,7 +38,7 @@ test("internal dashboard components never publish Add-card picker metadata", () 
   for (const type of publicTypes) {
     assert.ok(!frontend.includes(`\"${type}\"`), `${type} must remain public`);
   }
-  for (const source of [trip, charge, gps, fuel]) {
+  for (const source of [trip, charge, gps, fuel, audit]) {
     assert.doesNotMatch(source, /window\.customCards/, "internal card source must not publish picker metadata");
   }
 });
@@ -49,4 +51,5 @@ test("internal elements remain registered for generated dashboard use", () => {
   assert.match(gps, /customElements\.define\(DATE_CARD_TAG/);
   assert.match(gps, /customElements\.define\(MAP_CARD_TAG/);
   assert.match(fuel, /customElements\.define\(CARD_TAG/);
+  assert.match(audit, /customElements\.define\(CARD_TAG/);
 });
