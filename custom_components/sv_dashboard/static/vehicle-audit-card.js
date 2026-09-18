@@ -1,5 +1,5 @@
 import { LitElement, html, css, nothing } from "./vendor-lit.js?v=0.6.0-beta.7";
-import { textFor } from "./i18n.js?v=0.6.0-beta.15";
+import { textFor } from "./i18n.js?v=0.6.0-beta.17";
 
 const STATUS_DOMAIN = "sv_dashboard";
 const CARD_TAG = "sv-dashboard-vehicle-audit-card";
