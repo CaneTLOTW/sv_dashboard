@@ -4,6 +4,16 @@
 
 No changes yet.
 
+## 0.6.0-beta.21 notification recipient cutover candidate
+
+- Migrates recipient discovery toward modern Home Assistant `notify.*` entities while retaining legacy `notify.<service>` actions as a compatibility fallback.
+- Sends modern notification entities through the canonical `notify.send_message` action, allowing mobile-app and Telegram notify entities to coexist in one explicit recipient fan-out.
+- Keeps recipient consent explicit: configuring one or more recipients still creates package-owned recipient switches that default off until the owner enables them.
+- Allows the package Test notification to bypass only the global notification master so routing can be accepted before production notifications are enabled; selected recipient switches remain mandatory.
+- Reuses one shared recipient-discovery contract in options flow and runtime delivery instead of maintaining service-only discovery in two places.
+- Adds regression coverage for entity-first delivery, legacy fallback and pre-cutover test-notification behavior.
+- Package version `0.6.0-beta.21`; frontend resource version remains beta.20 because this candidate changes backend/config-flow behavior only.
+
 ## 0.6.0-beta.20 notification and wake-up migration candidate
 
 - Hardens vehicle reachability around the newest trustworthy Stellantis `createdAt` / `updatedAt` timestamp already present in the loaded upstream coordinator payload, so fresh telemetry can be proven even when a value such as ambient temperature remains numerically unchanged.
