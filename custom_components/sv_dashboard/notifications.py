@@ -890,6 +890,7 @@ class VehicleNotificationManager:
         # runtime cache is not yet resolvable. HA last_updated is deliberately
         # used only for mapped vehicle-data entities whose state/attributes
         # actually changed; a command accepted/forwarded state is never used.
+        candidates: list[tuple[Any, str]] = []
         for key in (
             "temperature",
             "mileage",
@@ -910,8 +911,10 @@ class VehicleNotificationManager:
             )
             stamp = self._parse_time(source_value) or self._parse_time(state.last_updated)
             if stamp is not None:
-                return stamp, "source_attribute" if source_value else "ha_last_updated"
-        return None, None
+                candidates.append(
+                    (stamp, "source_attribute" if source_value else "ha_last_updated")
+                )
+        return max(candidates, key=lambda item: item[0]) if candidates else (None, None)
 
     def _charge_target(self) -> float:
         switch = self._entity("battery_charging_limit_switch")
