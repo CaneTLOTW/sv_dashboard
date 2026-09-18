@@ -58,7 +58,7 @@
       "server_charge_history": {"name": "Server-laadhistorie"},
       "vehicle_info": {"name": "Voertuiginformatie"},
       "trailing_consumption_500km": {"name": "Gemiddeld verbruik (500 km)"},
-      "distance_since_charge": {"name": "Afstand sinds laatste laadbeurt"},
+      "distance_since_charge": {"name": "Afstand sinds laatste laadbeurt"},"canonical_mileage":{"name":"Canonieke kilometerstand"},
       "current_trip_energy": {"name": "Energie huidige rit"},
       "current_charge_power": {"name": "Huidig laadvermogen"},
       "last_trip_result": {"name": "Resultaat laatste lokale rit"},
