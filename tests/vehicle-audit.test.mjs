@@ -91,6 +91,7 @@ test("audit exports structural capability evidence without model assumptions", (
     "probe_results",
     "status_path_inventory",
     "trip_query_audit",
+    "alert_evidence",
     "unmapped_candidate_fields",
     "privacy_redaction_summary",
   ]) {
@@ -100,6 +101,8 @@ test("audit exports structural capability evidence without model assumptions", (
   assert.match(backend, /freshest_age_seconds/);
   assert.match(backend, /enum_values/);
   assert.match(backend, /Observed ordering is runtime evidence, not a documented Stellantis ordering guarantee/);
+  assert.match(backend, /documented_pull_endpoint/);
+  assert.match(backend, /empty result does not prove that no vehicle-local warning occurred/);
 });
 
 test("System card runs on demand and exports JSON plus GitHub Markdown locally", () => {
