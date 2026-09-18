@@ -178,9 +178,11 @@ test("new card strings cover 18 languages", () => {
 });
 
 test("frontend cache-busts changed modules", () => {
-  for (const module of ["trip-history-card", "charge-history-card", "gps-history-card", "vehicle-overview-card", "dual-energy-overview-card", "fuel-history-card", "vehicle-audit-card"]) {
+  for (const module of ["trip-history-card", "charge-history-card", "gps-history-card", "vehicle-overview-card", "dual-energy-overview-card", "fuel-history-card"]) {
     assert.match(frontend, new RegExp(`${module}\\.js\\?v=0\\.6\\.0-beta\\.17`));
   }
-  assert.match(frontend, /sv_dashboard\.js\?v=0\.6\.0-beta\.18/);
+  assert.match(frontend, /vehicle-audit-card\.js\?v=0\.6\.0-beta\.20/);
+  assert.match(frontend, /sv_dashboard\.js\?v=0\.6\.0-beta\.20/);
+  assert.match(strategy, /i18n\.js\?v=0\.6\.0-beta\.20/);
   assert.match(strategy, /modules\.trips && supportsFuel \? \{ type: "custom:sv-dashboard-fuel-history-card"/);
 });
