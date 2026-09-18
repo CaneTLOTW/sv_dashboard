@@ -151,4 +151,4 @@ The **Restore notification defaults** action resets only package-owned Number/Ti
 
 The migrated SV implementation contains the notification/wake-up contract above, but focused real-event runtime acceptance is still open.
 
-Recipient delivery, quiet-hours deferral, heartbeat outage/recovery and real trip/charge reports are tracked in **SV Dashboard issue #3**. Source behavior is hardened for beta.20, but active wake-up/recovery acceptance waits for a naturally connected vehicle; the project does not manufacture disruptive vehicle states solely for testing.
+Recipient delivery, quiet-hours deferral, heartbeat outage/recovery and real trip/charge reports are tracked in **SV Dashboard issue #3**. Source behavior is hardened for beta.20. Runtime QA should validate the same generic contract for any vehicle state and must not add owner- or vehicle-specific behavior.
