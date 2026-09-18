@@ -92,10 +92,19 @@ def freshest_upstream_timestamp(
     reference = now or datetime.now(timezone.utc)
     candidates: list[datetime] = []
 
-    def visit(value: Any) -> None:
+    def visit(value: Any, path: tuple[str, ...] = ()) -> None:
         if isinstance(value, dict):
             for key, child in value.items():
                 normalized = str(key).replace("_", "").casefold()
+                child_path = (*path, normalized)
+                # Command lifecycle timestamps prove only that a remote request
+                # was accepted/forwarded, never that fresh vehicle telemetry
+                # returned. Keep those subtrees out of the heartbeat contract.
+                if any(
+                    "command" in segment or segment in {"pendingaction", "actionhistory"}
+                    for segment in child_path
+                ):
+                    continue
                 if normalized in {"createdat", "updatedat"}:
                     parsed = None
                     if isinstance(child, datetime):
@@ -113,10 +122,10 @@ def freshest_upstream_timestamp(
                             parsed = parsed.astimezone(timezone.utc)
                         if parsed <= reference + max_future_skew:
                             candidates.append(parsed)
-                visit(child)
+                visit(child, child_path)
         elif isinstance(value, (list, tuple)):
             for child in value:
-                visit(child)
+                visit(child, path)
 
     visit(payload)
     return max(candidates) if candidates else None
