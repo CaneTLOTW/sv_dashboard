@@ -76,6 +76,7 @@ SETTING_META = {
 _MAX_RECENT_CHARGE_POWER_KW = 350.0
 _MAX_RECENT_CHARGE_SAMPLE_AGE = timedelta(minutes=30)
 _CHARGE_END_START_TOLERANCE = timedelta(minutes=5)
+_MAX_NOTIFIED_EVENTS = 100
 
 
 class VehicleNotificationManager:
@@ -289,6 +290,35 @@ class VehicleNotificationManager:
             await self._evaluate_charge_start()
         await self._evaluate_scheduled_wakeup()
 
+    @staticmethod
+    def _logical_event_key(kind: str, payload: dict[str, Any]) -> str:
+        """Return a stable local key for one completed logical event."""
+        for key in ("id", "server_id"):
+            value = payload.get(key)
+            if value not in (None, ""):
+                return f"{kind}:{value}"
+        parts = [
+            payload.get("start_time") or payload.get("startedAt"),
+            payload.get("end_time") or payload.get("stoppedAt"),
+            payload.get("distance_km") if kind == "trip" else payload.get("soc_end"),
+        ]
+        return f"{kind}:" + "|".join(str(value or "") for value in parts)
+
+    def _event_already_notified(self, event_key: str) -> bool:
+        values = self.data.get("markers", {}).get("notified_events", [])
+        return isinstance(values, list) and event_key in values
+
+    async def _mark_event_notified(self, event_key: str) -> None:
+        markers = self.data.setdefault("markers", {})
+        values = [
+            value
+            for value in markers.get("notified_events", [])
+            if isinstance(value, str) and value != event_key
+        ]
+        values.append(event_key)
+        markers["notified_events"] = values[-_MAX_NOTIFIED_EVENTS:]
+        await self._save()
+
     async def _async_trip_notification(self, trip: dict[str, Any]) -> None:
         if not self.is_enabled(SWITCH_TRIP_REPORTS):
             return
@@ -336,12 +366,17 @@ class VehicleNotificationManager:
             )
         if fuel_parts:
             message = f"{message} · {' · '.join(fuel_parts)}"
-        await self._async_notify(
+        event_key = self._logical_event_key("trip", trip)
+        if self._event_already_notified(event_key):
+            return
+        sent = await self._async_notify(
             title,
             message,
             "trip_completed",
             SWITCH_TRIP_REPORTS,
         )
+        if sent:
+            await self._mark_event_notified(event_key)
 
     async def _async_charge_notification(self, charge: dict[str, Any]) -> None:
         if (
@@ -361,12 +396,17 @@ class VehicleNotificationManager:
             maximum_power=self._number(charge.get("maximum_power_kw"), 2),
             charge_type=charge.get("charge_type") or text(self.hass, "unknown"),
         )
-        await self._async_notify(
+        event_key = self._logical_event_key("charge", charge)
+        if self._event_already_notified(event_key):
+            return
+        sent = await self._async_notify(
             title,
             message,
             "charge_completed",
             SWITCH_CHARGE_REPORTS,
         )
+        if sent:
+            await self._mark_event_notified(event_key)
 
     async def _evaluate_range(self) -> None:
         value = self._state_number("autonomy", "range")
@@ -582,22 +622,31 @@ class VehicleNotificationManager:
                 if soc is not None and capacity is not None and power and target > soc
                 else None
             )
-        if remaining is None or remaining <= 0:
-            return
-        if not direct_finish:
-            finish = dt_util.utcnow() + timedelta(hours=remaining)
-        end = self._format_charge_end(finish)
-        sent = await self._async_notify(
-            text(self.hass, "charge_started_title"),
-            text(
+        charge_type = active.get("charge_type") or text(self.hass, "unknown")
+        if remaining is not None and remaining > 0:
+            if not direct_finish:
+                finish = dt_util.utcnow() + timedelta(hours=remaining)
+            end = self._format_charge_end(finish)
+            message = text(
                 self.hass,
                 "charge_started_message",
                 start_soc=self._number(active.get("start_soc"), 0),
                 soc=self._number(soc, 0),
                 duration=self._duration(round(remaining * 3600)),
                 end=end,
-                charge_type=active.get("charge_type") or text(self.hass, "unknown"),
-            ),
+                charge_type=charge_type,
+            )
+        else:
+            message = text(
+                self.hass,
+                "charge_started_message_no_eta",
+                start_soc=self._number(active.get("start_soc"), 0),
+                soc=self._number(soc, 0),
+                charge_type=charge_type,
+            )
+        sent = await self._async_notify(
+            text(self.hass, "charge_started_title"),
+            message,
             "charge_started",
             SWITCH_CHARGE_REPORTS,
         )
