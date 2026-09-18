@@ -4,7 +4,7 @@
  * status entity created by the backend config entry. It never derives IDs from
  * VINs or friendly names.
  */
-import { languageFor, localeFor, textFor } from "./i18n.js?v=0.6.0-beta.15";
+import { languageFor, localeFor, textFor } from "./i18n.js?v=0.6.0-beta.17";
 
 const STRATEGY_TYPE = "sv-dashboard";
 const STATUS_DOMAIN = "sv_dashboard";
@@ -778,6 +778,7 @@ class SvDashboardStrategy extends HTMLElement {
         { type: "heading", heading: strings.system, icon: "mdi:car-cog", heading_style: "title" },
         bubble(null, strings.status, "mdi:car-cog", [], "full", statusEntity),
         { type: "custom:bubble-card", card_type: "button", button_type: "state", entity: statusEntity, name: strings.mappedEntities, icon: "mdi:transit-connection-variant", show_state: true, force_icon: true, card_layout: "large", grid_options: { columns: "full" }, styles: `\${(() => { const target=card.querySelector('.bubble-state'); if (target) target.innerText='${mappedEntityCount}'; })()}` },
+        { type: "custom:sv-dashboard-vehicle-audit-card", entry_id: attributes.entry_id, grid_options: { columns: "full" } },
         entity("privacy") ? separator(strings.privacySharing, "mdi:shield-account") : null,
         entity("privacy") ? { ...bubble("privacy", strings.privacyDataSharing, "mdi:shield-check", [subState("privacy_mode", "", "mdi:shield-account")]), show_state: false, styles: `\${(() => { const raw=hass.states[entity]?.state; card.querySelector('.bubble-state').innerText=raw==='on'?${literalText(strings.unrestricted)}:raw==='off'?${literalText(strings.restricted)}:'—'; icon.setAttribute('icon',raw==='on'?'mdi:shield-check':raw==='off'?'mdi:shield-alert-outline':'mdi:shield-question'); })()}` } : null,
         separator(strings.settings, "mdi:cog-outline"),
