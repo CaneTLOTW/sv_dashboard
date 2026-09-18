@@ -152,3 +152,12 @@ The **Restore notification defaults** action resets only package-owned Number/Ti
 The migrated SV implementation contains the notification/wake-up contract above, but focused real-event runtime acceptance is still open.
 
 Recipient delivery, quiet-hours deferral, heartbeat outage/recovery and real trip/charge reports are tracked in **SV Dashboard issue #3**. Source behavior is hardened for beta.20. Runtime QA should validate the same generic contract for any vehicle state and must not add owner- or vehicle-specific behavior.
+
+
+## Recipient delivery
+
+SV Dashboard discovers notification destinations explicitly selected by the user. Modern Home Assistant notify entities are delivered through `notify.send_message`; legacy `notify.<service>` actions remain supported only as a compatibility fallback.
+
+Selecting a recipient in the integration options does not enable it automatically. Each selected recipient retains its own explicit SV recipient switch.
+
+The package Test notification is intentionally usable while the global notification master is still off, so recipient routing can be accepted before the production cutover. It still requires at least one selected recipient whose recipient switch is enabled.
