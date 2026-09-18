@@ -19,11 +19,11 @@ const times = read("time.py");
 
 test("Home Assistant registers one SV frontend resource", () => {
   assert.match(constants, /FRONTEND_URL = "\/sv_dashboard\/frontend\.js"/);
-  assert.match(constants, /FRONTEND_VERSION = "0\.6\.0-beta\.15"/);
+  assert.match(constants, /FRONTEND_VERSION = "0\.6\.0-beta\.16"/);
   assert.match(constants, /FRONTEND_RESOURCE_URLS = \(FRONTEND_URL,\)/);
-  // beta.15 cache-busts the full package frontend surface touched by the tester hardening.
+  // beta.16 cache-busts only modules changed by the picker/range-label minifix.
   assert.match(frontend, /import\("\.\/vehicle-overview-card\.js\?v=0\.6\.0-beta\.15"\)/);
-  assert.match(frontend, /import\("\.\/gps-history-card\.js\?v=0\.6\.0-beta\.15"\)/);
+  assert.match(frontend, /import\("\.\/gps-history-card\.js\?v=0\.6\.0-beta\.16"\)/);
   assert.match(frontend, /import\("\.\/sv_dashboard\.js\?v=0\.6\.0-beta\.15"\)/);
   assert.doesNotMatch(frontend, /gps-history-fix\.js/);
   assert.doesNotMatch(frontend, /map-marker-fix\.js/);
