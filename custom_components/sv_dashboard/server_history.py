@@ -750,6 +750,7 @@ class ServerHistoryManager:
             "server_history_reason": "not_initialized",
             "server_history_source": "local_fallback",
             "server_history_error": None,
+            "server_history_retryable": False,
             "telemetry": {"available": False},
         }
 
@@ -972,6 +973,7 @@ class ServerHistoryManager:
         """Read v1 data without losing its raw fields, then rebuild v2 aliases."""
         if isinstance(stored.get("server_trips_raw"), list):
             self.data.update(stored)
+            self.data.setdefault("server_history_retryable", False)
             self.data.setdefault("recorder_observed_charges_archive", [])
             self.data.setdefault("recorder_capacity_samples_archive", [])
             self.data["recorder_observed_charges_archive"] = self._merge_observed_archive(
