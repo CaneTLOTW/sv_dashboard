@@ -72,6 +72,52 @@ def historical_transport_available(client: Any) -> bool:
     return _transport_parts(client) is not None
 
 
+def upstream_transport_constant(client: Any, name: str) -> Any:
+    """Return one loaded upstream transport constant for diagnostic adapters."""
+    return _module_value(client, name)
+
+
+async def async_authenticated_get(
+    client: Any,
+    vehicle: Any,
+    url: str,
+    *,
+    query: dict[str, Any] | None = None,
+) -> Any:
+    """Perform one read-only GET through the already-loaded upstream transport.
+
+    This helper deliberately reuses the same authentication headers, query
+    template, session lifecycle and closed-connector recovery as canonical
+    history. It does not create credentials, sessions or remote commands.
+    """
+    parts = _transport_parts(client)
+    if parts is None:
+        raise HistoricalTripsTransportUnavailable(
+            "upstream_authenticated_transport_unavailable"
+        )
+    apply_query, apply_headers, request, _trips_url, query_params, header_template = parts
+    request_url = apply_query(url, dict(query_params), vehicle)
+    if query:
+        request_url = _append_query(
+            request_url,
+            {str(key): str(value) for key, value in query.items() if value is not None},
+        )
+    headers = apply_headers(dict(header_template))
+    return await _request_page(client, request, request_url, headers)
+
+
+async def async_authenticated_get_href(client: Any, href: str) -> Any:
+    """Follow one server-provided authenticated HAL link without rewriting it."""
+    parts = _transport_parts(client)
+    if parts is None:
+        raise HistoricalTripsTransportUnavailable(
+            "upstream_authenticated_transport_unavailable"
+        )
+    _apply_query, apply_headers, request, _trips_url, _query_params, header_template = parts
+    headers = apply_headers(dict(header_template))
+    return await _request_page(client, request, href, headers)
+
+
 def _append_query(url: str, values: dict[str, str]) -> str:
     separator = "&" if "?" in url else "?"
     return f"{url}{separator}{urlencode(values)}"
