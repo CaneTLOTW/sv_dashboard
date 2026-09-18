@@ -102,6 +102,10 @@ test("audit exports structural capability evidence without model assumptions", (
   assert.match(backend, /enum_values/);
   assert.match(backend, /Observed ordering is runtime evidence, not a documented Stellantis ordering guarantee/);
   assert.match(backend, /documented_pull_endpoint/);
+  assert.match(backend, /probe_error_class/);
+  assert.match(backend, /probe_http_status/);
+  assert.match(backend, /probe_error/);
+  assert.match(backend, /error_class": error\.__class__\.__name__/);
   assert.match(backend, /empty result does not prove that no vehicle-local warning occurred/);
 });
 
