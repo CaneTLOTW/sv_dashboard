@@ -136,7 +136,7 @@ See [Installation](docs/INSTALLATION.en.md).
 | **GPS** | Recorder/server position history plus current vehicle position. |
 | **Wake-up** | Manual and optional reachability controls. |
 | **Notifications** | Recipient controls, thresholds, quiet hours and diagnostics. |
-| **System** | Integration/runtime administration and mapped upstream diagnostics. |
+| **System** | Integration/runtime administration, mapped upstream diagnostics and the opt-in privacy-safe Vehicle API audit. |
 
 Views and cards are capability-gated: unsupported electric or fuel features are not shown merely because another vehicle type provides them.
 
@@ -216,6 +216,7 @@ SV Dashboard is an independent community project and is not affiliated with or e
 
 - [Installation](docs/INSTALLATION.en.md)
 - [Vehicle validation guide](docs/VEHICLE_VALIDATION.en.md)
+- [Vehicle capability audit](docs/VEHICLE_AUDIT.md)
 - [Community guide](docs/COMMUNITY.en.md)
 - [Concept](docs/CONCEPT.md)
 - [Stellantis API reference and runtime findings](docs/STELLANTIS_API_REFERENCE.md)
