@@ -106,6 +106,7 @@ node --check custom_components/sv_dashboard/static/frontend.js
 node --check custom_components/sv_dashboard/static/i18n.js
 node --check custom_components/sv_dashboard/static/sv_dashboard.js
 node --check custom_components/sv_dashboard/static/vehicle-overview-card.js
+node --check custom_components/sv_dashboard/static/vehicle-audit-card.js
 node --check custom_components/sv_dashboard/static/gps-history-card.js
 node --check custom_components/sv_dashboard/static/gps-history-core.js
 node --check custom_components/sv_dashboard/static/trip-history-card.js
