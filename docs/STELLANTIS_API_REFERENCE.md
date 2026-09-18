@@ -145,7 +145,7 @@ Important limitations:
 
 Capability metadata should therefore complement, not replace, real-vehicle evidence in [VEHICLE_CAPABILITY_MATRIX.md](VEHICLE_CAPABILITY_MATRIX.md).
 
-The privacy-safe vehicle audit tracked in [issue #70](https://github.com/CaneTLOTW/sv_dashboard/issues/70) should inspect, where accessible:
+The privacy-safe **Phase A Vehicle API audit** tracked in [issue #70](https://github.com/CaneTLOTW/sv_dashboard/issues/70) is implemented on `develop` and probes, where accessible:
 
 - vehicle/account list and extensions;
 - current vehicle status;
@@ -167,7 +167,7 @@ The privacy-safe vehicle audit tracked in [issue #70](https://github.com/CaneTLO
 - preconditioning cause/failure fields;
 - charging schedule / power-level fields.
 
-A 403, 404 or absent field is capability evidence and should not fail the complete audit.
+A 403, 404 or absent field is capability evidence and does not fail the complete audit. The implementation and privacy/export contract are documented in [Vehicle capability audit](VEHICLE_AUDIT.md).
 
 ## Evidence rules
 
