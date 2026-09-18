@@ -508,7 +508,7 @@ async def _run_probe(name: str, awaitable, secrets: set[str], counts) -> tuple[d
             },
             None,
         )
-    status = "ok" if payload not in (None, {}, []) else "unavailable"
+    status = "pass" if payload not in (None, {}, []) else "unavailable"
     return (
         {
             "name": name,
