@@ -100,6 +100,7 @@ def main():
     from datetime import datetime, timezone
 
     heartbeat_payload = {
+        "updatedAt": "2026-09-18T17:01:00+00:00",
         "environment": {
             "air": {
                 "temp": 12.0,
@@ -110,6 +111,9 @@ def main():
             "mileage": 1956,
             "createdAt": "2026-09-18T16:55:00+00:00",
         },
+        "maintenance": {
+            "updatedAt": "2026-09-18T17:09:00+00:00",
+        },
         "commandHistory": {
             "createdAt": "2026-09-18T17:05:00+00:00",
         },
@@ -118,7 +122,21 @@ def main():
         heartbeat_payload,
         now=datetime(2026, 9, 18, 17, 10, tzinfo=timezone.utc),
     )
-    assert heartbeat == datetime(2026, 9, 18, 17, 0, tzinfo=timezone.utc)
+    # The root vehicle-status updatedAt is the same freshness contract used by
+    # Stellantis Vehicles itself; maintenance/command timestamps cannot win.
+    assert heartbeat == datetime(2026, 9, 18, 17, 1, tzinfo=timezone.utc)
+
+    # Without a root updatedAt, fallback scans telemetry timestamps but still
+    # excludes maintenance and command/action lifecycle metadata.
+    fallback_payload = {
+        "environment": {"air": {"createdAt": "2026-09-18T17:00:00+00:00"}},
+        "maintenance": {"updatedAt": "2026-09-18T17:09:00+00:00"},
+        "pendingAction": {"updatedAt": "2026-09-18T17:08:00+00:00"},
+    }
+    assert freshest_upstream_timestamp(
+        fallback_payload,
+        now=datetime(2026, 9, 18, 17, 10, tzinfo=timezone.utc),
+    ) == datetime(2026, 9, 18, 17, 0, tzinfo=timezone.utc)
 
     # A far-future source timestamp is not accepted as freshness proof.
     future_only = {"environment": {"createdAt": "2026-09-19T17:00:00+00:00"}}
