@@ -4,6 +4,19 @@
 
 No changes yet.
 
+## 0.6.0-beta.18 canonical mileage statistics candidate
+
+- Adds a package-owned **Canonical mileage** distance sensor with Home Assistant `total_increasing` semantics.
+- Advances the canonical counter from valid upstream odometer observations while ignoring numeric rollbacks and unavailable/unknown samples; implausibly large live forward jumps are deferred to server-history reconciliation.
+- Reconciles the counter against the highest trustworthy canonical server-trip odometer anchor, so missed upstream updates and proven odometer gaps can move the counter forward without inventing trip timestamps, energy or consumption.
+- Keeps the raw Stellantis mileage entity untouched for current-state diagnostics/provenance.
+- Changes the Statistics view to use Canonical mileage for mileage history and **monthly driven-distance `change`** bars; the raw upstream odometer is no longer used for driven-distance aggregation.
+- Fixes the existing label/config mismatch where “Distance driven per month” was actually rendered with `period: "week"`.
+- Adds regression coverage for rollback, unavailable values, positive odometer gaps, invalid server rows and the dashboard source contract.
+- Adds the Canonical mileage entity name across the full 18-language Home Assistant translation matrix.
+- Bumps the package/frontend resource to `0.6.0-beta.18`. Existing malformed Recorder/LTS history is intentionally not rewritten by the integration and requires the one-time supported repair workflow tracked in issue #71.
+- Remains a prerelease on `develop`; exact-SHA Home Assistant runtime/LTS acceptance is required before promotion.
+
 All notable user-facing changes to SV Dashboard are recorded here.
 
 ## 0.6.0-beta.17 vehicle capability audit candidate
