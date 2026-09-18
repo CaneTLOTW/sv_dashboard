@@ -163,9 +163,13 @@ No artificial precision is added.
 
 ## Long-term statistics
 
-Statistics views may consume Home Assistant long-term statistics for supported mileage/SOH sources. SV Dashboard does not silently rewrite malformed existing statistics.
+SV Dashboard keeps the raw upstream odometer available as source/current-state evidence, but does not use its `total_increasing` statistics contract for driven-distance aggregation.
 
-The known mileage/LTS reset investigation is tracked in **SV Dashboard issue #4**.
+The package-owned **Canonical mileage** sensor is a monotonic distance counter. It advances from valid upstream odometer observations, ignores rollback/unavailable noise and may reconcile forward from trustworthy canonical server-trip odometer anchors. Home Assistant can therefore retain normal long-term `change` statistics for week/month/year analysis without treating a transient odometer rollback as a meter reset.
+
+Calendar-accurate historical repair/backfill remains separate from normal runtime collection because a trip recovered later must not be silently assigned to the time of the sync. Existing malformed Recorder statistics are repaired only through supported Home Assistant statistics APIs; SV Dashboard never mutates Recorder tables directly.
+
+Canonical mileage remediation and runtime acceptance are tracked in **SV Dashboard issue #71**.
 
 ## Notifications and wake-up
 
