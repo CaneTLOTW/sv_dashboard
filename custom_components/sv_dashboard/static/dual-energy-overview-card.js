@@ -349,7 +349,7 @@ ${mapped.temperature ? html`
   <div class="label">${text.battery}</div>
   <button class="metric-button level" type="button" @click=${() => this._showMore(mapped.battery)}>${battery}<small>${battery === "—" ? "" : " %"}</small></button>
   <div class="fill ${batteryPercent === null ? "unavailable" : ""}" aria-hidden="true"><div class="fill-value" style=${`width:${batteryPercent ?? 0}%`}></div></div>
-  <div class="detail-label">${text.electricRange}</div>
+  <div class="detail-label">${dashboardText.range}</div>
   <button class="metric-button detail-value" type="button" @click=${() => this._showMore(mapped.autonomy)}>${electricRange}<small>${electricRange === "—" ? "" : " km"}</small></button>
   <div class="secondary">${mode.charging && chargePower !== "—" ? html`${text.chargePower}<button class="metric-button" type="button" @click=${() => this._showMore(mode.chargePower)}>${chargePower} kW</button>` : nothing}</div>
 </div>
@@ -359,7 +359,7 @@ ${mapped.temperature ? html`
   <div class="label">${text.fuel}</div>
   <button class="metric-button level" type="button" @click=${() => this._showMore(mapped.fuel)}>${fuel}<small>${fuel === "—" ? "" : " %"}</small></button>
   <div class="fill ${fuelPercent === null ? "unavailable" : ""}" aria-hidden="true"><div class="fill-value" style=${`width:${fuelPercent ?? 0}%`}></div></div>
-  <div class="detail-label">${text.fuelRange}</div>
+  <div class="detail-label">${dashboardText.range}</div>
   <button class="metric-button detail-value" type="button" @click=${() => this._showMore(mapped.fuel_autonomy)}>${fuelRange}<small>${fuelRange === "—" ? "" : " km"}</small></button>
   <div class="secondary">${fuelConsumptionEntity && fuelConsumption !== "—" ? html`${text.fuelConsumption}<button class="metric-button" type="button" @click=${() => this._showMore(fuelConsumptionEntity)}>${fuelConsumption} l/100 km</button>` : nothing}</div>
 </div>
