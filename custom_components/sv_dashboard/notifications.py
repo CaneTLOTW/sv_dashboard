@@ -15,7 +15,12 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 from homeassistant.util import slugify
 
-from .const import CONF_VEHICLE_SLUG, DOMAIN, OPTION_NOTIFICATION_RECIPIENTS
+from .const import (
+    CONF_VEHICLE_SLUG,
+    DOMAIN,
+    OPTION_HOME_ZONES,
+    OPTION_NOTIFICATION_RECIPIENTS,
+)
 from .i18n import language_for, text
 
 _LOGGER = logging.getLogger(__name__)
@@ -55,6 +60,7 @@ SETTING_DEFAULTS = {
     "stale_away_hours": 2.0,
     "probe_wait_minutes": 15.0,
     "charge_start_delay_minutes": 10.0,
+    "wakeup_interval_minutes": 60.0,
     "quiet_start": "22:00:00",
     "quiet_end": "07:00:00",
 }
@@ -71,6 +77,7 @@ SETTING_META = {
     "stale_away_hours": ("Stale away", "mdi:car-clock", .25, 48, .25),
     "probe_wait_minutes": ("Probe wait", "mdi:timer-sand", 1, 180, 1),
     "charge_start_delay_minutes": ("Charge start delay", "mdi:timer-play-outline", 0, 180, 1),
+    "wakeup_interval_minutes": ("Periodic wake-up interval", "mdi:timer-sync-outline", 30, 360, 15),
 }
 
 _MAX_RECENT_CHARGE_POWER_KW = 350.0
@@ -192,6 +199,11 @@ class VehicleNotificationManager:
     def setting(self, key: str) -> Any:
         return self.data.get("settings", {}).get(key, SETTING_DEFAULTS[key])
 
+    async def async_reset_settings(self) -> None:
+        """Restore only package-owned Number/Time settings to safe defaults."""
+        self.data["settings"] = dict(SETTING_DEFAULTS)
+        await self._save()
+
     async def async_set_setting(self, key: str, value: Any) -> None:
         if key not in SETTING_DEFAULTS:
             raise ValueError(f"Unknown notification setting: {key}")
@@ -222,11 +234,15 @@ class VehicleNotificationManager:
         last = self.data.get("last_notification") or {}
         return {
             "settings": dict(self.data.get("settings", {})),
+            "home_zones": self._home_zones(),
             "heartbeat": markers.get("last_heartbeat"),
             "heartbeat_source": markers.get("heartbeat_source"),
             "outage_since": markers.get("outage_since"),
             "outage_reported": bool(markers.get("outage_reported")),
             "probe_at": markers.get("probe_at"),
+            "probe_sent": bool(markers.get("probe_at")),
+            "last_wakeup": self.data.get("last_wakeup"),
+            "wakeup_count_today": int(self.data.get("wakeup_count_today") or 0),
             "last_notification": {
                 key: last.get(key) for key in ("type", "title", "message", "time")
             },
@@ -672,7 +688,11 @@ class VehicleNotificationManager:
             and self._is_off("engine")
             and charging_inactive
             and not self._parse_time(self.data["markers"].get("outage_since"))
-            and (last is None or now - last >= timedelta(hours=1))
+            and (
+                last is None
+                or now - last
+                >= timedelta(minutes=float(self.setting("wakeup_interval_minutes")))
+            )
         ):
             await self._async_wakeup(text(self.hass, "wakeup_hourly"))
 
@@ -808,16 +828,40 @@ class VehicleNotificationManager:
         entity_id = self._entity(key)
         return bool(entity_id and self.hass.states.is_state(entity_id, "off"))
 
+    def _home_zones(self) -> list[str]:
+        configured = self.entry.options.get(OPTION_HOME_ZONES, ["zone.home"])
+        values = [str(value) for value in configured if str(value).startswith("zone.")]
+        return values or ["zone.home"]
+
     def _is_home(self) -> bool:
         tracker = self._entity("vehicle")
         state = self.hass.states.get(tracker) if tracker else None
-        return bool(
-            state
-            and (
-                state.state == "home"
-                or "zone.home" in (state.attributes.get("in_zones") or [])
-            )
-        )
+        if state is None:
+            return False
+
+        selected = set(self._home_zones())
+        in_zones = {
+            str(value)
+            for value in (state.attributes.get("in_zones") or [])
+        }
+        if selected & in_zones:
+            return True
+
+        tracker_state = str(state.state or "").strip().casefold()
+        for zone_entity in selected:
+            if zone_entity == "zone.home" and tracker_state == "home":
+                return True
+            zone_state = self.hass.states.get(zone_entity)
+            aliases = {
+                zone_entity.removeprefix("zone.").replace("_", " ").casefold(),
+            }
+            if zone_state is not None:
+                friendly = str(zone_state.attributes.get("friendly_name") or "").strip()
+                if friendly:
+                    aliases.add(friendly.casefold())
+            if tracker_state in aliases:
+                return True
+        return False
 
     def _heartbeat(self):
         """Return the freshest proven vehicle-data heartbeat available locally.
