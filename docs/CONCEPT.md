@@ -138,6 +138,8 @@ The integration does not treat arbitrary user-created dashboards as disposable p
 
 SV Dashboard retains normalized Stellantis trip/charge history while preserving raw source values for diagnostics.
 
+Stellantis collection/pagination behavior, production probes and upstream API-reference links are maintained in [Stellantis API reference and runtime findings](STELLANTIS_API_REFERENCE.md).
+
 Implausible rows do not feed derived statistics. A derived boundary can be repaired only when strong continuity evidence exists; the original upstream value remains unchanged.
 
 ### Recorder history
