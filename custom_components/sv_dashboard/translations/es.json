@@ -47,7 +47,8 @@
           "notifications": "Controles de notificaciones y destinatarios",
           "notification_recipients": "Destinatarios Notify seleccionables",
           "history_hours": "Ventana de visualización del historial",
-          "powertrain_override": "Propulsión (respaldo)"
+          "powertrain_override": "Propulsión (respaldo)",
+          "home_zones": "Zonas de casa para notificaciones"
         }
       }
     }
@@ -74,7 +75,10 @@
       },
       "distance_since_charge": {
         "name": "Distancia desde la última carga"
-      },"canonical_mileage":{"name":"Kilometraje canónico"},
+      },
+      "canonical_mileage": {
+        "name": "Kilometraje canónico"
+      },
       "current_trip_energy": {
         "name": "Energía del viaje actual"
       },
@@ -124,6 +128,9 @@
       },
       "charge_start_delay_minutes": {
         "name": "Retraso de notificación de inicio de carga"
+      },
+      "wakeup_interval_minutes": {
+        "name": "Intervalo de activación periódica"
       }
     },
     "time": {
@@ -148,7 +155,7 @@
         "name": "Alertas del vehículo"
       },
       "wakeup_hourly": {
-        "name": "Activación cada hora"
+        "name": "Activación periódica"
       },
       "wakeup_charging": {
         "name": "Activación durante la carga"
@@ -169,6 +176,9 @@
       },
       "sync_server_history": {
         "name": "Sincronizar historial del servidor"
+      },
+      "reset_notification_defaults": {
+        "name": "Restaurar valores predeterminados de notificaciones"
       }
     }
   }
