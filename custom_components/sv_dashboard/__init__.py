@@ -190,7 +190,11 @@ async def async_setup_entry(
     entry.async_on_unload(server_history.async_cancel_background_tasks)
 
     notifications = VehicleNotificationManager(
-        hass, entry, coordinator.data["entity_mapping"], metrics
+        hass,
+        entry,
+        coordinator.data["entity_mapping"],
+        metrics,
+        server_history=server_history,
     )
     await notifications.async_initialize()
     coordinator.notifications = notifications
