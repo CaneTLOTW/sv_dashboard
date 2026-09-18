@@ -23,7 +23,7 @@ test("Home Assistant registers one SV frontend resource", () => {
   assert.match(constants, /FRONTEND_URL = "\/sv_dashboard\/frontend\.js"/);
   assert.match(constants, /FRONTEND_VERSION = "0\.6\.0-beta\.17"/);
   assert.match(constants, /FRONTEND_RESOURCE_URLS = \(FRONTEND_URL,\)/);
-  // beta.17 cache-busts the package frontend for the vehicle-audit feature.
+  // beta.18 cache-busts the Strategy for canonical mileage statistics.
   assert.match(frontend, /import\("\.\/vehicle-overview-card\.js\?v=0\.6\.0-beta\.17"\)/);
   assert.match(frontend, /import\("\.\/gps-history-card\.js\?v=0\.6\.0-beta\.17"\)/);
   assert.match(frontend, /import\("\.\/sv_dashboard\.js\?v=0\.6\.0-beta\.17"\)/);
