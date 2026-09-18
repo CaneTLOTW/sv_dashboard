@@ -35,7 +35,11 @@ from .server_history_transport import (
     historical_transport_retryable,
     server_history_retry_allowed,
 )
-from .upstream_compat import resolve_loaded_upstream
+from .upstream_compat import (
+    freshest_upstream_timestamp,
+    get_upstream_coordinator_data,
+    resolve_loaded_upstream,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -1638,6 +1642,15 @@ class ServerHistoryManager:
             legacy_clients,
             preferred_entry_ids,
         )
+
+    def current_upstream_heartbeat(self) -> datetime | None:
+        """Return the newest cached vehicle-data source timestamp, without I/O."""
+        client, _vehicle = self._resolve_upstream()
+        vin = vehicle_vin(self.hass, self.entry)
+        if client is None or not vin:
+            return None
+        payload = get_upstream_coordinator_data(client, vin)
+        return freshest_upstream_timestamp(payload) if payload else None
 
     @staticmethod
     def _public_vehicle_info(vehicle: dict[str, Any]) -> dict[str, Any]:
