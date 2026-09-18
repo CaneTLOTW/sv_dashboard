@@ -550,10 +550,15 @@ async def _run_probe(name: str, awaitable, secrets: set[str], counts) -> tuple[d
     try:
         payload = await awaitable
     except Exception as error:
+        status_code = getattr(error, "status", None)
+        if status_code is None:
+            status_code = getattr(error, "status_code", None)
         return (
             {
                 "name": name,
                 "status": _probe_status_from_error(error),
+                "error_class": error.__class__.__name__,
+                "http_status": status_code if isinstance(status_code, int) else None,
                 "error": _safe_error(error, secrets),
             },
             None,
@@ -850,6 +855,9 @@ async def async_build_vehicle_audit(hass: HomeAssistant, coordinator: Any) -> di
         "alert_evidence": {
             **_collection_summary(raw.get("hal_alerts"), "alerts"),
             "probe_status": (probes.get("hal_alerts") or {}).get("status"),
+            "probe_error_class": (probes.get("hal_alerts") or {}).get("error_class"),
+            "probe_http_status": (probes.get("hal_alerts") or {}).get("http_status"),
+            "probe_error": (probes.get("hal_alerts") or {}).get("error"),
             "documented_pull_endpoint": True,
             "note": (
                 "The Stellantis alerts endpoint is server-side pull evidence. "
