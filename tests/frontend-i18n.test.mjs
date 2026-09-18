@@ -28,9 +28,23 @@ const LANGUAGES = [
 ];
 const EXTRA_LANGUAGES = LANGUAGES.filter((language) => !["de", "en", "fr"].includes(language));
 const NAMESPACES = ["tripHistory", "chargeHistory", "vehicleOverview", "dashboard", "dualEnergyOverview", "fuelHistory", "vehicleAudit"];
-// reconstructedGap is intentionally composed in i18n.js because it is a
-// frontend-only provenance label shared by all 18 languages in one place.
-const CAPABILITY_EXCEPTIONS = { tripHistory: new Set(["reconstructedGap"]) };
+// These keys are intentionally composed in i18n.js from complete explicit
+// 18-language tables rather than duplicated across the regional source files.
+const CAPABILITY_EXCEPTIONS = {
+  tripHistory: new Set(["reconstructedGap"]),
+  dashboard: new Set([
+    "periodicWakeup",
+    "wakeupInterval",
+    "wakeupsToday",
+    "lastWakeup",
+    "lastVehicleData",
+    "lastProbe",
+    "homeZones",
+    "wakeupActivity24h",
+    "restoreNotificationDefaults",
+    "reachability",
+  ]),
+};
 const baseCatalogs = Object.assign({}, WESTERN_TEXT, NORTHERN_TEXT, EASTERN_TEXT);
 const advancedCatalogs = Object.assign({}, WESTERN_ADVANCED, NORTHERN_ADVANCED, EASTERN_ADVANCED);
 
