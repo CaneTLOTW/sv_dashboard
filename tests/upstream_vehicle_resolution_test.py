@@ -10,6 +10,7 @@ MODULE_PATH = Path(__file__).parents[1] / "custom_components" / "sv_dashboard" /
 SPEC = importlib.util.spec_from_file_location("sv_dashboard_upstream_compat", MODULE_PATH)
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
+freshest_upstream_timestamp = MODULE.freshest_upstream_timestamp
 get_upstream_coordinator_data = MODULE.get_upstream_coordinator_data
 resolve_cached_upstream = MODULE.resolve_cached_upstream
 resolve_loaded_upstream = MODULE.resolve_loaded_upstream
@@ -93,6 +94,38 @@ def main():
     assert data_client.fetches == 0
     assert get_upstream_coordinator_data(Client(Coordinator(data=None)), VIN) is None
     assert get_upstream_coordinator_data(Client(), VIN) is None
+
+    # Heartbeat uses source timestamps from the already-loaded payload, even
+    # when a value such as ambient temperature itself did not change.
+    from datetime import datetime, timezone
+
+    heartbeat_payload = {
+        "environment": {
+            "air": {
+                "temp": 12.0,
+                "createdAt": "2026-09-18T17:00:00+00:00",
+            }
+        },
+        "odometer": {
+            "mileage": 1956,
+            "createdAt": "2026-09-18T16:55:00+00:00",
+        },
+        "commandHistory": {
+            "createdAt": "2026-09-18T17:05:00+00:00",
+        },
+    }
+    heartbeat = freshest_upstream_timestamp(
+        heartbeat_payload,
+        now=datetime(2026, 9, 18, 17, 10, tzinfo=timezone.utc),
+    )
+    assert heartbeat == datetime(2026, 9, 18, 17, 0, tzinfo=timezone.utc)
+
+    # A far-future source timestamp is not accepted as freshness proof.
+    future_only = {"environment": {"createdAt": "2026-09-19T17:00:00+00:00"}}
+    assert freshest_upstream_timestamp(
+        future_only,
+        now=datetime(2026, 9, 18, 17, 10, tzinfo=timezone.utc),
+    ) is None
 
     # Older/public candidate attribute remains supported.
     check("public vehicle_info", Client(Coordinator(vehicle_info=vehicle())))
