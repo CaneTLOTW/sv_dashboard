@@ -35,6 +35,7 @@ from .const import (
     OPTION_DASHBOARD_NAME,
     OPTION_GPS,
     OPTION_HISTORY_HOURS,
+    OPTION_HOME_ZONES,
     OPTION_NOTIFICATIONS,
     OPTION_NOTIFICATION_RECIPIENTS,
     OPTION_TRIPS,
@@ -346,6 +347,21 @@ class SvDashboardOptionsFlow(config_entries.OptionsFlow):
             )
         )
 
+        zone_entities = sorted(
+            state.entity_id
+            for state in self.hass.states.async_all()
+            if state.entity_id.startswith("zone.")
+        )
+        if "zone.home" not in zone_entities:
+            zone_entities.insert(0, "zone.home")
+        home_zone_selector = selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=zone_entities,
+                multiple=True,
+                mode=selector.SelectSelectorMode.DROPDOWN,
+            )
+        )
+
         current_capacity = self.config_entry.data.get(CONF_BATTERY_CAPACITY_KWH)
         capacity_key = (
             vol.Optional(CONF_BATTERY_CAPACITY_KWH, default=float(current_capacity))
@@ -406,6 +422,14 @@ class SvDashboardOptionsFlow(config_entries.OptionsFlow):
                         if entity_id in notify_recipients
                     ],
                 ): recipient_selector,
+                vol.Optional(
+                    OPTION_HOME_ZONES,
+                    default=[
+                        entity_id
+                        for entity_id in options[OPTION_HOME_ZONES]
+                        if entity_id in zone_entities
+                    ] or ["zone.home"],
+                ): home_zone_selector,
                 vol.Required(
                     OPTION_HISTORY_HOURS,
                     default=options[OPTION_HISTORY_HOURS],
