@@ -248,6 +248,34 @@ def test_unsupported_transport_is_explicit_and_does_not_create_auth():
         raise AssertionError("unsupported transport did not fail closed")
 
 
+def test_retryable_transport_failure_classifier():
+    class HttpError(RuntimeError):
+        def __init__(self, status):
+            super().__init__(f"HTTP {status}")
+            self.status = status
+
+    assert MODULE.historical_transport_retryable(RuntimeError("Request timeout"))
+    assert MODULE.historical_transport_retryable(TimeoutError("timed out"))
+    assert MODULE.historical_transport_retryable(ConnectionResetError("connection reset"))
+    assert MODULE.historical_transport_retryable(HttpError(503))
+    assert MODULE.historical_transport_retryable(HttpError(429))
+    assert MODULE.historical_transport_retryable(
+        MODULE.HistoricalTripsTransportUnavailable("upstream_client_shutting_down")
+    )
+
+    assert not MODULE.historical_transport_retryable(HttpError(401))
+    assert not MODULE.historical_transport_retryable(HttpError(403))
+    assert not MODULE.historical_transport_retryable(ValueError("malformed payload"))
+
+
+def test_retry_state_machine_contract():
+    assert MODULE.server_history_retry_allowed("upstream_vehicle_unavailable", False)
+    assert MODULE.server_history_retry_allowed("sync_failed", True)
+    assert not MODULE.server_history_retry_allowed("sync_failed", False)
+    assert not MODULE.server_history_retry_allowed("unsupported_upstream_capability", True)
+    assert not MODULE.server_history_retry_allowed("sync_succeeded", True)
+
+
 if __name__ == "__main__":
     test_since_pagination_dedupe_and_cycle_guard()
     test_stranded_closed_session_is_cleared_before_request()
@@ -257,4 +285,6 @@ if __name__ == "__main__":
     test_generic_authenticated_get_reuses_upstream_query_and_headers()
     test_generic_authenticated_href_follows_server_url_unchanged()
     test_unsupported_transport_is_explicit_and_does_not_create_auth()
+    test_retryable_transport_failure_classifier()
+    test_retry_state_machine_contract()
     print("SERVER_HISTORY_TRANSPORT_TEST=PASS")
