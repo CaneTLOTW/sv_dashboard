@@ -12,6 +12,7 @@ No changes yet.
 - Allows the package Test notification to bypass only the global notification master so routing can be accepted before production notifications are enabled; selected recipient switches remain mandatory.
 - Reuses one shared recipient-discovery contract in options flow and runtime delivery instead of maintaining service-only discovery in two places.
 - Adds regression coverage for entity-first delivery, legacy fallback and pre-cutover test-notification behavior.
+- Retains privacy-sanitized per-probe error class, HTTP status when exposed by the upstream exception, and short error text in Vehicle API Audit alert evidence so failed `/alerts` probes remain diagnosable.
 - Package version `0.6.0-beta.21`; frontend resource version remains beta.20 because this candidate changes backend/config-flow behavior only.
 
 ## 0.6.0-beta.20 notification and wake-up migration candidate
