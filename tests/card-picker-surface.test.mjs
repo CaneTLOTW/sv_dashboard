@@ -26,7 +26,7 @@ const publicTypes = [
   "sv-dashboard-dual-energy-overview-card",
 ];
 
-test("internal dashboard components are removed from Home Assistant's Add-card picker", () => {
+test("internal dashboard components never publish Add-card picker metadata", () => {
   assert.match(frontend, /const INTERNAL_CARD_TYPES = new Set\(\[/);
   assert.match(frontend, /window\.customCards = \(window\.customCards \|\| \[\]\)\.filter/);
   assert.match(frontend, /!INTERNAL_CARD_TYPES\.has\(card\?\.type\)/);
