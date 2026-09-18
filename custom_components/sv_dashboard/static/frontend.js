@@ -20,6 +20,7 @@ const INTERNAL_CARD_TYPES = new Set([
   "sv-dashboard-gps-date-card",
   "sv-dashboard-gps-map-card",
   "sv-dashboard-fuel-history-card",
+  "sv-dashboard-vehicle-audit-card",
 ]);
 
 const waitForElement = async ([tag, name]) => {
@@ -85,12 +86,13 @@ installTransparentMapMarkerCompatibility();
  * no longer produce a false missing-dependency page during the first reload.
  */
 const packageModules = Promise.all([
-  import("./trip-history-card.js?v=0.6.0-beta.16"),
-  import("./charge-history-card.js?v=0.6.0-beta.16"),
-  import("./gps-history-card.js?v=0.6.0-beta.16"),
-  import("./vehicle-overview-card.js?v=0.6.0-beta.15"),
-  import("./dual-energy-overview-card.js?v=0.6.0-beta.16"),
-  import("./fuel-history-card.js?v=0.6.0-beta.16"),
+  import("./trip-history-card.js?v=0.6.0-beta.17"),
+  import("./charge-history-card.js?v=0.6.0-beta.17"),
+  import("./gps-history-card.js?v=0.6.0-beta.17"),
+  import("./vehicle-overview-card.js?v=0.6.0-beta.17"),
+  import("./dual-energy-overview-card.js?v=0.6.0-beta.17"),
+  import("./fuel-history-card.js?v=0.6.0-beta.17"),
+  import("./vehicle-audit-card.js?v=0.6.0-beta.17"),
 ]);
 const dependencyReadiness = Promise.all(REQUIRED_ELEMENTS.map(waitForElement));
 
@@ -99,4 +101,4 @@ window.customCards = (window.customCards || []).filter(
   (card) => !INTERNAL_CARD_TYPES.has(card?.type),
 );
 window.__svDashboardDependencyReadiness = await dependencyReadiness;
-await import("./sv_dashboard.js?v=0.6.0-beta.15");
+await import("./sv_dashboard.js?v=0.6.0-beta.17");
