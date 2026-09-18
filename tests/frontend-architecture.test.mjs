@@ -23,14 +23,14 @@ test("Home Assistant registers one SV frontend resource", () => {
   assert.match(constants, /FRONTEND_URL = "\/sv_dashboard\/frontend\.js"/);
   assert.match(constants, /FRONTEND_VERSION = "0\.6\.0-beta\.20"/);
   assert.match(constants, /FRONTEND_RESOURCE_URLS = \(FRONTEND_URL,\)/);
-  // beta.18 cache-busts the Strategy for canonical mileage statistics.
+  // beta.20 cache-busts the changed Strategy/i18n/audit modules.
   assert.match(frontend, /import\("\.\/vehicle-overview-card\.js\?v=0\.6\.0-beta\.17"\)/);
   assert.match(frontend, /import\("\.\/gps-history-card\.js\?v=0\.6\.0-beta\.17"\)/);
   assert.match(frontend, /import\("\.\/sv_dashboard\.js\?v=0\.6\.0-beta\.20"\)/);
   assert.match(strategy, /from "\.\/i18n\.js\?v=0\.6\.0-beta\.20"/);
   assert.doesNotMatch(frontend, /gps-history-fix\.js/);
   assert.doesNotMatch(frontend, /map-marker-fix\.js/);
-  assert.match(frontend, /import\("\.\/vehicle-audit-card\.js\?v=0\.6\.0-beta\.17"\)/);
+  assert.match(frontend, /import\("\.\/vehicle-audit-card\.js\?v=0\.6\.0-beta\.20"\)/);
 });
 
 test("dependency preflight waits instead of failing on first customElements lookup", () => {
