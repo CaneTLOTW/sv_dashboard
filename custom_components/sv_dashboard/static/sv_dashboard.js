@@ -639,41 +639,92 @@ class SvDashboardStrategy extends HTMLElement {
 
     if (modules.wakeup && (control("manual_wakeup") || entity("wakeup"))) {
       const wakeupStatusEntity = entity("command_status") || control("manual_wakeup");
+      const wakeupIntervalEntity = control("notification_setting_wakeup_interval_minutes");
+      const staleHomeEntity = control("notification_setting_stale_home_hours");
+      const staleAwayEntity = control("notification_setting_stale_away_hours");
+      const probeWaitEntity = control("notification_setting_probe_wait_minutes");
+      const wakeupActivity = `### ${strings.wakeupActivity24h}
+
+{% set d = state_attr('${statusEntity}', 'notification_diagnostics') or {} %}
+**${strings.wakeupsToday}:** {{ d.get('wakeup_count_today', 0) }}  
+**${strings.lastWakeup}:** {{ relative_time(as_datetime(d.get('last_wakeup'))) if d.get('last_wakeup') else '—' }}  
+**${strings.homeZones}:** {{ (d.get('home_zones') or []) | join(', ') }}
+
+{% set activity = d.get('wakeup_activity') or [] %}
+{% if activity %}
+{% for item in (activity[-8:] | reverse) %}
+- {{ relative_time(as_datetime(item.get('time'))) if item.get('time') else '—' }} · {{ item.get('message') or '—' }}
+{% endfor %}
+{% else %}
+—
+{% endif %}`;
+      const reachabilityDiagnostics = `### ${strings.reachability}
+
+{% set d = state_attr('${statusEntity}', 'notification_diagnostics') or {} %}
+{% set source = d.get('heartbeat_source') %}
+**${strings.lastVehicleData}:** {{ relative_time(as_datetime(d.get('heartbeat'))) if d.get('heartbeat') else '—' }}  
+**${strings.heartbeatSource}:** {{ '${strings.heartbeatSourceUpstream}' if source in ['upstream_payload_timestamp', 'source_attribute'] else '${strings.heartbeatSourceHa}' if source == 'ha_last_updated' else source or '—' }}  
+**${strings.outageStatus}:** {{ '${strings.outageActive}' if d.get('outage_since') else '—' }}  
+**${strings.outageSince}:** {{ relative_time(as_datetime(d.get('outage_since'))) if d.get('outage_since') else '—' }}  
+**${strings.lastProbe}:** {{ relative_time(as_datetime(d.get('probe_at'))) if d.get('probe_at') else '—' }}`;
+      const wakeupSettings = [
+        wakeupIntervalEntity ? { entity: wakeupIntervalEntity, name: strings.wakeupInterval, icon: "mdi:timer-sync-outline" } : null,
+        staleHomeEntity ? { entity: staleHomeEntity, name: strings.staleAtHome, icon: "mdi:home-clock-outline" } : null,
+        staleAwayEntity ? { entity: staleAwayEntity, name: strings.staleAway, icon: "mdi:car-clock" } : null,
+        probeWaitEntity ? { entity: probeWaitEntity, name: strings.probeWait, icon: "mdi:timer-sand" } : null,
+      ].filter(Boolean);
       views.push({
         title: strings.wakeup,
         path: "wakeup",
         icon: "mdi:power-sleep",
         type: "sections",
-        max_columns: 2,
-        sections: [{
-          type: "grid",
-          cards: [
-            { type: "heading", heading: strings.wakeup, icon: "mdi:power-sleep", heading_style: "title" },
-            control("manual_wakeup") ? {
-              type: "custom:bubble-card",
-              card_type: "button",
-              button_type: "state",
-              entity: wakeupStatusEntity,
-              name: strings.manualWakeup,
-              icon: "mdi:car-key",
-              show_state: Boolean(entity("command_status")),
-              force_icon: true,
-              card_layout: "large",
-              button_action: {
-                tap_action: {
-                  action: "perform-action",
-                  perform_action: "button.press",
-                  target: { entity_id: control("manual_wakeup") },
+        max_columns: 3,
+        sections: [
+          {
+            type: "grid",
+            cards: [
+              { type: "heading", heading: strings.wakeup, icon: "mdi:power-sleep", heading_style: "title" },
+              control("manual_wakeup") ? {
+                type: "custom:bubble-card",
+                card_type: "button",
+                button_type: "state",
+                entity: wakeupStatusEntity,
+                name: strings.manualWakeup,
+                icon: "mdi:car-key",
+                show_state: Boolean(entity("command_status")),
+                force_icon: true,
+                card_layout: "large",
+                button_action: {
+                  tap_action: {
+                    action: "perform-action",
+                    perform_action: "button.press",
+                    target: { entity_id: control("manual_wakeup") },
+                  },
                 },
-              },
-              grid_options: { columns: "full" },
-            } : { type: "button", entity: entity("wakeup"), name: strings.manualWakeup, icon: "mdi:car-key", show_state: false, grid_options: { columns: "full" } },
-            controlSwitch("wakeup_hourly", strings.hourlyWakeup, "mdi:car-clock", "full"),
-            controlSwitch("wakeup_probe", strings.availabilityProbe, "mdi:access-point-check", "full"),
-            supportsCharging ? controlSwitch("wakeup_charging", strings.chargeWakeup, "mdi:battery-sync-outline", "full") : null,
-            bubble("remote_commands", strings.remote, "mdi:car-wireless"),
-          ].filter(Boolean),
-        }],
+                grid_options: { columns: "full" },
+              } : { type: "button", entity: entity("wakeup"), name: strings.manualWakeup, icon: "mdi:car-key", show_state: false, grid_options: { columns: "full" } },
+              controlSwitch("wakeup_hourly", strings.periodicWakeup, "mdi:car-clock", "full"),
+              controlSwitch("wakeup_probe", strings.availabilityProbe, "mdi:access-point-check", "full"),
+              supportsCharging ? controlSwitch("wakeup_charging", strings.chargeWakeup, "mdi:battery-sync-outline", "full") : null,
+              wakeupSettings.length ? { type: "entities", entities: wakeupSettings, show_header_toggle: false, grid_options: { columns: "full" } } : null,
+              bubble("remote_commands", strings.remote, "mdi:car-wireless"),
+            ].filter(Boolean),
+          },
+          {
+            type: "grid",
+            cards: [
+              { type: "heading", heading: strings.wakeupActivity24h, icon: "mdi:history", heading_style: "title" },
+              { type: "markdown", content: wakeupActivity, entity_id: [statusEntity], grid_options: { columns: "full" } },
+            ],
+          },
+          {
+            type: "grid",
+            cards: [
+              { type: "heading", heading: strings.reachability, icon: "mdi:access-point-network", heading_style: "title" },
+              { type: "markdown", content: reachabilityDiagnostics, entity_id: [statusEntity], grid_options: { columns: "full" } },
+            ],
+          },
+        ],
       });
     }
 
@@ -725,7 +776,7 @@ class SvDashboardStrategy extends HTMLElement {
 **${strings.lastNotificationTime}:** {{ last.get('time') or '—' }}<br>
 **${strings.lastNotificationMessage}:** {{ last.get('message') or '—' }}
 
-**${strings.heartbeatSource}:** {{ '${strings.heartbeatSourceUpstream}' if heartbeat_source == 'source_attribute' else '${strings.heartbeatSourceHa}' if heartbeat_source == 'ha_last_updated' else heartbeat_source or '—' }}<br>
+**${strings.heartbeatSource}:** {{ '${strings.heartbeatSourceUpstream}' if heartbeat_source in ['upstream_payload_timestamp', 'source_attribute'] else '${strings.heartbeatSourceHa}' if heartbeat_source == 'ha_last_updated' else heartbeat_source or '—' }}<br>
 **${strings.heartbeatTime}:** {{ d.get('heartbeat') or '—' }}<br>
 **${strings.outageStatus}:** {{ '${strings.outageActive}' if d.get('outage_since') else '—' }}<br>
 **${strings.outageSince}:** {{ d.get('outage_since') or '—' }}<br>
@@ -754,6 +805,7 @@ class SvDashboardStrategy extends HTMLElement {
             warningThresholds || markdown(strings.notificationSettingsUnavailable),
             timingAvailability,
             quietHours,
+            controlButton("reset_notification_defaults", strings.restoreNotificationDefaults, "mdi:restore"),
             { type: "markdown", content: notificationDiagnostics, entity_id: [statusEntity], grid_options: { columns: "full" } },
           ].flat()),
         }],
