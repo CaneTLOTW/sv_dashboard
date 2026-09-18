@@ -200,6 +200,40 @@ def test_shutting_down_client_is_not_resurrected():
     assert client.created_sessions == 0
 
 
+def test_generic_authenticated_get_reuses_upstream_query_and_headers():
+    install_fake_upstream_constants()
+    client = FakeClient([{"ok": True}])
+
+    result = asyncio.run(
+        MODULE.async_authenticated_get(
+            client,
+            {"vehicle_id": "vehicle-1"},
+            "https://api.example/vehicles/{#vehicle_id#}/status",
+            query={"pageSize": 1, "extension": "onboardCapabilities"},
+        )
+    )
+
+    assert result == {"ok": True}
+    query = parse_qs(urlsplit(client.urls[0]).query)
+    assert query["client_id"] == ["resolved"]
+    assert query["vehicle_id"] == ["vehicle-1"]
+    assert query["pageSize"] == ["1"]
+    assert query["extension"] == ["onboardCapabilities"]
+    assert client.headers[0]["Authorization"] == "Bearer [filtered]"
+
+
+def test_generic_authenticated_href_follows_server_url_unchanged():
+    install_fake_upstream_constants()
+    client = FakeClient([{"ok": True}])
+    href = "https://api.example/trips?client_id=resolved&pageToken=opaque"
+
+    result = asyncio.run(MODULE.async_authenticated_get_href(client, href))
+
+    assert result == {"ok": True}
+    assert client.urls == [href]
+    assert client.headers[0]["Authorization"] == "Bearer [filtered]"
+
+
 def test_unsupported_transport_is_explicit_and_does_not_create_auth():
     class UnsupportedClient:
         __module__ = "missing_upstream.client"
@@ -219,5 +253,7 @@ if __name__ == "__main__":
     test_closed_connector_uses_upstream_cleanup_before_recreation()
     test_closed_connector_race_retries_exactly_once()
     test_shutting_down_client_is_not_resurrected()
+    test_generic_authenticated_get_reuses_upstream_query_and_headers()
+    test_generic_authenticated_href_follows_server_url_unchanged()
     test_unsupported_transport_is_explicit_and_does_not_create_auth()
     print("SERVER_HISTORY_TRANSPORT_TEST=PASS")
