@@ -534,9 +534,3 @@ class CodexStellantisTripHistoryCardV4 extends LitElement {
 }
 
 customElements.define("sv-dashboard-trip-history-card", CodexStellantisTripHistoryCardV4);
-window.customCards = window.customCards ?? [];
-window.customCards.push({
-    type: "sv-dashboard-trip-history-card",
-    name: "SV Dashboard Trip History",
-    preview: true,
-});
