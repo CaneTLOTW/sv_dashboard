@@ -92,6 +92,33 @@ def freshest_upstream_timestamp(
     reference = now or datetime.now(timezone.utc)
     candidates: list[datetime] = []
 
+    def parse_source_timestamp(value: Any) -> datetime | None:
+        parsed = None
+        if isinstance(value, datetime):
+            parsed = value
+        elif value:
+            text = str(value).strip().replace("Z", "+00:00")
+            try:
+                parsed = datetime.fromisoformat(text)
+            except ValueError:
+                parsed = None
+        if parsed is None:
+            return None
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        else:
+            parsed = parsed.astimezone(timezone.utc)
+        return parsed if parsed <= reference + max_future_skew else None
+
+    # Stellantis Vehicles itself uses the root vehicle-status updatedAt value
+    # to reject stale status payloads. Prefer that same contract so a
+    # maintenance timestamp cannot accidentally make an otherwise stale
+    # vehicle look reachable.
+    if isinstance(payload, dict):
+        root = parse_source_timestamp(payload.get("updatedAt"))
+        if root is not None:
+            return root
+
     def visit(value: Any, path: tuple[str, ...] = ()) -> None:
         if isinstance(value, dict):
             for key, child in value.items():
@@ -99,29 +126,18 @@ def freshest_upstream_timestamp(
                 child_path = (*path, normalized)
                 # Command lifecycle timestamps prove only that a remote request
                 # was accepted/forwarded, never that fresh vehicle telemetry
-                # returned. Keep those subtrees out of the heartbeat contract.
+                # returned. Maintenance freshness is also not vehicle
+                # reachability proof. Keep both subtrees out of the fallback.
                 if any(
-                    "command" in segment or segment in {"pendingaction", "actionhistory"}
+                    "command" in segment
+                    or segment in {"pendingaction", "actionhistory", "maintenance"}
                     for segment in child_path
                 ):
                     continue
                 if normalized in {"createdat", "updatedat"}:
-                    parsed = None
-                    if isinstance(child, datetime):
-                        parsed = child
-                    elif child:
-                        text = str(child).strip().replace("Z", "+00:00")
-                        try:
-                            parsed = datetime.fromisoformat(text)
-                        except ValueError:
-                            parsed = None
+                    parsed = parse_source_timestamp(child)
                     if parsed is not None:
-                        if parsed.tzinfo is None:
-                            parsed = parsed.replace(tzinfo=timezone.utc)
-                        else:
-                            parsed = parsed.astimezone(timezone.utc)
-                        if parsed <= reference + max_future_skew:
-                            candidates.append(parsed)
+                        candidates.append(parsed)
                 visit(child, child_path)
         elif isinstance(value, (list, tuple)):
             for child in value:
