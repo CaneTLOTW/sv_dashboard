@@ -60,7 +60,7 @@
       "server_charge_history": {"name": "Server charge history"},
       "vehicle_info": {"name": "Vehicle information"},
       "trailing_consumption_500km": {"name": "Average consumption (500 km)"},
-      "distance_since_charge": {"name": "Distance since last charge"},
+      "distance_since_charge": {"name": "Distance since last charge"},"canonical_mileage":{"name":"Canonical mileage"},
       "current_trip_energy": {"name": "Current trip energy"},
       "current_charge_power": {"name": "Current charge power"},
       "last_trip_result": {"name": "Last local trip result"},
