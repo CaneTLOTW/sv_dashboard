@@ -31,6 +31,15 @@ test("vehicle audit reacquires the live upstream client after upstream reloads",
   assert.match(backend, /not getattr\(client, "_shutting_down", False\)/);
 });
 
+test("audit treats raw energy battery aliases as already mapped without rewriting inventory paths", () => {
+  assert.match(backend, /def _canonical_mapped_path\(path: str\) -> str:/);
+  assert.match(backend, /raw_prefix = "energy\[\]\.battery"/);
+  assert.match(backend, /mapped_prefix = "energies\[\]\.extension\.electric\.battery"/);
+  assert.match(backend, /canonical_path = _canonical_mapped_path\(path\)/);
+  assert.match(backend, /canonical_candidate = _canonical_mapped_path\(candidate\)/);
+  assert.match(backend, /"path": path/);
+});
+
 test("audit probes the bounded Phase A API surface", () => {
   for (const token of [
     '"vehicles"',
