@@ -4,6 +4,13 @@
 
 No changes yet.
 
+## 0.6.0-beta.23 vehicle-audit battery alias reconciliation
+
+- Treats the raw Stellantis status aliases under `energy[].battery.*` as equivalent to the already mapped upstream paths under `energies[].extension.electric.battery.*` when classifying Vehicle API Audit fields.
+- Keeps the original raw inventory paths intact for diagnostics while preventing SOH capacity, SOH resistance and battery load capacity from being falsely reported as new unmapped capabilities.
+- Adds no new battery-health sensor: Stellantis Vehicles already exposes `battery_health_capacity` and `battery_health_resistance` as percentage entities and `battery_capacity` as kWh.
+- Adds focused regression coverage for the alias-normalization contract and bumps the package/top-level resource generation to beta.23; unchanged frontend modules retain their beta.22 content keys.
+
 ## 0.6.0-beta.22 vehicle-audit runtime recovery candidate
 
 - Reacquires the currently loaded Stellantis Vehicles client before every read-only Vehicle API Audit instead of preferring a cached server-history client that may belong to a prior upstream config-entry generation.
