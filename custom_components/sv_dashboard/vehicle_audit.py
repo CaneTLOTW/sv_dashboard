@@ -361,9 +361,24 @@ def _known_upstream_paths(client: Any) -> set[str]:
     return paths
 
 
+def _canonical_mapped_path(path: str) -> str:
+    """Canonicalize known raw API aliases for mapping comparison only."""
+    raw_prefix = "energy[].battery"
+    mapped_prefix = "energies[].extension.electric.battery"
+    if path == raw_prefix or path.startswith(f"{raw_prefix}."):
+        return f"{mapped_prefix}{path[len(raw_prefix):]}"
+    return path
+
+
 def _path_is_mapped(path: str, known: set[str]) -> bool:
+    canonical_path = _canonical_mapped_path(path)
     for candidate in known:
-        if path == candidate or path.startswith(f"{candidate}.") or candidate.startswith(f"{path}."):
+        canonical_candidate = _canonical_mapped_path(candidate)
+        if (
+            canonical_path == canonical_candidate
+            or canonical_path.startswith(f"{canonical_candidate}.")
+            or canonical_candidate.startswith(f"{canonical_path}.")
+        ):
             return True
     return False
 
