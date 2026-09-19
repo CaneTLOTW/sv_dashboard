@@ -156,8 +156,16 @@ class VehicleNotificationManager:
             settings.setdefault(key, default)
         for key in BASE_SWITCHES:
             self.data["switches"].setdefault(key, False)
-        for recipient in self.recipients:
+        for recipient in self.configured_recipients:
             self.data["switches"].setdefault(self.recipient_switch_key(recipient), False)
+
+        recipient_watch = self.configured_recipients
+        if recipient_watch:
+            self._unsub.append(
+                async_track_state_change_event(
+                    self.hass, recipient_watch, self._handle_recipient_state
+                )
+            )
 
         watched = [
             self._entity("engine"),
@@ -187,23 +195,46 @@ class VehicleNotificationManager:
         self._unsub.clear()
 
     @property
-    def recipients(self) -> list[str]:
-        """Return only recipients explicitly selected by the user.
+    def configured_recipients(self) -> list[str]:
+        """Return explicitly selected recipients independent of provider uptime.
 
-        Older entries may not yet have the selection option. In that case keep
-        only recipients whose legacy package switch had already been explicitly
-        enabled. Merely discovering a notify service never opts it in.
+        A notify provider may briefly remove its entities while its own config
+        entry reloads. Keep the SV recipient controls tied to the user's stored
+        selection so that transient provider lifecycle events cannot orphan the
+        package-owned switches.
         """
-        discovered = available_notification_recipients(self.hass)
         configured = self.entry.options.get(OPTION_NOTIFICATION_RECIPIENTS)
-        if configured is None:
-            switches = self.data.get("switches", {})
+        if configured is not None:
             return [
-                recipient
-                for recipient in discovered
-                if switches.get(self.recipient_switch_key(recipient)) is True
+                str(recipient)
+                for recipient in configured
+                if str(recipient).startswith("notify.")
             ]
-        return [recipient for recipient in configured if recipient in discovered]
+
+        # Compatibility for entries created before recipient selection became
+        # an explicit option: only recipients that were already opted in may be
+        # recovered, and only while they are discoverable.
+        discovered = available_notification_recipients(self.hass)
+        switches = self.data.get("switches", {})
+        return [
+            recipient
+            for recipient in discovered
+            if switches.get(self.recipient_switch_key(recipient)) is True
+        ]
+
+    @property
+    def recipients(self) -> list[str]:
+        """Return configured recipients whose provider is currently present."""
+        discovered = set(available_notification_recipients(self.hass))
+        return [
+            recipient
+            for recipient in self.configured_recipients
+            if recipient in discovered
+        ]
+
+    def recipient_available(self, recipient: str) -> bool:
+        """Return whether a configured notify target is currently published."""
+        return recipient in set(available_notification_recipients(self.hass))
 
     @staticmethod
     def recipient_switch_key(entity_id: str) -> str:
@@ -275,7 +306,8 @@ class VehicleNotificationManager:
 
     async def async_set_enabled(self, key: str, enabled: bool) -> None:
         if key not in BASE_SWITCHES and key not in {
-            self.recipient_switch_key(recipient) for recipient in self.recipients
+            self.recipient_switch_key(recipient)
+            for recipient in self.configured_recipients
         }:
             raise ValueError(f"Unknown SV Dashboard notification switch: {key}")
         self.data["switches"][key] = enabled
@@ -292,6 +324,11 @@ class VehicleNotificationManager:
             required_category=None,
             bypass_master=True,
         )
+
+    @callback
+    def _handle_recipient_state(self, _event: Event) -> None:
+        """Refresh package switches when a notify provider disappears/returns."""
+        self.hass.async_create_task(self.async_refresh_entities())
 
     @callback
     def _handle_state(self, _event: Event) -> None:
