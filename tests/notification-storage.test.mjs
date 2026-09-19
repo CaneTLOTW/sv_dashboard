@@ -19,9 +19,9 @@ test("notify discovery supports modern entities without auto-opting recipients i
   assert.match(source, /state\.entity_id\.startswith\("notify\."\)/);
   assert.match(source, /hass\.services\.async_services\(\)\.get\("notify", \{\}\)/);
   assert.match(source, /configured = self\.entry\.options\.get\(OPTION_NOTIFICATION_RECIPIENTS\)/);
-  assert.match(source, /if configured is None:/);
+  assert.match(source, /if configured is not None:/);
   assert.match(source, /switches\.get\(self\.recipient_switch_key\(recipient\)\) is True/);
-  assert.doesNotMatch(source, /if configured is None:\s*return discovered/);
+  assert.doesNotMatch(source, /if configured is not None:\s*return discovered/);
 });
 
 test("configured recipient controls survive transient notify provider reloads", () => {
@@ -30,7 +30,7 @@ test("configured recipient controls survive transient notify provider reloads", 
   assert.match(source, /def recipient_available\(self, recipient: str\) -> bool:/);
   assert.match(source, /async_track_state_change_event\([\s\S]*recipient_watch[\s\S]*_handle_recipient_state/);
   assert.match(source, /for recipient in self\.configured_recipients/);
-  assert.match(source, /for recipient in self\.configured_recipients\s*\}/);
+  assert.match(source, /for recipient in self\.configured_recipients/);
 });
 
 test("delivery prefers notify.send_message entities and keeps legacy service fallback", () => {
