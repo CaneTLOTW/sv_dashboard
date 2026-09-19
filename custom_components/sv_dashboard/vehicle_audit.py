@@ -575,18 +575,33 @@ async def _run_probe(name: str, awaitable, secrets: set[str], counts) -> tuple[d
 
 
 def _resolve_runtime(coordinator: Any) -> tuple[Any, dict[str, Any] | None]:
+    """Resolve the currently loaded upstream runtime, not a stale cached client."""
     manager = getattr(coordinator, "server_history", None)
     if manager is None:
         return None, None
-    client = getattr(manager, "_client", None)
-    vehicle = getattr(manager, "_vehicle", None)
-    if client is not None and isinstance(vehicle, dict):
-        return client, vehicle
+
+    # The upstream integration can be reloaded independently of SV Dashboard.
+    # Prefer the manager's live resolver so an audit never reuses the previous
+    # client after Home Assistant has marked it as shutting down.
     resolver = getattr(manager, "_resolve_upstream", None)
     if callable(resolver):
         resolved_client, resolved_vehicle = resolver()
-        if resolved_client is not None and isinstance(resolved_vehicle, dict):
+        if (
+            resolved_client is not None
+            and not getattr(resolved_client, "_shutting_down", False)
+            and isinstance(resolved_vehicle, dict)
+        ):
             return resolved_client, resolved_vehicle
+
+    # Fall back only for runtimes that do not expose the live resolver yet.
+    client = getattr(manager, "_client", None)
+    vehicle = getattr(manager, "_vehicle", None)
+    if (
+        client is not None
+        and not getattr(client, "_shutting_down", False)
+        and isinstance(vehicle, dict)
+    ):
+        return client, vehicle
     return None, None
 
 
