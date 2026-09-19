@@ -4,6 +4,15 @@
 
 No changes yet.
 
+## 0.6.0-beta.24 vehicle-audit remaining-field reconciliation
+
+- Extends audit-only alias comparison for verified raw Stellantis mirrors of range, SoC and charging fields while preserving the original raw inventory paths.
+- Treats the observed `preconditionning.airConditioning.*` spelling as the raw alias of the existing upstream `preconditioning.airConditioning.*` mapping for audit classification only.
+- Recognizes `charging.nextDelayedTime` as already represented by the upstream time entity even though that mapping lives outside the sensor/binary-sensor constants.
+- Suppresses known type/service/top-level timestamp metadata from the actionable unmapped-candidate list without removing it from the diagnostic inventory.
+- Leaves empty charging schedule data and `stolen.*` evidence unresolved for future natural samples; no new entities or vehicle-specific behavior are introduced.
+- Adds focused regression coverage and bumps package/top-level resource generation to beta.24; unchanged frontend modules retain their beta.22 content keys.
+
 ## 0.6.0-beta.23 vehicle-audit battery alias reconciliation
 
 - Treats the raw Stellantis status aliases under `energy[].battery.*` as equivalent to the already mapped upstream paths under `energies[].extension.electric.battery.*` when classifying Vehicle API Audit fields.
