@@ -92,7 +92,7 @@ const packageModules = Promise.all([
   import("./vehicle-overview-card.js?v=0.6.0-beta.17"),
   import("./dual-energy-overview-card.js?v=0.6.0-beta.17"),
   import("./fuel-history-card.js?v=0.6.0-beta.17"),
-  import("./vehicle-audit-card.js?v=0.6.0-beta.20"),
+  import("./vehicle-audit-card.js?v=0.6.0-beta.22"),
 ]);
 const dependencyReadiness = Promise.all(REQUIRED_ELEMENTS.map(waitForElement));
 
@@ -101,4 +101,4 @@ window.customCards = (window.customCards || []).filter(
   (card) => !INTERNAL_CARD_TYPES.has(card?.type),
 );
 window.__svDashboardDependencyReadiness = await dependencyReadiness;
-await import("./sv_dashboard.js?v=0.6.0-beta.20");
+await import("./sv_dashboard.js?v=0.6.0-beta.22");
