@@ -25,6 +25,13 @@ test("notification controls use Home Assistant entity translation keys", () => {
   assert.match(buttonSource, /self\._attr_translation_key = key/);
 });
 
+test("recipient switches are created from configured selection and track provider availability", () => {
+  assert.match(switchSource, /for recipient in manager\.configured_recipients/);
+  assert.match(switchSource, /recipient_entity_id=recipient/);
+  assert.match(switchSource, /def available\(self\) -> bool:/);
+  assert.match(switchSource, /self\.manager\.recipient_available\(self\.recipient_entity_id\)/);
+});
+
 test("German and English notification control runtime translations are complete", () => {
   const required = {
     number: [
