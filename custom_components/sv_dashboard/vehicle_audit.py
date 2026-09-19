@@ -70,6 +70,20 @@ _META_PATH_ENDINGS = (
     ".created_at",
     ".updated_at",
 )
+_META_ONLY_PATHS = {
+    "createdAt",
+    "updatedAt",
+    "energies[].type",
+    "energies[].subType",
+    "energy[].type",
+    "service.type",
+}
+_EXTRA_MAPPED_PATHS = {
+    # Stellantis Vehicles exposes this through its time platform rather than
+    # SENSORS_DEFAULT/BINARY_SENSORS_DEFAULT, so it is not discoverable from
+    # the two mapping constants scanned below.
+    "energies[].extension.electric.charging.nextDelayedTime",
+}
 _INVENTORY_PRIVATE_PATH_TOKENS = {
     "vin",
     "token",
@@ -346,7 +360,7 @@ def _value_map_path(value: Any) -> str | None:
 
 
 def _known_upstream_paths(client: Any) -> set[str]:
-    paths = {"lastPosition"}
+    paths = {"lastPosition", *_EXTRA_MAPPED_PATHS}
     for constant in ("SENSORS_DEFAULT", "BINARY_SENSORS_DEFAULT"):
         mapping = upstream_transport_constant(client, constant)
         if not isinstance(mapping, dict):
@@ -362,11 +376,21 @@ def _known_upstream_paths(client: Any) -> set[str]:
 
 
 def _canonical_mapped_path(path: str) -> str:
-    """Canonicalize known raw API aliases for mapping comparison only."""
-    raw_prefix = "energy[].battery"
-    mapped_prefix = "energies[].extension.electric.battery"
-    if path == raw_prefix or path.startswith(f"{raw_prefix}."):
-        return f"{mapped_prefix}{path[len(raw_prefix):]}"
+    """Canonicalize verified raw API aliases for mapping comparison only."""
+    prefix_aliases = (
+        ("energy[].battery", "energies[].extension.electric.battery"),
+        ("energy[].charging", "energies[].extension.electric.charging"),
+        ("preconditionning.airConditioning", "preconditioning.airConditioning"),
+    )
+    exact_aliases = {
+        "energy[].autonomy": "energies[].autonomy",
+        "energy[].level": "energies[].level",
+    }
+    if path in exact_aliases:
+        return exact_aliases[path]
+    for raw_prefix, mapped_prefix in prefix_aliases:
+        if path == raw_prefix or path.startswith(f"{raw_prefix}."):
+            return f"{mapped_prefix}{path[len(raw_prefix):]}"
     return path
 
 
@@ -485,7 +509,7 @@ def _unmapped_candidates(inventory: list[dict[str, Any]]) -> list[str]:
         path = str(row.get("path") or "")
         if row.get("mapped_upstream"):
             continue
-        if not path or path.endswith(_META_PATH_ENDINGS):
+        if not path or path in _META_ONLY_PATHS or path.endswith(_META_PATH_ENDINGS):
             continue
         lower = path.casefold()
         if any(token in lower for token in ("_links", "coordinate", "latitude", "longitude", "vin", "picture")):
