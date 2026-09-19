@@ -13,6 +13,7 @@ const audit = read("static/vehicle-audit-card.js");
 const auditBackend = read("vehicle_audit.py");
 const i18n = read("static/i18n-core.js");
 const constants = read("const.py");
+const manifest = JSON.parse(read("manifest.json"));
 const init = read("__init__.py");
 const switches = read("switch.py");
 const buttons = read("button.py");
@@ -21,23 +22,24 @@ const times = read("time.py");
 
 test("Home Assistant registers one SV frontend resource", () => {
   assert.match(constants, /FRONTEND_URL = "\/sv_dashboard\/frontend\.js"/);
-  assert.match(constants, /FRONTEND_VERSION = "0\.6\.0-beta\.20"/);
+  assert.match(constants, /FRONTEND_VERSION = "0\.6\.0-beta\.22"/);
+  assert.equal(manifest.version, "0.6.0-beta.22");
   assert.match(constants, /FRONTEND_RESOURCE_URLS = \(FRONTEND_URL,\)/);
-  // beta.20 cache-busts the changed Strategy/i18n/audit modules.
+  // beta.22 cache-busts the changed Strategy/audit modules.
   assert.match(frontend, /import\("\.\/vehicle-overview-card\.js\?v=0\.6\.0-beta\.17"\)/);
   assert.match(frontend, /import\("\.\/gps-history-card\.js\?v=0\.6\.0-beta\.17"\)/);
-  assert.match(frontend, /import\("\.\/sv_dashboard\.js\?v=0\.6\.0-beta\.20"\)/);
+  assert.match(frontend, /import\("\.\/sv_dashboard\.js\?v=0\.6\.0-beta\.22"\)/);
   assert.match(strategy, /from "\.\/i18n\.js\?v=0\.6\.0-beta\.20"/);
   assert.doesNotMatch(frontend, /gps-history-fix\.js/);
   assert.doesNotMatch(frontend, /map-marker-fix\.js/);
-  assert.match(frontend, /import\("\.\/vehicle-audit-card\.js\?v=0\.6\.0-beta\.20"\)/);
+  assert.match(frontend, /import\("\.\/vehicle-audit-card\.js\?v=0\.6\.0-beta\.22"\)/);
 });
 
 test("dependency preflight waits instead of failing on first customElements lookup", () => {
   assert.match(frontend, /customElements\.whenDefined\(tag\)/);
   assert.match(frontend, /DEPENDENCY_GRACE_MS = 10000/);
   assert.match(frontend, /await dependencyReadiness/);
-  assert.match(frontend, /await import\("\.\/sv_dashboard\.js\?v=0\.6\.0-beta\.20"\)/);
+  assert.match(frontend, /await import\("\.\/sv_dashboard\.js\?v=0\.6\.0-beta\.22"\)/);
 });
 
 test("LIVE reuses the validated vehicle overview lifecycle instead of owning a second compact hero", () => {
@@ -58,7 +60,8 @@ test("vehicle capability audit is read-only, internal, and lives in System", () 
   assert.match(init, /async_register_vehicle_audit_websocket\(hass\)/);
   assert.match(audit, /callWS\(\{[\s\S]*type: `\$\{STATUS_DOMAIN\}\/vehicle_audit`/);
   assert.match(audit, /new Blob\(/);
-  assert.match(audit, /navigator\.clipboard\.writeText/);
+  assert.match(audit, /typeof clipboard\?\.writeText === "function"/);
+  assert.match(audit, /document\.execCommand\("copy"\)/);
   assert.doesNotMatch(audit, /window\.customCards/);
   assert.match(auditBackend, /"mode": "read_only"/);
   assert.match(auditBackend, /async_authenticated_get/);
