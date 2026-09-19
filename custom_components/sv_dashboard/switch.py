@@ -60,8 +60,9 @@ async def async_setup_entry(
             manager.recipient_switch_key(recipient),
             "mdi:account-bell-outline",
             recipient=recipient.removeprefix("notify."),
+            recipient_entity_id=recipient,
         )
-        for recipient in manager.recipients
+        for recipient in manager.configured_recipients
     )
     for entity in entities:
         manager.register_entity(entity)
@@ -86,16 +87,24 @@ class SvNotificationSwitch(SwitchEntity):
         icon: str,
         *,
         recipient: str | None = None,
+        recipient_entity_id: str | None = None,
     ) -> None:
         self.coordinator = coordinator
         self.entry = entry
         self.manager = coordinator.notifications
         self.key = key
+        self.recipient_entity_id = recipient_entity_id
         self._attr_translation_key = "notify_recipient" if recipient else key
         if recipient:
             self._attr_translation_placeholders = {"recipient": recipient}
         self._attr_icon = icon
         apply_vehicle_entity_identity(self, coordinator.hass, entry, "switch", key)
+
+    @property
+    def available(self) -> bool:
+        if self.recipient_entity_id is None:
+            return True
+        return self.manager.recipient_available(self.recipient_entity_id)
 
     @property
     def is_on(self) -> bool:
