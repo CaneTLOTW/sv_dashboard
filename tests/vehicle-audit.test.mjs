@@ -23,6 +23,14 @@ test("vehicle audit is explicit, read-only, and reuses upstream authenticated tr
   assert.doesNotMatch(backend, /async_save|Store\(/);
 });
 
+test("vehicle audit reacquires the live upstream client after upstream reloads", () => {
+  const resolver = backend.indexOf('resolver = getattr(manager, "_resolve_upstream", None)');
+  const cached = backend.indexOf('client = getattr(manager, "_client", None)');
+  assert.ok(resolver >= 0 && cached > resolver);
+  assert.match(backend, /not getattr\(resolved_client, "_shutting_down", False\)/);
+  assert.match(backend, /not getattr\(client, "_shutting_down", False\)/);
+});
+
 test("audit probes the bounded Phase A API surface", () => {
   for (const token of [
     '"vehicles"',
@@ -116,7 +124,8 @@ test("System card runs on demand and exports JSON plus GitHub Markdown locally",
   assert.match(frontend, /callWS\(\{[\s\S]*vehicle_audit/);
   assert.match(frontend, /new Blob\(/);
   assert.match(frontend, /URL\.createObjectURL/);
-  assert.match(frontend, /navigator\.clipboard\.writeText/);
+  assert.match(frontend, /typeof clipboard\?\.writeText === "function"/);
+  assert.match(frontend, /document\.execCommand\("copy"\)/);
   assert.match(frontend, /SV Dashboard vehicle capability audit/);
   assert.doesNotMatch(frontend, /window\.customCards/);
 });
