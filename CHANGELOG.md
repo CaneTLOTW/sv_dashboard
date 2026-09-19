@@ -4,6 +4,14 @@
 
 No changes yet.
 
+## 0.6.0-beta.22 vehicle-audit runtime recovery candidate
+
+- Reacquires the currently loaded Stellantis Vehicles client before every read-only Vehicle API Audit instead of preferring a cached server-history client that may belong to a prior upstream config-entry generation.
+- Refuses to reuse an upstream client already marked as shutting down, fixing full-audit runs that otherwise reported `HistoricalTripsTransportUnavailable: upstream_client_shutting_down` for every live probe after an upstream reload.
+- Adds a browser-local clipboard fallback for Home Assistant origins where `navigator.clipboard` is unavailable (commonly plain HTTP/local-IP access), while keeping the Markdown export transient and non-persistent.
+- Aligns the package/frontend resource version at `0.6.0-beta.22`, so the audit environment reports the active package generation and browsers receive the corrected audit card without stale beta.20 caching.
+- Adds source-contract regression coverage for live upstream reacquisition, shutdown-client rejection and clipboard fallback.
+
 ## 0.6.0-beta.21 notification recipient cutover candidate
 
 - Migrates recipient discovery toward modern Home Assistant `notify.*` entities while retaining legacy `notify.<service>` actions as a compatibility fallback.
