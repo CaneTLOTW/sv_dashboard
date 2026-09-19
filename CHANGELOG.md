@@ -4,6 +4,14 @@
 
 No changes yet.
 
+## 0.6.0-beta.25 notify-provider lifecycle resilience
+
+- Keeps package-owned recipient switches defined from the user's configured notify targets even while a notify provider temporarily removes its entities during reload.
+- Tracks configured notify-entity state changes so recipient-switch availability updates automatically when providers disappear and return, without requiring an SV Dashboard config-entry reload.
+- Keeps delivery fail-closed to currently discoverable recipients while preserving the user's persisted opt-in switch state across provider outages.
+- Retains the provider-neutral Home Assistant notify-entity contract; no Telegram-specific product logic or formatting is introduced.
+- Adds regression coverage for recipient publication and provider-lifecycle availability, and bumps the package/top-level resource generation to beta.25.
+
 ## 0.6.0-beta.24 vehicle-audit remaining-field reconciliation
 
 - Extends audit-only alias comparison for verified raw Stellantis mirrors of range, SoC and charging fields while preserving the original raw inventory paths.
