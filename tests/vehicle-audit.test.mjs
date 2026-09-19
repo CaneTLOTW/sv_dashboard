@@ -31,10 +31,25 @@ test("vehicle audit reacquires the live upstream client after upstream reloads",
   assert.match(backend, /not getattr\(client, "_shutting_down", False\)/);
 });
 
-test("audit treats raw energy battery aliases as already mapped without rewriting inventory paths", () => {
+test("audit reconciles verified raw aliases without rewriting inventory paths", () => {
   assert.match(backend, /def _canonical_mapped_path\(path: str\) -> str:/);
-  assert.match(backend, /raw_prefix = "energy\[\]\.battery"/);
-  assert.match(backend, /mapped_prefix = "energies\[\]\.extension\.electric\.battery"/);
+  assert.match(backend, /\("energy\[\]\.battery", "energies\[\]\.extension\.electric\.battery"\)/);
+  assert.match(backend, /\("energy\[\]\.charging", "energies\[\]\.extension\.electric\.charging"\)/);
+  assert.match(backend, /"energy\[\]\.autonomy": "energies\[\]\.autonomy"/);
+  assert.match(backend, /"energy\[\]\.level": "energies\[\]\.level"/);
+  assert.match(backend, /\("preconditionning\.airConditioning", "preconditioning\.airConditioning"\)/);
+  assert.match(backend, /"energies\[\]\.extension\.electric\.charging\.nextDelayedTime"/);
+  assert.match(backend, /_META_ONLY_PATHS/);
+  for (const path of [
+    '"createdAt"',
+    '"updatedAt"',
+    '"energies[].type"',
+    '"energies[].subType"',
+    '"energy[].type"',
+    '"service.type"',
+  ]) {
+    assert.ok(backend.includes(path), `missing metadata-only audit path ${path}`);
+  }
   assert.match(backend, /canonical_path = _canonical_mapped_path\(path\)/);
   assert.match(backend, /canonical_candidate = _canonical_mapped_path\(candidate\)/);
   assert.match(backend, /"path": path/);
