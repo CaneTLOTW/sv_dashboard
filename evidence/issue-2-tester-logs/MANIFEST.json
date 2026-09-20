@@ -1,0 +1,60 @@
+{
+  "files": [
+    {
+      "original_filename": "2026-07-06-07H30-2026-07-06-08H15-home-assistant_anonymized.log",
+      "original_size": 211279,
+      "original_sha256": "8af8947f27b365d50b7e10f0e34751270b35f5dc29cb741baecf993a576d58bf",
+      "sanitized_filename": "2026-07-06-07H30-2026-07-06-08H15-home-assistant_anonymized.log",
+      "sanitized_size": 211233,
+      "sanitized_sha256": "d991c34603dd265c6ea0f7acff57e671053f543cd1929be04d67423bc3a985da",
+      "privacy_result": "sanitized",
+      "redacted_categories": [
+        "access/refresh/session tokens",
+        "Authorization/cookies",
+        "vehicle identifiers/VIN-like IDs",
+        "GPS coordinates",
+        "email/account identifiers",
+        "notification/chat identifiers",
+        "API keys/passwords/secrets"
+      ]
+    },
+    {
+      "original_filename": "2026-09-19-14H15-2026-09-19-15H15-home-assistant-AR.Trip.Test.log",
+      "original_size": 352973,
+      "original_sha256": "6eb95a9f3035667ba2dad6fcad249afd6defffe5fac0f8f33f8e10a7ae191187",
+      "sanitized_filename": "2026-09-19-14H15-2026-09-19-15H15-home-assistant-AR.Trip.Test.log",
+      "sanitized_size": 352890,
+      "sanitized_sha256": "6f95cc71f6bb162b30e295be1cb8c239b26d5c8dc499b504d4f0d84e92c01c6d",
+      "privacy_result": "sanitized",
+      "redacted_categories": [
+        "access/refresh/session tokens",
+        "Authorization/cookies",
+        "vehicle identifiers/VIN-like IDs",
+        "GPS coordinates",
+        "email/account identifiers",
+        "notification/chat identifiers",
+        "API keys/passwords/secrets"
+      ]
+    },
+    {
+      "original_filename": "2026-09-19-17H00-2026-09-20-07H00-home-assistant_anonymized.log",
+      "original_size": 3245583,
+      "original_sha256": "bfdd69d40cbfea04e45cbac00e491bb0d9cec074365ffab6229c83d34d5e1436",
+      "sanitized_filename": "2026-09-19-17H00-2026-09-20-07H00-home-assistant_anonymized.log",
+      "sanitized_size": 3245174,
+      "sanitized_sha256": "61d3ef748b749c7a6aca1f044370e9ad1db6cd8064a74b2f71f2d16aa3b496a9",
+      "privacy_result": "sanitized",
+      "redacted_categories": [
+        "access/refresh/session tokens",
+        "Authorization/cookies",
+        "vehicle identifiers/VIN-like IDs",
+        "GPS coordinates",
+        "email/account identifiers",
+        "notification/chat identifiers",
+        "API keys/passwords/secrets"
+      ]
+    }
+  ],
+  "source": "GitHub issue #2 tester attachments",
+  "code_or_runtime_mutation": false
+}
