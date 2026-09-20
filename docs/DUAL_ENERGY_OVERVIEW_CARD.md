@@ -11,7 +11,7 @@ The Dual-Energy Hero is deliberately reusable in two different contexts:
 1. **Standalone/start-page Hero** — add the card to any ordinary Home Assistant dashboard to show the most important vehicle information without opening the complete SV Dashboard first. This is a supported product use case, not only a beta test scaffold.
 2. **Generated SV Dashboard Hero** — the generated dashboard can use the same Dual-Energy presentation for vehicles that expose both electric and fuel capabilities. Pure-electric and other non-dual vehicles keep the compact/universal Hero.
 
-The current beta still uses the compact/universal card in the generated LIVE view. Capability-driven automatic selection of the Dual-Energy Hero for Hybrid/PHEV vehicles is the next integration step after external DS4 validation.
+The generated Vehicle / LIVE view automatically selects the Dual-Energy Hero when the mapped vehicle exposes both electric and fuel capabilities. Pure-electric and other non-dual vehicles keep the compact/universal Hero.
 
 ## Minimal configuration
 
@@ -34,8 +34,9 @@ The card keeps the two energy domains deliberately separate:
 Important rules:
 
 - `current_trip_energy` is an **absolute kWh value**, not kWh/100 km.
-- Fuel consumption is shown only when the mapped upstream value is numeric, belongs to the current drive and is sufficiently fresh. A stale value is not presented as live consumption.
+- Fuel consumption is shown only when the mapped upstream value is numeric, belongs to the current drive, is sufficiently fresh **and the vehicle/runtime behavior supports treating it as a live measurement**. A field that is absent, stale or observed to remain zero while the vehicle is demonstrably moving must not be promoted to a live value.
 - Unknown or unsupported values stay neutral (`—`); the card does not invent Hybrid/EV values.
+- The card must not branch on model names. Vehicle-specific differences such as live-vs-end-of-trip odometer behavior belong to the canonical capability/behavior resolver.
 - Package-derived charging power and energy can be battery-side SOC/time estimates. They are not EVSE/grid meter readings and do not include charging losses.
 
 ## Native interactions
