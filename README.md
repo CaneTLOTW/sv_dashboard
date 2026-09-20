@@ -4,7 +4,7 @@
 
 SV Dashboard is a HACS custom integration that builds a vehicle-focused Home Assistant dashboard on top of [Stellantis Vehicles](https://github.com/andreadegiovine/homeassistant-stellantis-vehicles).
 
-> **Beta status:** SV Dashboard is the successor to `CaneTLOTW/e_c3_dashboard`. The new Home Assistant domain is `sv_dashboard`. Owner live/visual validation has passed through the native Dual-Energy Hero beta cycle; a real DS4 Hybrid/French external validation remains active before promotion to `main`.
+> **Beta status:** SV Dashboard is the successor to `CaneTLOTW/e_c3_dashboard`. The new Home Assistant domain is `sv_dashboard`. Owner runtime validation has progressed through beta.25; beta.26 is the next frozen external DS N°4/French validation candidate. Real-vehicle evidence now covers both field availability and vehicle-specific timing/behavior differences before promotion to `main`.
 
 [![Open the SV Dashboard repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=CaneTLOTW&repository=sv_dashboard&category=integration)
 
@@ -50,24 +50,26 @@ Real-world SV Dashboard validation is intentionally tracked separately from expe
 
 | Brand / vehicle | SV status |
 | --- | --- |
-| Citroën e-C3 | **Confirmed owner validation** — EV dashboard and native Hero visual/i18n QA passed |
-| DS4 Hybrid | **Active external beta** — real Hybrid/French/SOH validation by `@chmtc94` |
+| Citroën ë-C3 CC21 | **Confirmed owner validation** — EV dashboard/runtime validation plus end-of-trip odometer behavior evidence |
+| DS N°4 MY2026 PHEV | **Active external beta** — real Hybrid/French validation by `@chmtc94`; live odometer and reduced status-payload behavior documented |
+| DS4 E-Tense Hybrid 225 MY2022 | **Historical tester evidence** — richer legacy payload retained for cross-generation comparison |
 | Peugeot | **Expected / upstream-supported** — real SV vehicle test pending |
 | Opel | **Expected / upstream-supported** — real SV vehicle test pending |
 | Vauxhall | **Expected / upstream-supported** — real SV vehicle test pending |
 
 Other Stellantis brands are **not claimed as supported** unless the upstream integration exposes the required vehicle data and SV Dashboard has been validated against it.
 
-See the [Vehicle validation guide](docs/VEHICLE_VALIDATION.en.md), the completed [migration record](https://github.com/CaneTLOTW/sv_dashboard/issues/1) and the active [DS4 Hybrid beta issue](https://github.com/CaneTLOTW/sv_dashboard/issues/2).
+See the [Vehicle validation guide](docs/VEHICLE_VALIDATION.en.md), [Vehicle capability evidence matrix](docs/VEHICLE_CAPABILITY_MATRIX.md), the completed [migration record](https://github.com/CaneTLOTW/sv_dashboard/issues/1) and the active [DS N°4 / Hybrid beta issue](https://github.com/CaneTLOTW/sv_dashboard/issues/2).
 
 ## Powertrain behavior
 
-SV Dashboard derives a vehicle capability profile from the upstream integration:
+SV Dashboard derives a vehicle capability profile from the upstream integration. For calculations where timing/semantics matter, it also distinguishes **behavioral capability** from simple field presence:
 
 - **Electric** — SOC, electric range, charging, battery/SOH and electric energy metrics when available.
 - **Hybrid / PHEV** — electric and fuel capabilities can appear simultaneously or independently. The Dual-Energy Hero keeps both energy domains visible without inventing unavailable values.
 - **Thermic / combustion** — fuel level, fuel range and fuel-consumption views where available; electric-only charging and battery analytics remain hidden.
 - **Hydrogen / unknown** — handled defensively; only capabilities actually exposed upstream are shown.
+- **Behavior-qualified metrics** — a mapped field is not automatically a valid live metric. For example, odometer updates can be live on one vehicle but arrive only after trip completion on another; a fuel-consumption field can be present but remain unusably stale/zero while driving.
 
 For the Dual-Energy Hero, `current_trip_energy` means absolute energy used during the current trip in **kWh**. It is not a synthetic `kWh/100 km` Hero value. While driving, a fuel-consumption value is shown only when the mapped upstream value is numeric and fresh for the current drive; otherwise fuel range remains visible. Package-derived charge power/energy can be battery-side SOC/time estimates and are not EVSE/grid meter readings.
 
@@ -204,7 +206,7 @@ CI currently checks:
 - Hassfest
 - HACS repository validation
 
-Promotion to `main` happens only after the exact candidate has passed CI and the required owner/external live acceptance. The current plan is to wait for the DS4 Hybrid tester feedback before the next `develop` → `main` promotion.
+Promotion to `main` happens only after the exact candidate has passed CI and the required owner/external live acceptance. The current plan is to complete the frozen beta.26 DS N°4/French retest before the next `develop` → `main` promotion.
 
 ## License and trademarks
 
@@ -216,6 +218,8 @@ SV Dashboard is an independent community project and is not affiliated with or e
 
 - [Installation](docs/INSTALLATION.en.md)
 - [Vehicle validation guide](docs/VEHICLE_VALIDATION.en.md)
+- [Vehicle capability evidence matrix](docs/VEHICLE_CAPABILITY_MATRIX.md)
+- [beta.26 DS N°4 external test scope](docs/BETA26_TEST_SCOPE.md)
 - [Vehicle capability audit](docs/VEHICLE_AUDIT.md)
 - [Community guide](docs/COMMUNITY.en.md)
 - [Concept](docs/CONCEPT.md)
