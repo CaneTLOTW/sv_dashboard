@@ -105,6 +105,8 @@ Depending on the selected vehicle, SV Dashboard can map upstream Stellantis enti
 
 These are **not** package-owned entities. Their semantics, availability and refresh cadence belong to Stellantis Vehicles and the Stellantis service.
 
+A mapped upstream entity is evidence of **field availability**, not automatically evidence that it is suitable for a live SV metric. Real-vehicle validation may classify behavior separately (for example odometer `live` vs `end_of_trip`, or live fuel consumption `direct` vs `untrusted`). Canonical SV calculations must fail closed when that behavioral evidence is unknown or incompatible with the calculation.
+
 ## Battery-capacity and residual rules
 
 There is no generic fixed e-C3 capacity in SV Dashboard.
