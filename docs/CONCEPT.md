@@ -55,6 +55,20 @@ The selected vehicle is classified from upstream type/data into an effective pro
 
 Views and metrics are enabled by actual mapped capabilities.
 
+### Capability presence is not enough
+
+Real-vehicle evidence now proves that two vehicles can expose the same broad data class while behaving differently enough to change whether a live calculation is valid. For example, the DS N°4 and an older DS4 update odometer mileage during an active trip, while the owner ë-C3 can hold mileage constant until after the authoritative trip end.
+
+SV Dashboard therefore distinguishes three layers:
+
+1. **mapped capability** — whether an upstream entity/field exists;
+2. **behavior profile** — whether the field has validated runtime semantics such as `live`, `end_of_trip`, `direct`, `untrusted` or `unknown`;
+3. **canonical metric** — the value exposed to cards/statistics together with source, freshness and quality/provenance.
+
+The frontend should consume canonical metrics instead of branching on brand/model names. Behavior-specific complexity belongs in the resolver/data layer, not in duplicated per-model dashboard layouts.
+
+Initial evidence-backed behavior properties are documented in [Vehicle capability evidence matrix](VEHICLE_CAPABILITY_MATRIX.md), including `odometer_update_mode`, live fuel-consumption quality, movement signal, SOH source and unresolved alarm semantics.
+
 ### Electric
 
 May expose SOC, electric range, charging, traction-battery/SOH and electric energy metrics.
@@ -154,7 +168,7 @@ Restart-safe stores retain package-owned history, metrics and notification/wake-
 
 The package distinguishes direct values from estimates:
 
-- valid odometer deltas can provide high-quality distance;
+- valid odometer deltas can provide high-quality distance only when the selected vehicle/runtime has demonstrated that mileage updates with sufficient timing for the intended calculation;
 - SOC × capacity energy is an estimate;
 - SOC/time charging power is an estimate;
 - sparse GPS points are not presented as a complete driven route.
