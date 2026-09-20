@@ -4,6 +4,15 @@
 
 No changes yet.
 
+## 0.6.0-beta.26 DS N°4 external validation candidate
+
+- Freezes the accepted beta.25 product line for the next real DS N°4 MY2026 PHEV / French validation round instead of asking the external tester to follow a moving `develop` branch.
+- Updates the vehicle capability evidence documentation with real cross-generation evidence from the owner ë-C3, current DS N°4 and historical DS4 E-Tense Hybrid 225.
+- Explicitly separates mapped field presence from behavioral usability: live-vs-end-of-trip odometer updates, absent-vs-untrusted live fuel consumption, movement signals, optional SOH and unresolved alarm semantics.
+- Documents the intended architecture direction: behavioral complexity belongs in a canonical metric/resolver layer, not model-specific frontend branches. This candidate documents that contract; it does not yet introduce a new behavior-profile runtime subsystem.
+- Adds a focused beta.26 external test scope covering only the remaining DS N°4 gaps: current Dual-Energy Hero, preconditioning lifecycle, canonical Trip/Fuel/Charge history, French UI, Add Card picker and the read-only Vehicle API Audit.
+- Carries the beta.25 notify-provider lifecycle fix unchanged and bumps the package/top-level frontend resource generation to beta.26. Unchanged internal frontend modules retain their existing validated content keys.
+
 ## 0.6.0-beta.25 notify-provider lifecycle resilience
 
 - Keeps package-owned recipient switches defined from the user's configured notify targets even while a notify provider temporarily removes its entities during reload.
