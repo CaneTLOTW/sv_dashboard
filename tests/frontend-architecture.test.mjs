@@ -22,10 +22,10 @@ const times = read("time.py");
 
 test("Home Assistant registers one SV frontend resource", () => {
   assert.match(constants, /FRONTEND_URL = "\/sv_dashboard\/frontend\.js"/);
-  assert.match(constants, /FRONTEND_VERSION = "0\.6\.0-beta\.25"/);
+  assert.match(constants, /FRONTEND_VERSION = "0\.6\.0-beta\.26"/);
   assert.equal(manifest.version, "0.6.0-beta.25");
   assert.match(constants, /FRONTEND_RESOURCE_URLS = \(FRONTEND_URL,\)/);
-  // beta.25 changes backend notification lifecycle only; unchanged internal modules keep beta.22 keys.
+  // beta.26 freezes the beta.25 product line for external DS validation; unchanged internal modules keep beta.22 keys.
   assert.match(frontend, /import\("\.\/vehicle-overview-card\.js\?v=0\.6\.0-beta\.17"\)/);
   assert.match(frontend, /import\("\.\/gps-history-card\.js\?v=0\.6\.0-beta\.17"\)/);
   assert.match(frontend, /import\("\.\/sv_dashboard\.js\?v=0\.6\.0-beta\.22"\)/);
