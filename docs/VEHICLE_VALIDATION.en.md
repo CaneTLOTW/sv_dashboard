@@ -4,6 +4,8 @@ This guide is the shared test procedure for validating SV Dashboard with additio
 
 SV Dashboard is capability-driven. A vehicle should therefore be validated against the data and controls actually exposed by the upstream **Stellantis Vehicles** integration rather than against a hard-coded model checklist.
 
+Real-vehicle tests must also capture **behavioral semantics**, not only field presence. A present field may update only after an activity ends, remain stale/zero while driving, or have vehicle-specific meaning. Presence alone is therefore not sufficient evidence for a live calculation.
+
 ## Test levels
 
 Use these terms consistently:
@@ -104,6 +106,18 @@ Where the upstream vehicle exposes the capability, check:
 
 Check that parked residual kWh is displayed only when it can be derived from a trustworthy residual/capacity source.
 
+## Live-behavior validation
+
+For any new vehicle where practical, record these separately from simple entity presence:
+
+- whether odometer/mileage changes **during** an authoritative active trip or only at/after trip completion;
+- which signal best represents movement (`kinetic.moving`, speed, ignition, or none);
+- whether a live fuel-consumption field is absent, plausibly numeric during combustion driving, or present but stale/zero;
+- whether alarm/security-like values have an observed physical meaning rather than an assumed label;
+- whether SOH values are direct upstream measurements, absent, or only available through a fallback.
+
+Do not infer a behavior from a related Stellantis model or an older model year. Add validated findings to the canonical [Vehicle capability evidence matrix](VEHICLE_CAPABILITY_MATRIX.md).
+
 ## Hybrid validation
 
 Hybrid vehicles are especially important because they exercise both electric and fuel capability paths.
@@ -117,6 +131,7 @@ Check:
 - configured per-vehicle battery-capacity fallback behaves plausibly;
 - electric trip/charging metrics appear only where real data exists;
 - fuel cards/statistics render correctly;
+- live fuel consumption is shown only if a fresh, behaviorally trustworthy upstream value exists;
 - SOH capacity/resistance entities and values, if exposed;
 - unsupported remote functions remain absent.
 
