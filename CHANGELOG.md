@@ -4,6 +4,15 @@
 
 No changes yet.
 
+## 0.6.0-beta.28 stacked Consumption & reserves layout correction
+
+- Replaces the beta.27 half-width Electric/Fuel reserve cards with four full-width stacked Bubble state cards, matching the established **Consumption & usage** visual grammar.
+- Gives remaining battery energy, rolling electric consumption, estimated fuel remaining and rolling fuel consumption their own unambiguous rows instead of nesting 500-km consumption inside a sub-button.
+- Removes the beta.27-only reserve-card/sub-button/responsive-layout helpers; desktop and mobile now use the same full-width metric rows.
+- Updates the shared 18-language labels for explicit battery/fuel reserve and 500-km electric/fuel consumption wording.
+- Bumps package/frontend cache generation to beta.28 because the beta.27 frontend was already served during owner visual QA.
+- beta.28 is not yet published externally; the frozen beta.26 DS N°4 prerelease remains unchanged.
+
 ## 0.6.0-beta.27 Dual-Energy consumption & reserves candidate
 
 - Adds package-owned **Remaining battery energy** with explicit provenance: direct upstream residual kWh is preferred; otherwise SV Dashboard uses current SOC × the existing trustworthy vehicle-capacity hierarchy and marks the result estimated.
