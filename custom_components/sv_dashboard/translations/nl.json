@@ -93,6 +93,15 @@
       },
       "current_trip_consumption": {
         "name": "Verbruik huidige rit"
+      },
+      "remaining_battery_energy_kwh": {
+        "name": "Resterende batterij-energie"
+      },
+      "remaining_fuel_liters": {
+        "name": "Geschatte resterende brandstof"
+      },
+      "trailing_fuel_consumption_500km": {
+        "name": "Gemiddeld brandstofverbruik (500 km)"
       }
     },
     "number": {
