@@ -93,6 +93,15 @@
       },
       "current_trip_consumption": {
         "name": "Aktuális út fogyasztása"
+      },
+      "remaining_battery_energy_kwh": {
+        "name": "Hátralévő akkumulátorenergia"
+      },
+      "remaining_fuel_liters": {
+        "name": "Becsült hátralévő üzemanyag"
+      },
+      "trailing_fuel_consumption_500km": {
+        "name": "Átlagos üzemanyag-fogyasztás (500 km)"
       }
     },
     "number": {
