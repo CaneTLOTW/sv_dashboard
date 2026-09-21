@@ -173,4 +173,77 @@ for (const [language, labels] of Object.entries(NOTIFICATION_WAKEUP_TEXT)) {
 
 // Capability labels are owned by the per-language catalogs.
 
+
+// Dual-Energy Consumption & reserves labels added for the beta.27 candidate.
+// Keep these in the shared dashboard namespace so generated-dashboard surfaces
+// inherit the same 18-language parity contract as the rest of the UI.
+const CONSUMPTION_RESERVES_TEXT = {
+  de: { consumptionReserves: "Verbrauch & Reserven", electricReserve: "Elektrisch · verbleibend", fuelReserve: "Kraftstoff · verbleibend", last500km: "Letzte 500 km" },
+  en: { consumptionReserves: "Consumption & reserves", electricReserve: "Electric · remaining", fuelReserve: "Fuel · remaining", last500km: "Last 500 km" },
+  fr: { consumptionReserves: "Consommation et réserves", electricReserve: "Électrique · restant", fuelReserve: "Carburant · restant", last500km: "500 derniers km" },
+  it: { consumptionReserves: "Consumi e riserve", electricReserve: "Elettrico · residuo", fuelReserve: "Carburante · residuo", last500km: "Ultimi 500 km" },
+  es: { consumptionReserves: "Consumo y reservas", electricReserve: "Eléctrico · restante", fuelReserve: "Combustible · restante", last500km: "Últimos 500 km" },
+  pt: { consumptionReserves: "Consumo e reservas", electricReserve: "Elétrico · restante", fuelReserve: "Combustível · restante", last500km: "Últimos 500 km" },
+  nl: { consumptionReserves: "Verbruik en reserves", electricReserve: "Elektrisch · resterend", fuelReserve: "Brandstof · resterend", last500km: "Laatste 500 km" },
+  da: { consumptionReserves: "Forbrug og reserver", electricReserve: "Elektrisk · tilbage", fuelReserve: "Brændstof · tilbage", last500km: "Seneste 500 km" },
+  nb: { consumptionReserves: "Forbruk og reserver", electricReserve: "Elektrisk · igjen", fuelReserve: "Drivstoff · igjen", last500km: "Siste 500 km" },
+  sv: { consumptionReserves: "Förbrukning och reserver", electricReserve: "El · kvar", fuelReserve: "Bränsle · kvar", last500km: "Senaste 500 km" },
+  fi: { consumptionReserves: "Kulutus ja varannot", electricReserve: "Sähkö · jäljellä", fuelReserve: "Polttoaine · jäljellä", last500km: "Viimeiset 500 km" },
+  pl: { consumptionReserves: "Zużycie i rezerwy", electricReserve: "Elektrycznie · pozostało", fuelReserve: "Paliwo · pozostało", last500km: "Ostatnie 500 km" },
+  cs: { consumptionReserves: "Spotřeba a rezervy", electricReserve: "Elektřina · zbývá", fuelReserve: "Palivo · zbývá", last500km: "Posledních 500 km" },
+  sk: { consumptionReserves: "Spotreba a rezervy", electricReserve: "Elektrina · zostáva", fuelReserve: "Palivo · zostáva", last500km: "Posledných 500 km" },
+  hu: { consumptionReserves: "Fogyasztás és tartalékok", electricReserve: "Elektromos · hátralévő", fuelReserve: "Üzemanyag · hátralévő", last500km: "Utolsó 500 km" },
+  ro: { consumptionReserves: "Consum și rezerve", electricReserve: "Electric · rămas", fuelReserve: "Combustibil · rămas", last500km: "Ultimii 500 km" },
+  sl: { consumptionReserves: "Poraba in rezerve", electricReserve: "Elektrika · preostalo", fuelReserve: "Gorivo · preostalo", last500km: "Zadnjih 500 km" },
+  hr: { consumptionReserves: "Potrošnja i rezerve", electricReserve: "Električno · preostalo", fuelReserve: "Gorivo · preostalo", last500km: "Posljednjih 500 km" },
+};
+for (const [language, labels] of Object.entries(CONSUMPTION_RESERVES_TEXT)) {
+  FRONTEND_TEXT.dashboard[language] = {
+    ...FRONTEND_TEXT.dashboard.en,
+    ...FRONTEND_TEXT.dashboard[language],
+    ...labels,
+  };
+}
+
+// Fuel History can display either a direct refill amount or an amount estimated
+// from configured tank capacity × a confirmed fuel-level increase. Keep the
+// helper text aligned with that provenance in every supported language.
+const FUEL_HISTORY_HINTS = {
+  de: "Tankvorgänge werden aus deutlichen Anstiegen des Tankfüllstands erkannt. Liter können direkt vorliegen oder aus der konfigurierten Tankkapazität geschätzt werden; Schätzwerte sind gekennzeichnet.",
+  en: "Refuelling events are detected from clear fuel-level increases. Litres may come directly from the source or be estimated from the configured tank capacity; estimates are marked.",
+  fr: "Les ravitaillements sont détectés par une hausse nette du niveau de carburant. La quantité peut provenir directement de la source ou être estimée à partir de la capacité configurée du réservoir ; les estimations sont signalées.",
+  it: "I rifornimenti vengono rilevati da chiari aumenti del livello carburante. I litri possono provenire direttamente dalla fonte o essere stimati dalla capacità del serbatoio configurata; le stime sono indicate.",
+  es: "Los repostajes se detectan por aumentos claros del nivel de combustible. Los litros pueden proceder directamente de la fuente o estimarse con la capacidad de depósito configurada; las estimaciones se indican.",
+  pt: "Os abastecimentos são detetados por aumentos claros do nível de combustível. Os litros podem vir diretamente da fonte ou ser estimados pela capacidade configurada do depósito; as estimativas são assinaladas.",
+  nl: "Tankbeurten worden herkend aan duidelijke stijgingen van het brandstofniveau. Liters kunnen rechtstreeks uit de bron komen of worden geschat op basis van de ingestelde tankinhoud; schattingen zijn gemarkeerd.",
+  da: "Tankninger registreres ud fra tydelige stigninger i brændstofniveauet. Liter kan komme direkte fra kilden eller estimeres ud fra den konfigurerede tankkapacitet; estimater markeres.",
+  nb: "Fyllinger registreres fra tydelige økninger i drivstoffnivået. Liter kan komme direkte fra kilden eller beregnes fra konfigurert tankkapasitet; estimater merkes.",
+  sv: "Tankningar identifieras genom tydliga ökningar av bränslenivån. Liter kan komma direkt från källan eller uppskattas från konfigurerad tankvolym; uppskattningar markeras.",
+  fi: "Tankkaukset havaitaan selkeistä polttoainetason nousuista. Litramäärä voi tulla suoraan lähteestä tai se voidaan arvioida määritetyn säiliötilavuuden perusteella; arviot merkitään.",
+  pl: "Tankowania są wykrywane na podstawie wyraźnych wzrostów poziomu paliwa. Litry mogą pochodzić bezpośrednio ze źródła lub być oszacowane z ustawionej pojemności zbiornika; wartości szacowane są oznaczone.",
+  cs: "Tankování se zjišťuje podle výrazného nárůstu hladiny paliva. Litry mohou pocházet přímo ze zdroje nebo být odhadnuty z nastavené kapacity nádrže; odhady jsou označeny.",
+  sk: "Tankovania sa zisťujú podľa výrazného zvýšenia hladiny paliva. Litre môžu pochádzať priamo zo zdroja alebo byť odhadnuté z nastavenej kapacity nádrže; odhady sú označené.",
+  hu: "A tankolásokat az üzemanyagszint egyértelmű emelkedése alapján észleljük. A litermennyiség származhat közvetlenül a forrásból vagy a beállított tankkapacitásból becsülhető; a becsült értékeket jelöljük.",
+  ro: "Alimentările sunt detectate din creșteri clare ale nivelului de combustibil. Litrii pot proveni direct din sursă sau pot fi estimați din capacitatea configurată a rezervorului; estimările sunt marcate.",
+  sl: "Točenja se zaznajo iz jasnih povečanj ravni goriva. Litri so lahko podani neposredno ali ocenjeni iz nastavljene prostornine rezervoarja; ocene so označene.",
+  hr: "Točenja se prepoznaju po jasnom porastu razine goriva. Litre može dati izvor izravno ili se mogu procijeniti iz konfiguriranog kapaciteta spremnika; procjene su označene.",
+};
+for (const [language, hint] of Object.entries(FUEL_HISTORY_HINTS)) {
+  FRONTEND_TEXT.fuelHistory[language] = {
+    ...FRONTEND_TEXT.fuelHistory.en,
+    ...FRONTEND_TEXT.fuelHistory[language],
+    hint,
+  };
+}
+// The French tester correctly noted that a refuelling event does not imply a
+// completely full tank. Use neutral "ravitaillement" wording throughout.
+Object.assign(FRONTEND_TEXT.fuelHistory.fr, {
+  cardName: "Historique SV des ravitaillements",
+  cardDescription: "Ravitaillements détectés à partir du niveau de carburant",
+  title: "Historique des ravitaillements",
+  empty: "Aucun ravitaillement détecté sur la période sélectionnée.",
+  loading: "Chargement de l’historique des ravitaillements…",
+  error: "Impossible de charger l’historique des ravitaillements :",
+});
+
 export { FRONTEND_TEXT, languageFor, localeFor, textFor };
