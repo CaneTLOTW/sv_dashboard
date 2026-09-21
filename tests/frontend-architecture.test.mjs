@@ -87,7 +87,7 @@ test("vehicle overview keeps only useful vehicle metrics and moves privacy to sy
   assert.doesNotMatch(vehicleBlock, /entity\("privacy"\)/);
   const usage = vehicleBlock.indexOf('separator(strings.consumptionUsage');
   const mileage = vehicleBlock.indexOf('entity("mileage")', usage);
-  const trailing = vehicleBlock.indexOf('metric("trailing_consumption_500km")', usage);
+  const trailing = vehicleBlock.indexOf("trailingElectricConsumption", usage);
   assert.ok(usage >= 0 && mileage > usage && trailing > mileage);
   const systemStart = strategy.indexOf('path: "system"');
   assert.ok(systemStart > vehicleEnd);
