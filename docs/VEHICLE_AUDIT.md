@@ -130,6 +130,18 @@ Useful non-identifying evidence is retained, including:
 
 The report includes a `privacy_redaction_summary` stating the export contract. Testers should still review a file before publishing it publicly.
 
+## Localisation contract
+
+The generated **Vehicle API audit card chrome** is part of the normal 18-language frontend catalogue: title, explanatory text, Run/Download/Copy actions, error/not-run state and privacy-ready message follow the Home Assistant UI language.
+
+The exported artifacts deliberately do **not** localize protocol identifiers:
+
+- JSON field names, probe identifiers and status enums remain stable machine-oriented values;
+- **Copy Markdown** is a canonical English/GitHub-oriented diagnostic export so reports from different tester languages remain directly comparable;
+- API/HAL relation names remain technical identifiers rather than translated product labels.
+
+This separation is intentional: the interactive Home Assistant surface is localized, while evidence/export schemas stay stable across languages.
+
 ## Report schema
 
 Current schema version: **1**
