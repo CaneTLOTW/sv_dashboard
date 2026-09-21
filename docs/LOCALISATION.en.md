@@ -55,10 +55,11 @@ Examples:
 | fuel | Kraftstoff | Fuel | Carburant |
 | electric range | E-Reichweite | EV range | Autonomie électrique |
 | fuel range | Kraftstoffreichweite | Fuel range | Autonomie carburant |
-| current-trip energy used | Verbraucht | Energy used | Énergie consommée |
+| range | Reichweite | Range | Autonomie |
 | charge power | Ladeleistung | Charge power | Puissance de recharge |
+| fuel consumption | Verbrauch | Fuel consumption | Consommation carburant |
 
-The Hero's current-trip energy value is an **absolute kWh value**. Translators must not label it as `kWh/100 km` consumption. Likewise, current charge power may be a battery-side SOC/time estimate and should not be worded as though it were a direct wallbox/EVSE meter reading.
+The current Dual-Energy Hero keeps range labels visible across vehicle states. Package-owned `current_trip_energy` remains an absolute **kWh** metric elsewhere in the product and must never be translated as `kWh/100 km` consumption. Current charge power may be a battery-side SOC/time estimate and should not be worded as though it were a direct wallbox/EVSE meter reading.
 
 DE / EN / FR runtime language switching of the native Hero was visually checked during beta.9 owner QA; the long French labels remained stable without clipping or column drift.
 
