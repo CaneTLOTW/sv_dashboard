@@ -93,6 +93,15 @@
       },
       "current_trip_consumption": {
         "name": "Consumo del viaggio in corso"
+      },
+      "remaining_battery_energy_kwh": {
+        "name": "Energia batteria residua"
+      },
+      "remaining_fuel_liters": {
+        "name": "Carburante residuo stimato"
+      },
+      "trailing_fuel_consumption_500km": {
+        "name": "Consumo medio carburante (500 km)"
       }
     },
     "number": {
