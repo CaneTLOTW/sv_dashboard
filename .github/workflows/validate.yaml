@@ -33,6 +33,7 @@ jobs:
           python3 tests/server_history_transport_test.py
           python3 tests/upstream_vehicle_resolution_test.py
           python3 tests/canonical_mileage_test.py
+          python3 tests/consumption_metrics_test.py
 
       - name: Check frontend JavaScript
         run: |
