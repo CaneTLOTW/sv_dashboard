@@ -338,6 +338,28 @@ class SvDashboardStrategy extends HTMLElement {
       }),
     });
 
+    const reserveLayoutCard = (cards) => ({
+      type: "custom:layout-card",
+      layout_type: "custom:grid-layout",
+      layout: {
+        "grid-template-columns": "repeat(2, minmax(0, 1fr))",
+        "grid-auto-flow": "row",
+        "grid-auto-rows": "auto",
+        "grid-gap": "8px",
+        margin: "0",
+        padding: "0",
+        mediaquery: {
+          "(max-width: 600px)": {
+            "grid-template-columns": "1fr",
+          },
+        },
+      },
+      cards: present(cards).map((card) => {
+        const { grid_options, ...layoutCompatibleCard } = card;
+        return layoutCompatibleCard;
+      }),
+    });
+
     const chargeSubStateFormatter = (index, entityId, kind = "text") => {
       if (!entityId) return "";
       const entityLiteral = JSON.stringify(entityId);
@@ -474,7 +496,7 @@ class SvDashboardStrategy extends HTMLElement {
         supportsFuel && !supportsDualEnergy ? bubble("fuel_autonomy", strings.fuelRange, "mdi:map-marker-distance", [], 6) : null,
         supportsFuel && !supportsDualEnergy ? bubble("fuel_consumption_instant", strings.fuelConsumption, "mdi:gas-station-outline") : null,
       ]) },
-      supportsDualEnergy && (remainingBatteryEnergy || remainingFuelLiters || trailingElectricConsumption || trailingFuelConsumption) ? { type: "grid", cards: present([
+      supportsDualEnergy && (remainingBatteryEnergy || remainingFuelLiters || trailingElectricConsumption || trailingFuelConsumption) ? { type: "grid", reserve_layout: true, cards: present([
         separator(strings.consumptionReserves, "mdi:gauge"),
         reserveCard(remainingBatteryEnergy, strings.electricReserve, "mdi:lightning-bolt-circle", trailingElectricConsumption),
         reserveCard(remainingFuelLiters, strings.fuelReserve, "mdi:gas-station", trailingFuelConsumption),
@@ -526,7 +548,9 @@ class SvDashboardStrategy extends HTMLElement {
         padding: "4px 0px 4px 0px",
         card_margin: "4px 8px 8px",
       },
-      cards: overviewSections.map((section) => layoutCard(section.cards)),
+      cards: overviewSections.map((section) =>
+        section.reserve_layout ? reserveLayoutCard(section.cards) : layoutCard(section.cards)
+      ),
     }];
 
     if (entity("battery_health_capacity") || entity("battery_health_resistance") || canonicalMileage || entity("mileage") || trailingElectricConsumption || trailingFuelConsumption) {
