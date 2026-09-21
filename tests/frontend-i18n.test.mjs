@@ -43,6 +43,11 @@ const CAPABILITY_EXCEPTIONS = {
     "wakeupActivity24h",
     "restoreNotificationDefaults",
     "reachability",
+    "consumptionReserves",
+    "electricReserve",
+    "fuelReserve",
+    "last500km",
+    "trailingFuelConsumption",
   ]),
 };
 const baseCatalogs = Object.assign({}, WESTERN_TEXT, NORTHERN_TEXT, EASTERN_TEXT);
@@ -148,6 +153,24 @@ test("capability labels are sourced from the language catalogs for every languag
       assert.ok(FRONTEND_TEXT.dashboard[language][key]?.trim(), `missing ${language} dashboard.${key}`);
     }
   }
+});
+
+test("dual-energy reserves and Fuel History semantics are localized", () => {
+  for (const language of LANGUAGES) {
+    const dashboard = FRONTEND_TEXT.dashboard[language];
+    for (const key of ["consumptionReserves", "electricReserve", "fuelReserve", "last500km", "trailingFuelConsumption"]) {
+      assert.ok(dashboard[key]?.trim(), `missing ${language} dashboard.${key}`);
+    }
+    assert.match(FRONTEND_TEXT.fuelHistory[language].hint, /./);
+  }
+  const french = FRONTEND_TEXT.fuelHistory.fr;
+  assert.doesNotMatch(
+    [french.cardName, french.cardDescription, french.title, french.empty, french.loading, french.error, french.hint].join(" "),
+    /\bplein(?:s)?\b/i,
+  );
+  assert.match(french.title, /ravitaillement/i);
+  assert.match(FRONTEND_TEXT.fuelHistory.en.hint, /estimated/i);
+  assert.match(FRONTEND_TEXT.fuelHistory.de.hint, /geschätzt/i);
 });
 
 test("long-label smoke coverage remains present for DE, FR and PL", () => {
