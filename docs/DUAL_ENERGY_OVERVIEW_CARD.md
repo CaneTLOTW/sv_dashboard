@@ -28,12 +28,13 @@ The card keeps the two energy domains deliberately separate:
 | Vehicle state | Battery side | Fuel side |
 | --- | --- | --- |
 | Parked / idle | battery SOC and electric range | fuel level and fuel range |
-| Driving | battery SOC and **current trip energy used in kWh** | fuel level and fresh instantaneous fuel consumption when the upstream entity is trustworthy |
-| Charging | battery SOC and **current charge power** | fuel level / range remains available |
+| Driving | battery SOC and electric range stay visible | fuel level and fuel range stay visible; fresh trustworthy instantaneous fuel consumption may appear as secondary detail |
+| Charging | battery SOC and electric range stay visible; current charge power may appear as secondary detail | fuel level and fuel range stay visible |
 
 Important rules:
 
-- `current_trip_energy` is an **absolute kWh value**, not kWh/100 km.
+- Both ranges remain visible across idle, driving and charging states.
+- The Hero does **not** synthesize live EV `kWh/100 km` from SOC/odometer changes. The package-owned `current_trip_energy` metric can still exist elsewhere in the generated dashboard/history when source quality supports it.
 - Fuel consumption is shown only when the mapped upstream value is numeric, belongs to the current drive, is sufficiently fresh **and the vehicle/runtime behavior supports treating it as a live measurement**. A field that is absent, stale or observed to remain zero while the vehicle is demonstrably moving must not be promoted to a live value.
 - Unknown or unsupported values stay neutral (`—`); the card does not invent Hybrid/EV values.
 - The card must not branch on model names. Vehicle-specific differences such as live-vs-end-of-trip odometer behavior belong to the canonical capability/behavior resolver.
@@ -54,17 +55,19 @@ The native implementation replaced the temporary YAML/button-card interaction pl
 
 ## Preconditioning interaction
 
-The small Hero climate control is intentionally treated primarily as a **one-shot preconditioning start action**, not as the main start/stop control surface.
+The Hero climate control uses a guarded, upstream-confirmed **START / STOP state machine**.
 
-Citroën describes remote temperature preconditioning as a vehicle-managed cycle to a fixed target around **21 °C**. Exact timing differs by model and by immediate versus scheduled use, and Stellantis state feedback can arrive with noticeable delay. For that reason the overview Hero must not encourage rapid repeated clicks that depend on an immediately updated remote state.
+Remote preconditioning state feedback can arrive with noticeable delay, so the card must not treat a command submission as immediate physical state confirmation.
 
 Design contract:
 
-- the Hero control starts the available mapped preconditioning action;
-- the visual state may follow the upstream preconditioning entity when that state becomes available;
-- a delayed state transition does not mean the first command failed;
-- explicit **Start climate / Stop climate** actions remain available in the generated SV Dashboard Quick Actions area for users who intentionally want to stop a running cycle;
-- the Hero should not send duplicate start commands merely because remote state feedback is still pending.
+- inactive + click → send the mapped START action and enter a start-pending state;
+- repeated START clicks are blocked while the command is pending;
+- only an upstream active state confirms the running state;
+- confirmed active + click → send the mapped STOP action and enter a separate stop-pending state;
+- repeated STOP clicks are blocked while pending;
+- only an upstream inactive state confirms completion;
+- explicit **Start climate / Stop climate** actions remain available in the generated SV Dashboard Quick Actions area as an alternate control surface.
 
 ## Localisation
 
