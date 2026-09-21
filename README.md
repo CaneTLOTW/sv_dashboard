@@ -4,7 +4,7 @@
 
 SV Dashboard is a HACS custom integration that builds a vehicle-focused Home Assistant dashboard on top of [Stellantis Vehicles](https://github.com/andreadegiovine/homeassistant-stellantis-vehicles).
 
-> **Beta status:** SV Dashboard is the successor to `CaneTLOTW/e_c3_dashboard`. The new Home Assistant domain is `sv_dashboard`. Owner runtime validation has progressed through beta.25; beta.26 is the next frozen external DS N°4/French validation candidate. Real-vehicle evidence now covers both field availability and vehicle-specific timing/behavior differences before promotion to `main`.
+> **Beta status:** SV Dashboard is the successor to `CaneTLOTW/e_c3_dashboard`. The new Home Assistant domain is `sv_dashboard`. Owner runtime validation has progressed through beta.25; **beta.26 remains the frozen external DS N°4/French validation candidate**. Development has moved on to a beta.27 candidate with capability-gated Dual-Energy consumption/reserve metrics; beta.26 is not retagged or modified. Real-vehicle evidence now covers both field availability and vehicle-specific timing/behavior differences before promotion to `main`.
 
 [![Open the SV Dashboard repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=CaneTLOTW&repository=sv_dashboard&category=integration)
 
@@ -25,6 +25,7 @@ Once a stable SV Dashboard release exists, normal stable users should not need t
 - Capability-based UI for electric, hybrid and combustion vehicles.
 - Electric SOC/range/charging views only when the upstream vehicle exposes those capabilities.
 - Fuel/range/consumption views for combustion-capable vehicles when available upstream.
+- For Dual-Energy vehicles, a compact **Consumption & reserves** block pairs remaining battery energy and remaining fuel with rolling 500-km electric/fuel consumption when the required source data exists.
 - A compact universal vehicle overview plus a native **Dual-Energy** vehicle overview for simultaneous battery + fuel presentation.
 - Native Hero interactions: vehicle navigation and Home Assistant More Info/history for temperature, battery/fuel percentages and the active detail metric.
 - Trip, charging, fuel and GPS history with data-quality guards.
@@ -71,7 +72,11 @@ SV Dashboard derives a vehicle capability profile from the upstream integration.
 - **Hydrogen / unknown** — handled defensively; only capabilities actually exposed upstream are shown.
 - **Behavior-qualified metrics** — a mapped field is not automatically a valid live metric. For example, odometer updates can be live on one vehicle but arrive only after trip completion on another; a fuel-consumption field can be present but remain unusably stale/zero while driving.
 
-The Dual-Energy Hero keeps **electric range and fuel range permanently visible**. It does not replace the electric range with a synthetic live EV-efficiency estimate while driving. A secondary live fuel-consumption value is shown only when the mapped upstream value is numeric, fresh for the current drive and behaviorally trustworthy; otherwise the fuel range remains the authoritative visible value. Package metrics such as `current_trip_energy` still exist elsewhere in the generated dashboard/history, and package-derived charge power/energy can be battery-side SOC/time estimates rather than EVSE/grid meter readings.
+The Dual-Energy Hero keeps **electric range and fuel range permanently visible**. It does not replace the electric range with a synthetic live EV-efficiency estimate while driving. A secondary live fuel-consumption value is shown only when the mapped upstream value is numeric, fresh for the current drive and behaviorally trustworthy; otherwise the fuel range remains the authoritative visible value.
+
+The generated Dual-Energy dashboard also contains a **Consumption & reserves** block. Remaining battery energy prefers direct upstream residual kWh and otherwise falls back to SOC × trustworthy vehicle capacity. Remaining fuel litres are explicitly estimated from configured tank capacity × current fuel level. The rolling fuel metric uses completed canonical trip fuel telemetry over up to the latest 500 km; it is not reconstructed from coarse tank-level percentage changes. No synthetic current-trip fuel metric is created when the vehicle lacks trustworthy live fuel consumption.
+
+Package metrics such as `current_trip_energy` still exist elsewhere in the generated dashboard/history, and package-derived charge power/energy can be battery-side SOC/time estimates rather than EVSE/grid meter readings.
 
 ## Languages
 
