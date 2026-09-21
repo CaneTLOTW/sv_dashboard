@@ -8,7 +8,7 @@ import {
   languageFor,
   localeFor,
   textFor,
-} from "./i18n-core.js?v=0.6.0-beta.17";
+} from "./i18n-core.js?v=0.6.0-beta.27";
 import { ADVANCED_FRONTEND_TEXT as WESTERN_ADVANCED } from "./i18n-advanced-west.js?v=0.6.0-beta.17";
 import { ADVANCED_FRONTEND_TEXT as NORTHERN_ADVANCED } from "./i18n-advanced-north.js?v=0.6.0-beta.17";
 import { ADVANCED_FRONTEND_TEXT as EASTERN_ADVANCED } from "./i18n-advanced-east.js?v=0.6.0-beta.17";
@@ -205,45 +205,5 @@ for (const [language, labels] of Object.entries(CONSUMPTION_RESERVES_TEXT)) {
   };
 }
 
-// Fuel History can display either a direct refill amount or an amount estimated
-// from configured tank capacity × a confirmed fuel-level increase. Keep the
-// helper text aligned with that provenance in every supported language.
-const FUEL_HISTORY_HINTS = {
-  de: "Tankvorgänge werden aus deutlichen Anstiegen des Tankfüllstands erkannt. Liter können direkt vorliegen oder aus der konfigurierten Tankkapazität geschätzt werden; Schätzwerte sind gekennzeichnet.",
-  en: "Refuelling events are detected from clear fuel-level increases. Litres may come directly from the source or be estimated from the configured tank capacity; estimates are marked.",
-  fr: "Les ravitaillements sont détectés par une hausse nette du niveau de carburant. La quantité peut provenir directement de la source ou être estimée à partir de la capacité configurée du réservoir ; les estimations sont signalées.",
-  it: "I rifornimenti vengono rilevati da chiari aumenti del livello carburante. I litri possono provenire direttamente dalla fonte o essere stimati dalla capacità del serbatoio configurata; le stime sono indicate.",
-  es: "Los repostajes se detectan por aumentos claros del nivel de combustible. Los litros pueden proceder directamente de la fuente o estimarse con la capacidad de depósito configurada; las estimaciones se indican.",
-  pt: "Os abastecimentos são detetados por aumentos claros do nível de combustível. Os litros podem vir diretamente da fonte ou ser estimados pela capacidade configurada do depósito; as estimativas são assinaladas.",
-  nl: "Tankbeurten worden herkend aan duidelijke stijgingen van het brandstofniveau. Liters kunnen rechtstreeks uit de bron komen of worden geschat op basis van de ingestelde tankinhoud; schattingen zijn gemarkeerd.",
-  da: "Tankninger registreres ud fra tydelige stigninger i brændstofniveauet. Liter kan komme direkte fra kilden eller estimeres ud fra den konfigurerede tankkapacitet; estimater markeres.",
-  nb: "Fyllinger registreres fra tydelige økninger i drivstoffnivået. Liter kan komme direkte fra kilden eller beregnes fra konfigurert tankkapasitet; estimater merkes.",
-  sv: "Tankningar identifieras genom tydliga ökningar av bränslenivån. Liter kan komma direkt från källan eller uppskattas från konfigurerad tankvolym; uppskattningar markeras.",
-  fi: "Tankkaukset havaitaan selkeistä polttoainetason nousuista. Litramäärä voi tulla suoraan lähteestä tai se voidaan arvioida määritetyn säiliötilavuuden perusteella; arviot merkitään.",
-  pl: "Tankowania są wykrywane na podstawie wyraźnych wzrostów poziomu paliwa. Litry mogą pochodzić bezpośrednio ze źródła lub być oszacowane z ustawionej pojemności zbiornika; wartości szacowane są oznaczone.",
-  cs: "Tankování se zjišťuje podle výrazného nárůstu hladiny paliva. Litry mohou pocházet přímo ze zdroje nebo být odhadnuty z nastavené kapacity nádrže; odhady jsou označeny.",
-  sk: "Tankovania sa zisťujú podľa výrazného zvýšenia hladiny paliva. Litre môžu pochádzať priamo zo zdroja alebo byť odhadnuté z nastavenej kapacity nádrže; odhady sú označené.",
-  hu: "A tankolásokat az üzemanyagszint egyértelmű emelkedése alapján észleljük. A litermennyiség származhat közvetlenül a forrásból vagy a beállított tankkapacitásból becsülhető; a becsült értékeket jelöljük.",
-  ro: "Alimentările sunt detectate din creșteri clare ale nivelului de combustibil. Litrii pot proveni direct din sursă sau pot fi estimați din capacitatea configurată a rezervorului; estimările sunt marcate.",
-  sl: "Točenja se zaznajo iz jasnih povečanj ravni goriva. Litri so lahko podani neposredno ali ocenjeni iz nastavljene prostornine rezervoarja; ocene so označene.",
-  hr: "Točenja se prepoznaju po jasnom porastu razine goriva. Litre može dati izvor izravno ili se mogu procijeniti iz konfiguriranog kapaciteta spremnika; procjene su označene.",
-};
-for (const [language, hint] of Object.entries(FUEL_HISTORY_HINTS)) {
-  FRONTEND_TEXT.fuelHistory[language] = {
-    ...FRONTEND_TEXT.fuelHistory.en,
-    ...FRONTEND_TEXT.fuelHistory[language],
-    hint,
-  };
-}
-// The French tester correctly noted that a refuelling event does not imply a
-// completely full tank. Use neutral "ravitaillement" wording throughout.
-Object.assign(FRONTEND_TEXT.fuelHistory.fr, {
-  cardName: "Historique SV des ravitaillements",
-  cardDescription: "Ravitaillements détectés à partir du niveau de carburant",
-  title: "Historique des ravitaillements",
-  empty: "Aucun ravitaillement détecté sur la période sélectionnée.",
-  loading: "Chargement de l’historique des ravitaillements…",
-  error: "Impossible de charger l’historique des ravitaillements :",
-});
 
 export { FRONTEND_TEXT, languageFor, localeFor, textFor };
