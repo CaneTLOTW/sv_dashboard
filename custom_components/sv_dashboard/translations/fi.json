@@ -93,6 +93,15 @@
       },
       "current_trip_consumption": {
         "name": "Nykyisen matkan kulutus"
+      },
+      "remaining_battery_energy_kwh": {
+        "name": "Akun jäljellä oleva energia"
+      },
+      "remaining_fuel_liters": {
+        "name": "Arvioitu jäljellä oleva polttoaine"
+      },
+      "trailing_fuel_consumption_500km": {
+        "name": "Keskimääräinen polttoaineenkulutus (500 km)"
       }
     },
     "number": {
