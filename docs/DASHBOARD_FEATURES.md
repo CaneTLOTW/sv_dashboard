@@ -217,7 +217,7 @@ System contains integration/runtime administration rather than everyday vehicle 
 - battery-value correction where applicable;
 - ABRP controls/status where configured.
 
-The package-owned **Dashboard status** sensor is part of the same Home Assistant translation contract as the other SV entities; it must not remain a hard-coded English exception. The Vehicle API audit is an internal generated-dashboard diagnostic component, not another public Add Card picker card. See [Vehicle capability audit](VEHICLE_AUDIT.md).
+The package-owned **Dashboard status** sensor is part of the same Home Assistant translation contract as the other SV entities; it must not remain a hard-coded English exception. The Vehicle API audit is an internal generated-dashboard diagnostic component, not another public Add Card picker card. Its read-only/privacy/runtime contract and accepted beta.22–beta.24 hardening are documented in [Vehicle capability audit](VEHICLE_AUDIT.md).
 
 ## Capability gating
 
