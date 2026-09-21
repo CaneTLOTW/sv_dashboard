@@ -1,5 +1,7 @@
 # beta.14 owner runtime scope
 
+> **Historical prerelease record:** this document is retained for traceability of beta.14. The current external DS N°4 validation candidate is **v0.6.0-beta.26**; use [BETA26_TEST_SCOPE.md](BETA26_TEST_SCOPE.md) for current testing.
+
 `v0.6.0-beta.14` is the immutable owner/canary candidate for the server-history lifecycle work merged after beta.13.
 
 Primary runtime acceptance is tracked in Issue #55.
