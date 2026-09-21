@@ -218,33 +218,6 @@ class SvDashboardStrategy extends HTMLElement {
       } : null;
     };
 
-    const metricSubState = (entityId, name, icon) => entityId ? {
-      entity: entityId,
-      name,
-      icon,
-      show_state: true,
-      show_name: true,
-      show_background: true,
-      tap_action: { action: "more-info" },
-    } : null;
-
-    const reserveCard = (entityId, name, icon, trailingEntity) => entityId ? {
-      type: "custom:bubble-card",
-      card_type: "button",
-      button_type: "state",
-      entity: entityId,
-      name,
-      icon,
-      force_icon: true,
-      show_state: true,
-      card_layout: "large",
-      button_action: { tap_action: { action: "more-info" } },
-      sub_button: [
-        metricSubState(trailingEntity, strings.last500km, "mdi:chart-line"),
-      ].filter(Boolean),
-      grid_options: { columns: 6 },
-    } : null;
-
     const lastTripResult = metric("last_trip_result");
     const nativeLastTrip = entity("last_trip");
     const lastTripDisplayEntity = lastTripResult || nativeLastTrip;
@@ -334,28 +307,6 @@ class SvDashboardStrategy extends HTMLElement {
             },
           };
         }
-        return layoutCompatibleCard;
-      }),
-    });
-
-    const reserveLayoutCard = (cards) => ({
-      type: "custom:layout-card",
-      layout_type: "custom:grid-layout",
-      layout: {
-        "grid-template-columns": "repeat(2, minmax(0, 1fr))",
-        "grid-auto-flow": "row",
-        "grid-auto-rows": "auto",
-        "grid-gap": "8px",
-        margin: "0",
-        padding: "0",
-        mediaquery: {
-          "(max-width: 600px)": {
-            "grid-template-columns": "1fr",
-          },
-        },
-      },
-      cards: present(cards).map((card) => {
-        const { grid_options, ...layoutCompatibleCard } = card;
         return layoutCompatibleCard;
       }),
     });
@@ -496,10 +447,12 @@ class SvDashboardStrategy extends HTMLElement {
         supportsFuel && !supportsDualEnergy ? bubble("fuel_autonomy", strings.fuelRange, "mdi:map-marker-distance", [], 6) : null,
         supportsFuel && !supportsDualEnergy ? bubble("fuel_consumption_instant", strings.fuelConsumption, "mdi:gas-station-outline") : null,
       ]) },
-      supportsDualEnergy && (remainingBatteryEnergy || remainingFuelLiters || trailingElectricConsumption || trailingFuelConsumption) ? { type: "grid", reserve_layout: true, cards: present([
+      supportsDualEnergy && (remainingBatteryEnergy || remainingFuelLiters || trailingElectricConsumption || trailingFuelConsumption) ? { type: "grid", cards: present([
         separator(strings.consumptionReserves, "mdi:gauge"),
-        reserveCard(remainingBatteryEnergy, strings.electricReserve, "mdi:lightning-bolt-circle", trailingElectricConsumption),
-        reserveCard(remainingFuelLiters, strings.fuelReserve, "mdi:gas-station", trailingFuelConsumption),
+        remainingBatteryEnergy ? bubble("remaining_battery_energy_kwh", strings.remainingBatteryEnergy, "mdi:battery-medium", [], "full", remainingBatteryEnergy) : null,
+        trailingElectricConsumption ? bubble("trailing_consumption_500km", strings.trailingElectricConsumption, "mdi:lightning-bolt-circle", [], "full", trailingElectricConsumption) : null,
+        remainingFuelLiters ? bubble("remaining_fuel_liters", strings.remainingFuel, "mdi:gas-station", [], "full", remainingFuelLiters) : null,
+        trailingFuelConsumption ? bubble("trailing_fuel_consumption_500km", strings.trailingFuelConsumption, "mdi:chart-line", [], "full", trailingFuelConsumption) : null,
       ]) } : { type: "grid", cards: [] },
       { type: "grid", cards: present([
         separator(strings.quickActions, "mdi:lightning-bolt"),
@@ -548,9 +501,7 @@ class SvDashboardStrategy extends HTMLElement {
         padding: "4px 0px 4px 0px",
         card_margin: "4px 8px 8px",
       },
-      cards: overviewSections.map((section) =>
-        section.reserve_layout ? reserveLayoutCard(section.cards) : layoutCard(section.cards)
-      ),
+      cards: overviewSections.map((section) => layoutCard(section.cards)),
     }];
 
     if (entity("battery_health_capacity") || entity("battery_health_resistance") || canonicalMileage || entity("mileage") || trailingElectricConsumption || trailingFuelConsumption) {
