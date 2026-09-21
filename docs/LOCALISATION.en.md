@@ -75,9 +75,10 @@ The generated Dual-Energy **Consumption & reserves** block is localized through 
 | Concept | DE | EN | FR |
 | --- | --- | --- | --- |
 | section | Verbrauch & Reserven | Consumption & reserves | Consommation et réserves |
-| electric reserve | Elektrisch · verbleibend | Electric · remaining | Électrique · restant |
-| fuel reserve | Kraftstoff · verbleibend | Fuel · remaining | Carburant · restant |
-| rolling period | Letzte 500 km | Last 500 km | 500 derniers km |
+| battery reserve | Verbleibende Batterieenergie | Remaining battery energy | Énergie électrique restante |
+| electric rolling consumption | Ø Stromverbrauch (500 km) | Average electric consumption (500 km) | Consommation électrique moyenne (500 km) |
+| fuel reserve | Geschätzter Tankinhalt | Estimated fuel remaining | Carburant restant estimé |
+| fuel rolling consumption | Ø Kraftstoffverbrauch (500 km) | Average fuel consumption (500 km) | Consommation moyenne de carburant (500 km) |
 
 Fuel History wording must remain provenance-correct. Litres can be direct or estimated from configured tank capacity, so helper text must not claim a direct source is mandatory. In French, generic refuelling uses neutral **ravitaillement** wording; `plein` is avoided because a refuelling event does not imply filling the tank completely.
 
