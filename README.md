@@ -71,7 +71,7 @@ SV Dashboard derives a vehicle capability profile from the upstream integration.
 - **Hydrogen / unknown** — handled defensively; only capabilities actually exposed upstream are shown.
 - **Behavior-qualified metrics** — a mapped field is not automatically a valid live metric. For example, odometer updates can be live on one vehicle but arrive only after trip completion on another; a fuel-consumption field can be present but remain unusably stale/zero while driving.
 
-For the Dual-Energy Hero, `current_trip_energy` means absolute energy used during the current trip in **kWh**. It is not a synthetic `kWh/100 km` Hero value. While driving, a fuel-consumption value is shown only when the mapped upstream value is numeric and fresh for the current drive; otherwise fuel range remains visible. Package-derived charge power/energy can be battery-side SOC/time estimates and are not EVSE/grid meter readings.
+The Dual-Energy Hero keeps **electric range and fuel range permanently visible**. It does not replace the electric range with a synthetic live EV-efficiency estimate while driving. A secondary live fuel-consumption value is shown only when the mapped upstream value is numeric, fresh for the current drive and behaviorally trustworthy; otherwise the fuel range remains the authoritative visible value. Package metrics such as `current_trip_energy` still exist elsewhere in the generated dashboard/history, and package-derived charge power/energy can be battery-side SOC/time estimates rather than EVSE/grid meter readings.
 
 ## Languages
 
