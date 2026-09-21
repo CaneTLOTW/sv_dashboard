@@ -8,7 +8,7 @@ import {
   languageFor,
   localeFor,
   textFor,
-} from "./i18n-core.js?v=0.6.0-beta.27";
+} from "./i18n-core.js?v=0.6.0-beta.28";
 import { ADVANCED_FRONTEND_TEXT as WESTERN_ADVANCED } from "./i18n-advanced-west.js?v=0.6.0-beta.17";
 import { ADVANCED_FRONTEND_TEXT as NORTHERN_ADVANCED } from "./i18n-advanced-north.js?v=0.6.0-beta.17";
 import { ADVANCED_FRONTEND_TEXT as EASTERN_ADVANCED } from "./i18n-advanced-east.js?v=0.6.0-beta.17";
@@ -196,7 +196,7 @@ const CONSUMPTION_RESERVES_TEXT = {
   ro: { consumptionReserves: "Consum și rezerve", remainingBatteryEnergy: "Energie rămasă în baterie", trailingElectricConsumption: "Consum electric mediu (500 km)", remainingFuel: "Combustibil rămas estimat", trailingFuelConsumption: "Consum mediu de combustibil (500 km)" },
   sl: { consumptionReserves: "Poraba in rezerve", remainingBatteryEnergy: "Preostala energija baterije", trailingElectricConsumption: "Povprečna poraba elektrike (500 km)", remainingFuel: "Ocenjeno preostalo gorivo", trailingFuelConsumption: "Povprečna poraba goriva (500 km)" },
   hr: { consumptionReserves: "Potrošnja i rezerve", remainingBatteryEnergy: "Preostala energija baterije", trailingElectricConsumption: "Prosječna potrošnja električne energije (500 km)", remainingFuel: "Procijenjeno preostalo gorivo", trailingFuelConsumption: "Prosječna potrošnja goriva (500 km)" },
-}
+};
 for (const [language, labels] of Object.entries(CONSUMPTION_RESERVES_TEXT)) {
   FRONTEND_TEXT.dashboard[language] = {
     ...FRONTEND_TEXT.dashboard.en,
