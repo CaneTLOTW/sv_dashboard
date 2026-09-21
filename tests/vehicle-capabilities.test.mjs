@@ -28,8 +28,8 @@ test("config flow only prompts for traction capacity on capable vehicles", () =>
 
 test("thermic dashboard hides electric sections and exposes fuel cards", () => {
   assert.match(strategy, /supportsCharging \? separator\(strings\.chargingRange/);
-  assert.match(strategy, /supportsFuel \? bubble\("fuel"/);
-  assert.match(strategy, /supportsFuel \? bubble\("fuel_autonomy"/);
+  assert.match(strategy, /supportsFuel && !supportsDualEnergy \? bubble\("fuel"/);
+  assert.match(strategy, /supportsFuel && !supportsDualEnergy \? bubble\("fuel_autonomy"/);
   assert.match(strategy, /modules\.charging && supportsChargeHistory/);
   assert.match(strategy, /supportsCharging \? controlSwitch\("charge_reports"/);
   assert.match(strategy, /supportsElectric && entity\("battery_values_correction"\)/);
@@ -70,6 +70,10 @@ test("package-owned entity platforms only load powertrain-relevant entities", ()
   assert.match(sensorPlatform, /SvTrailingConsumptionSensor/);
   assert.match(sensorPlatform, /SvCurrentTripEnergySensor/);
   assert.match(sensorPlatform, /SvCurrentTripConsumptionSensor/);
+  assert.match(sensorPlatform, /SvRemainingBatteryEnergySensor/);
+  assert.match(sensorPlatform, /if fuel:/);
+  assert.match(sensorPlatform, /SvRemainingFuelLitersSensor/);
+  assert.match(sensorPlatform, /SvTrailingFuelConsumptionSensor/);
   assert.match(sensorPlatform, /if charge_history:/);
   assert.match(sensorPlatform, /SvServerChargeHistorySensor/);
   assert.match(sensorPlatform, /SvDistanceSinceChargeSensor/);
