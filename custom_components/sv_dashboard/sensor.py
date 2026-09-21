@@ -6,7 +6,7 @@ from typing import Any
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfEnergy, UnitOfLength, UnitOfPower
+from homeassistant.const import UnitOfEnergy, UnitOfLength, UnitOfPower, UnitOfVolume
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers import entity_registry as er
@@ -24,7 +24,10 @@ from .const import (
     METRIC_DISTANCE_SINCE_CHARGE,
     METRIC_LAST_CHARGE,
     METRIC_LAST_TRIP,
+    METRIC_REMAINING_BATTERY_ENERGY,
+    METRIC_REMAINING_FUEL_LITERS,
     METRIC_TRAILING_CONSUMPTION,
+    METRIC_TRAILING_FUEL_CONSUMPTION,
 )
 from .entity_identity import (
     apply_vehicle_entity_identity,
@@ -225,6 +228,7 @@ async def async_setup_entry(
     coordinator.notifications.register_entity(status)
     capabilities = coordinator.data.get("capabilities", {})
     electric = capabilities.get("electric_trip_metrics", False)
+    fuel = capabilities.get("fuel_metrics", False)
     charge_history = capabilities.get("charge_history", False)
     charging = capabilities.get("charging", False)
 
@@ -239,8 +243,14 @@ async def async_setup_entry(
     if electric:
         entities.extend([
             SvTrailingConsumptionSensor(coordinator, entry),
+            SvRemainingBatteryEnergySensor(coordinator, entry),
             SvCurrentTripEnergySensor(coordinator, entry),
             SvCurrentTripConsumptionSensor(coordinator, entry),
+        ])
+    if fuel:
+        entities.extend([
+            SvRemainingFuelLitersSensor(coordinator, entry),
+            SvTrailingFuelConsumptionSensor(coordinator, entry),
         ])
     if charge_history:
         entities.extend([
@@ -693,6 +703,90 @@ class SvTrailingConsumptionSensor(SvMetricSensor):
             if history and getattr(history, "data", {}).get("trips")
             else "local completed trips fallback"
         )
+        return data
+
+
+class SvTrailingFuelConsumptionSensor(SvMetricSensor):
+    _attr_name = "Trailing fuel consumption (500 km)"
+    _attr_translation_key = "trailing_fuel_consumption_500km"
+    _attr_icon = "mdi:gas-station"
+    _attr_native_unit_of_measurement = f"{UnitOfVolume.LITERS}/100 {UnitOfLength.KILOMETERS}"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator, entry, METRIC_TRAILING_FUEL_CONSUMPTION)
+
+    @property
+    def native_value(self) -> float | None:
+        return self.metrics.trailing_fuel_consumption()["value"]
+
+    @property
+    def available(self) -> bool:
+        return self.native_value is not None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        data = super().extra_state_attributes
+        data.update(self.metrics.trailing_fuel_consumption())
+        history = getattr(self.metrics, "server_history", None)
+        data["source"] = (
+            "canonical server trip history"
+            if history and getattr(history, "data", {}).get("trips")
+            else "local completed trips fallback"
+        )
+        data["estimated"] = False
+        return data
+
+
+class SvRemainingBatteryEnergySensor(SvMetricSensor):
+    _attr_name = "Remaining battery energy"
+    _attr_translation_key = "remaining_battery_energy_kwh"
+    _attr_icon = "mdi:battery-medium"
+    _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
+    _attr_device_class = SensorDeviceClass.ENERGY
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator, entry, METRIC_REMAINING_BATTERY_ENERGY)
+
+    @property
+    def native_value(self) -> float | None:
+        return self.metrics.remaining_battery_energy()["value"]
+
+    @property
+    def available(self) -> bool:
+        return self.native_value is not None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        data = super().extra_state_attributes
+        data.update(self.metrics.remaining_battery_energy())
+        return data
+
+
+class SvRemainingFuelLitersSensor(SvMetricSensor):
+    _attr_name = "Remaining fuel"
+    _attr_translation_key = "remaining_fuel_liters"
+    _attr_icon = "mdi:gas-station"
+    _attr_native_unit_of_measurement = UnitOfVolume.LITERS
+    _attr_device_class = SensorDeviceClass.VOLUME
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator, entry, METRIC_REMAINING_FUEL_LITERS)
+
+    @property
+    def native_value(self) -> float | None:
+        return self.metrics.remaining_fuel_liters()["value"]
+
+    @property
+    def available(self) -> bool:
+        return self.native_value is not None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        data = super().extra_state_attributes
+        data.update(self.metrics.remaining_fuel_liters())
         return data
 
 
