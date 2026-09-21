@@ -194,6 +194,10 @@ class SvDashboardStrategy extends HTMLElement {
 
     const currentChargePower = metric("current_charge_power") || entity("battery_charging_rate");
     const canonicalMileage = metric("canonical_mileage");
+    const remainingBatteryEnergy = metric("remaining_battery_energy_kwh");
+    const remainingFuelLiters = metric("remaining_fuel_liters");
+    const trailingElectricConsumption = metric("trailing_consumption_500km");
+    const trailingFuelConsumption = metric("trailing_fuel_consumption_500km");
     const serviceBatteryEntity = entity("service_battery") || entity("service_battery_voltage");
 
     const bubble = (key, name, icon, subButton = [], columns = "full", entityOverride = null) => {
@@ -213,6 +217,33 @@ class SvDashboardStrategy extends HTMLElement {
         grid_options: { columns },
       } : null;
     };
+
+    const metricSubState = (entityId, name, icon) => entityId ? {
+      entity: entityId,
+      name,
+      icon,
+      show_state: true,
+      show_name: true,
+      show_background: true,
+      tap_action: { action: "more-info" },
+    } : null;
+
+    const reserveCard = (entityId, name, icon, trailingEntity) => entityId ? {
+      type: "custom:bubble-card",
+      card_type: "button",
+      button_type: "state",
+      entity: entityId,
+      name,
+      icon,
+      force_icon: true,
+      show_state: true,
+      card_layout: "large",
+      button_action: { tap_action: { action: "more-info" } },
+      sub_button: [
+        metricSubState(trailingEntity, strings.last500km, "mdi:chart-line"),
+      ].filter(Boolean),
+      grid_options: { columns: 6 },
+    } : null;
 
     const lastTripResult = metric("last_trip_result");
     const nativeLastTrip = entity("last_trip");
@@ -436,13 +467,18 @@ class SvDashboardStrategy extends HTMLElement {
       { type: "grid", cards: present([
         separator(strings.consumptionUsage, "mdi:chart-line"),
         entity("mileage") ? { ...bubble("mileage", strings.mileage, "mdi:counter", [subState("engine", "", vehicleIcon)]), button_action: { tap_action: { action: "navigate", navigation_path: statisticsViewPath } }, styles: `.bubble-sub-button-1 { background-color:\${hass.states['${entity("engine")}']?.state === 'on' ? 'rgba(76,175,80,0.35)' : ''} !important; } .bubble-sub-button-1 > ha-icon { color:\${hass.states['${entity("engine")}']?.state === 'on' ? 'var(--success-color)' : ''} !important; }`, grid_options: { columns: "full" } } : null,
-        supportsElectric && metric("trailing_consumption_500km") ? { type: "custom:bubble-card", card_type: "button", button_type: "state", entity: metric("trailing_consumption_500km"), name: strings.trailingConsumption, icon: "mdi:lightning-bolt-circle", force_icon: true, card_layout: "large", button_action: { tap_action: { action: "navigate", navigation_path: statisticsViewPath } }, grid_options: { columns: 6 } } : null,
+        supportsElectric && !supportsDualEnergy && trailingElectricConsumption ? { type: "custom:bubble-card", card_type: "button", button_type: "state", entity: trailingElectricConsumption, name: strings.trailingConsumption, icon: "mdi:lightning-bolt-circle", force_icon: true, card_layout: "large", button_action: { tap_action: { action: "navigate", navigation_path: statisticsViewPath } }, grid_options: { columns: 6 } } : null,
         supportsChargeHistory && metric("distance_since_charge") ? { type: "custom:bubble-card", card_type: "button", button_type: "state", entity: metric("distance_since_charge"), name: strings.distanceSinceCharge, icon: "mdi:map-marker-distance", force_icon: true, card_layout: "large", grid_options: { columns: 6 } } : null,
         supportsElectric && metric("current_trip_energy") ? { type: "custom:bubble-card", card_type: "button", button_type: "state", entity: metric("current_trip_energy"), name: strings.currentTripEnergy, icon: "mdi:battery-minus", force_icon: true, card_layout: "large" } : null,
-        supportsFuel ? bubble("fuel", strings.fuel, "mdi:gas-station", [], 6) : null,
-        supportsFuel ? bubble("fuel_autonomy", strings.fuelRange, "mdi:map-marker-distance", [], 6) : null,
-        supportsFuel ? bubble("fuel_consumption_instant", strings.fuelConsumption, "mdi:gas-station-outline") : null,
+        supportsFuel && !supportsDualEnergy ? bubble("fuel", strings.fuel, "mdi:gas-station", [], 6) : null,
+        supportsFuel && !supportsDualEnergy ? bubble("fuel_autonomy", strings.fuelRange, "mdi:map-marker-distance", [], 6) : null,
+        supportsFuel && !supportsDualEnergy ? bubble("fuel_consumption_instant", strings.fuelConsumption, "mdi:gas-station-outline") : null,
       ]) },
+      supportsDualEnergy && (remainingBatteryEnergy || remainingFuelLiters || trailingElectricConsumption || trailingFuelConsumption) ? { type: "grid", cards: present([
+        separator(strings.consumptionReserves, "mdi:gauge"),
+        reserveCard(remainingBatteryEnergy, strings.electricReserve, "mdi:lightning-bolt-circle", trailingElectricConsumption),
+        reserveCard(remainingFuelLiters, strings.fuelReserve, "mdi:gas-station", trailingFuelConsumption),
+      ]) } : { type: "grid", cards: [] },
       { type: "grid", cards: present([
         separator(strings.quickActions, "mdi:lightning-bolt"),
         bubble("command_status", strings.commandStatus, "mdi:remote"),
@@ -493,13 +529,14 @@ class SvDashboardStrategy extends HTMLElement {
       cards: overviewSections.map((section) => layoutCard(section.cards)),
     }];
 
-    if (entity("battery_health_capacity") || entity("battery_health_resistance") || canonicalMileage || entity("mileage") || metric("trailing_consumption_500km")) {
+    if (entity("battery_health_capacity") || entity("battery_health_resistance") || canonicalMileage || entity("mileage") || trailingElectricConsumption || trailingFuelConsumption) {
       const statisticsCards = [
         supportsElectric && entity("battery_health_capacity") ? { type: "statistics-graph", title: strings.sohCapacityHistory, entities: [entity("battery_health_capacity")], days_to_show: LONG_TERM_STATISTICS_DAYS, period: "week", stat_types: ["mean", "min", "max"], chart_type: "line", hide_legend: true, grid_options: { columns: "full", rows: 5 } } : null,
         supportsElectric && entity("battery_health_resistance") ? { type: "statistics-graph", title: strings.sohResistanceHistory, entities: [entity("battery_health_resistance")], days_to_show: LONG_TERM_STATISTICS_DAYS, period: "week", stat_types: ["mean", "min", "max"], chart_type: "line", hide_legend: true, grid_options: { columns: "full", rows: 5 } } : null,
         (canonicalMileage || entity("mileage")) ? { type: "statistics-graph", title: strings.mileageHistory, entities: [canonicalMileage || entity("mileage")], days_to_show: LONG_TERM_STATISTICS_DAYS, period: "week", stat_types: ["state"], chart_type: "line", hide_legend: true, grid_options: { columns: "full", rows: 5 } } : null,
         canonicalMileage ? { type: "statistics-graph", title: strings.drivenDistanceHistory, entities: [canonicalMileage], days_to_show: LONG_TERM_STATISTICS_DAYS, period: "month", stat_types: ["change"], chart_type: "bar", hide_legend: true, grid_options: { columns: "full", rows: 5 } } : null,
-        supportsElectric && metric("trailing_consumption_500km") ? { type: "statistics-graph", title: strings.consumptionHistory, entities: [metric("trailing_consumption_500km")], days_to_show: LONG_TERM_STATISTICS_DAYS, period: "week", stat_types: ["mean"], chart_type: "line", hide_legend: true, grid_options: { columns: "full", rows: 5 } } : null,
+        supportsElectric && trailingElectricConsumption ? { type: "statistics-graph", title: strings.consumptionHistory, entities: [trailingElectricConsumption], days_to_show: LONG_TERM_STATISTICS_DAYS, period: "week", stat_types: ["mean"], chart_type: "line", hide_legend: true, grid_options: { columns: "full", rows: 5 } } : null,
+        supportsFuel && trailingFuelConsumption ? { type: "statistics-graph", title: strings.trailingFuelConsumption, entities: [trailingFuelConsumption], days_to_show: LONG_TERM_STATISTICS_DAYS, period: "week", stat_types: ["mean"], chart_type: "line", hide_legend: true, grid_options: { columns: "full", rows: 5 } } : null,
         supportsFuel && entity("fuel_consumption_instant") ? { type: "statistics-graph", title: strings.fuelConsumption, entities: [entity("fuel_consumption_instant")], days_to_show: LONG_TERM_STATISTICS_DAYS, period: "week", stat_types: ["mean"], chart_type: "line", hide_legend: true, grid_options: { columns: "full", rows: 5 } } : null,
       ].filter(Boolean);
       views.push({ title: strings.longTermStatistics, path: "statistics", icon: "mdi:chart-timeline-variant", type: "sections", max_columns: 2, sections: [{ type: "grid", cards: [{ type: "heading", heading: strings.longTermStatistics, icon: "mdi:chart-timeline-variant", heading_style: "title" }, markdown(strings.longTermStatisticsIntro), ...statisticsCards] }] });
