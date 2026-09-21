@@ -93,6 +93,15 @@
       },
       "current_trip_consumption": {
         "name": "Consum cursă curentă"
+      },
+      "remaining_battery_energy_kwh": {
+        "name": "Energie rămasă în baterie"
+      },
+      "remaining_fuel_liters": {
+        "name": "Combustibil rămas estimat"
+      },
+      "trailing_fuel_consumption_500km": {
+        "name": "Consum mediu de combustibil (500 km)"
       }
     },
     "number": {
