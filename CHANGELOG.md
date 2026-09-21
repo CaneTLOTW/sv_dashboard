@@ -4,6 +4,17 @@
 
 No changes yet.
 
+## 0.6.0-beta.27 Dual-Energy consumption & reserves candidate
+
+- Adds package-owned **Remaining battery energy** with explicit provenance: direct upstream residual kWh is preferred; otherwise SV Dashboard uses current SOC × the existing trustworthy vehicle-capacity hierarchy and marks the result estimated.
+- Adds package-owned **Remaining fuel** in litres from configured per-vehicle tank capacity × current fuel-level percentage, always marked estimated rather than presented as directly measured volume.
+- Adds **Trailing fuel consumption (500 km)** from canonical completed-trip fuel litres and distance, including proportional use of the oldest boundary trip and excluding invalid/missing telemetry rather than inferring consumption from tank-level percentage changes.
+- Adds a capability-gated **Consumption & reserves** block to the generated Dual-Energy Vehicle view, pairing electric and fuel reserves with their rolling 500-km consumption metrics while removing duplicate raw fuel/rolling-electric cards from the older usage group for Dual-Energy vehicles.
+- Deliberately does **not** add synthetic current-trip fuel or live l/100 km from coarse tank percentage. Direct live fuel consumption remains usable only where the upstream vehicle actually exposes a fresh, behaviorally trustworthy field.
+- Completes the semantic localisation cleanup from #74: Fuel History help text now documents direct-or-estimated litres in all 18 languages, and French uses neutral `ravitaillement` wording instead of implying a full tank with `plein`.
+- Adds focused pure metric and frontend regression coverage and bumps package/frontend cache generation to beta.27.
+- Does not modify or retag the frozen external `v0.6.0-beta.26` DS N°4 validation candidate.
+
 ## 0.6.0-beta.26 DS N°4 external validation candidate
 
 - Freezes the accepted beta.25 product line for the next real DS N°4 MY2026 PHEV / French validation round instead of asking the external tester to follow a moving `develop` branch.
