@@ -180,7 +180,7 @@ Important limitations:
 
 Capability metadata should therefore complement, not replace, real-vehicle evidence in [VEHICLE_CAPABILITY_MATRIX.md](VEHICLE_CAPABILITY_MATRIX.md).
 
-The privacy-safe **Phase A Vehicle API audit** tracked in [issue #70](https://github.com/CaneTLOTW/sv_dashboard/issues/70) is implemented on `develop` and probes, where accessible:
+The privacy-safe **Phase A Vehicle API audit** tracked in [issue #70](https://github.com/CaneTLOTW/sv_dashboard/issues/70) is runtime-accepted and included in the beta.26 validation line. It probes, where accessible:
 
 - vehicle/account list and extensions;
 - current vehicle status;
@@ -203,6 +203,13 @@ The privacy-safe **Phase A Vehicle API audit** tracked in [issue #70](https://gi
 - charging schedule / power-level fields.
 
 A 403, 404 or absent field is capability evidence and does not fail the complete audit. The implementation and privacy/export contract are documented in [Vehicle capability audit](VEHICLE_AUDIT.md).
+
+Runtime hardening established two further rules:
+
+1. the audit must resolve the currently loaded upstream client and reject one already shutting down, so an upstream reload cannot turn every probe into a stale-client transport failure;
+2. raw payload paths are compared against a **narrow audit-only alias normalization** before they are classified as unmapped. This prevents already represented battery/SOC/range/charging/preconditioning data from being reported as false new capabilities while preserving the original raw paths in the export.
+
+The accepted reconciliation does not justify a second battery-health sensor or model-specific field list. Remaining empty charging-schedule data and naturally unobserved `stolen.*` fields stay evidence requests until a real sample exists.
 
 ## Evidence rules
 
