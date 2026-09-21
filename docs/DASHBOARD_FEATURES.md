@@ -96,7 +96,7 @@ The native Dual-Energy Hero uses normal Home Assistant interactions:
 - detail value → native More Info/history for the metric currently displayed;
 - preconditioning icon → sends a mapped **START** request once where supported.
 
-The Hero deliberately does **not** turn the preconditioning icon into a start/stop toggle. Vehicle/API state feedback can arrive with a delay, so repeated START requests are temporarily guarded while the command is pending. The icon is neutral while inactive, shows pending feedback after a START request and follows the actual mapped preconditioning state once it becomes active. Explicit **Start** and **Stop** controls remain available in the generated dashboard's **Quick actions** section.
+The Hero uses a guarded, upstream-confirmed **START / STOP state machine**. Vehicle/API feedback can arrive with a delay, so an inactive click sends START and enters a pending state; repeated START requests are blocked until the upstream state confirms active. Once active is confirmed, clicking the Hero control sends STOP and enters a separate stop-pending state until the upstream state confirms inactive. Explicit **Start** and **Stop** controls also remain available in the generated dashboard's **Quick actions** section.
 
 SV Dashboard does not impose its own fixed climate run time. The vehicle/upstream service remains responsible for the remote-preconditioning cycle and its termination.
 
@@ -107,16 +107,16 @@ The two energy domains remain deliberately independent.
 | State | Battery side | Fuel side |
 | --- | --- | --- |
 | Parked / idle | SOC + electric range | fuel level + fuel range |
-| Driving | SOC + current-trip energy used in **kWh** | fuel level + fresh upstream `l/100 km` when trustworthy, otherwise fuel range |
-| Charging | SOC + current charge power | fuel level/range remains available |
+| Driving | SOC + electric range remains visible | fuel level + fuel range remain visible; a fresh trustworthy upstream `l/100 km` may appear as secondary detail |
+| Charging | SOC + electric range remain visible; current charge power may appear as secondary detail | fuel level + fuel range remain visible |
 
-`current_trip_energy` is an **absolute current-trip kWh value**, not a Hero `kWh/100 km` value. Normalized electric consumption remains available elsewhere where the underlying metric supports it.
+The Hero deliberately keeps both ranges visible across states. It does **not** synthesize a live EV `kWh/100 km` value from coarse SOC/odometer changes. Package metrics such as `current_trip_energy` and normalized trip consumption remain available elsewhere when their source quality supports them.
 
-Fuel consumption is intentionally conservative: a stale value from an earlier drive must not be presented as current Hybrid consumption.
+Fuel consumption is intentionally conservative: a stale, absent or behaviorally untrusted value must not be presented as current Hybrid consumption.
 
 ## Fuel history
 
-Fuel-capable vehicles can expose fuel history/consumption presentation when the upstream data is sufficient. Refuelling detection remains conservative; SV Dashboard does not invent litres from ambiguous level changes.
+Fuel-capable vehicles can expose fuel history/consumption presentation when the upstream data is sufficient. Refuelling detection remains conservative and restart-safe. When a direct refill amount exists it is preferred; otherwise a configured per-vehicle tank capacity may estimate added litres from a confirmed fuel-level increase, with explicit provenance/estimated status. Ambiguous level changes remain excluded.
 
 ## Charging
 
