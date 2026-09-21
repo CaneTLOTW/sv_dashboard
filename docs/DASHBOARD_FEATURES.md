@@ -114,6 +114,21 @@ The Hero deliberately keeps both ranges visible across states. It does **not** s
 
 Fuel consumption is intentionally conservative: a stale, absent or behaviorally untrusted value must not be presented as current Hybrid consumption.
 
+## Consumption & reserves
+
+For vehicles exposing **both electric and fuel** capabilities, the generated Vehicle view adds a compact matched **Consumption & reserves** block between the general Consumption & usage section and Quick Actions.
+
+The two summary cards use package-owned canonical metrics rather than inline frontend arithmetic:
+
+- **Electric · remaining** — prefers a valid upstream `battery_residual` kWh value; otherwise derives remaining energy from current SOC × the existing trustworthy capacity hierarchy. Direct residual values are marked direct; SOC × capacity is marked estimated.
+- **Electric · last 500 km** — reuses the existing rolling electric `trailing_consumption_500km` metric.
+- **Fuel · remaining** — estimates litres from configured per-vehicle tank capacity × current fuel-level percentage. It is explicitly an estimate, not measured tank volume.
+- **Fuel · last 500 km** — derives l/100 km from canonical **completed-trip** `fuel_consumption_l` and distance over up to the latest 500 km. Invalid statistics rows and trips without fuel telemetry are excluded; a canonical explicit zero remains a valid EV-only trip contribution.
+
+The block is capability-gated rather than model-gated and is not added to BEV-only or thermic-only generated layouts in this scope. Dual-Energy values already represented by the Hero/reserve block are not repeated as raw fuel cards in the older Consumption & usage group.
+
+SV Dashboard deliberately does **not** calculate current-trip litres or live l/100 km from coarse tank-level percentage changes. A direct live fuel value may still be shown where the upstream vehicle provides a fresh, behaviorally trustworthy source.
+
 ## Fuel history
 
 Fuel-capable vehicles can expose fuel history/consumption presentation when the upstream data is sufficient. Refuelling detection remains conservative and restart-safe. When a direct refill amount exists it is preferred; otherwise a configured per-vehicle tank capacity may estimate added litres from a confirmed fuel-level increase, with explicit provenance/estimated status. Ambiguous level changes remain excluded.
