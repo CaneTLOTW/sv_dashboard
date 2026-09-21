@@ -27,7 +27,10 @@ SV Dashboard currently exposes package-owned `sensor`, `switch`, `button`, `numb
 | **Server GPS history** | GeoJSON/history derived from available server positions. | Can be sparse; route lines are approximations. |
 | **Server charge history** | Canonical/observed charging sessions and compact curve data. | Direct observations where available; reconstructed windows remain estimates. |
 | **Vehicle information** | Brand, powertrain and available vehicle/maintenance information. | Runtime data can contain private vehicle identifiers. |
-| **Trailing consumption (500 km)** | Rolling consumption over qualifying canonical trips. | Derived; electric energy can depend on SOC/capacity estimates. |
+| **Trailing consumption (500 km)** | Rolling electric consumption over qualifying canonical trips. | Derived; electric energy can depend on SOC/capacity estimates. |
+| **Remaining battery energy** | Current battery energy in kWh. Prefers direct upstream residual energy, otherwise SOC × trustworthy capacity. | Direct/high when `battery_residual` is available; otherwise estimated with explicit capacity/source provenance. |
+| **Remaining fuel** | Estimated litres currently in the tank from configured tank capacity × fuel-level percentage. | Estimated/low; coarse level resolution means this is not directly measured tank volume. |
+| **Trailing fuel consumption (500 km)** | Rolling fuel consumption from canonical completed-trip fuel telemetry over up to the latest 500 km. | Derived/medium; never reconstructed from tank-level percentage deltas. |
 | **Canonical mileage** | Monotonic package-owned odometer for Recorder/LTS distance changes. | Direct/derived high: valid upstream odometer values with rollback/unavailable filtering, reconciled forward by trustworthy canonical server-trip odometer anchors. |
 | **Distance since last charge** | Odometer minus reconciled last-charge baseline. | Direct/high when both values are valid; otherwise unavailable. |
 | **Current trip energy** | Battery-side energy estimate for an observed trip. | Estimated/low. Electric-capability only. |
@@ -35,7 +38,7 @@ SV Dashboard currently exposes package-owned `sensor`, `switch`, `button`, `numb
 | **Current charge power** | Battery-side charging-power estimate from SOC/time samples. | Estimated/low. Charging-capability only. |
 | **Last local charge result** | Completed locally observed charging result. | Mixed direct/estimated fields. Charging-capability only. |
 
-Not every vehicle receives every package-owned electric metric. Setup is capability-gated.
+Not every vehicle receives every package-owned metric. Setup is capability-gated. Fuel metrics are created only for fuel-capable vehicles; electric reserve metrics require electric capability. The generated paired **Consumption & reserves** block is shown only when both energy domains are present.
 
 ## Buttons
 
@@ -124,7 +127,14 @@ Residual-energy trust order:
 2. SOC × trustworthy capacity where appropriate;
 3. unknown.
 
-Unknown values are omitted rather than fabricated.
+Fuel-volume estimate:
+
+1. current valid fuel-level percentage;
+2. explicit configured per-vehicle nominal tank capacity;
+3. `remaining_fuel_liters = capacity × level / 100`;
+4. otherwise unknown.
+
+The fuel-volume result is always marked estimated. Rolling fuel consumption instead uses completed canonical trip `fuel_consumption_l` values and distance; it never uses tank-level percentage deltas. Unknown values are omitted rather than fabricated.
 
 ## Canonical trip data quality
 
