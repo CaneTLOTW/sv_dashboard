@@ -116,14 +116,14 @@ Fuel consumption is intentionally conservative: a stale, absent or behaviorally 
 
 ## Consumption & reserves
 
-For vehicles exposing **both electric and fuel** capabilities, the generated Vehicle view adds a compact matched **Consumption & reserves** block between the general Consumption & usage section and Quick Actions.
+For vehicles exposing **both electric and fuel** capabilities, the generated Vehicle view adds a compact **Consumption & reserves** block between the general Consumption & usage section and Quick Actions.
 
-The two summary cards use package-owned canonical metrics rather than inline frontend arithmetic:
+The owner-reviewed layout deliberately uses the same full-width stacked Bubble state-card pattern as the existing Consumption & usage section. Each metric gets its own row; there are no half-width Electric/Fuel cards and no nested “Last 500 km” sub-buttons.
 
-- **Electric · remaining** — prefers a valid upstream `battery_residual` kWh value; otherwise derives remaining energy from current SOC × the existing trustworthy capacity hierarchy. Direct residual values are marked direct; SOC × capacity is marked estimated.
-- **Electric · last 500 km** — reuses the existing rolling electric `trailing_consumption_500km` metric.
-- **Fuel · remaining** — estimates litres from configured per-vehicle tank capacity × current fuel-level percentage. It is explicitly an estimate, not measured tank volume.
-- **Fuel · last 500 km** — derives l/100 km from canonical **completed-trip** `fuel_consumption_l` and distance over up to the latest 500 km. Invalid statistics rows and trips without fuel telemetry are excluded; a canonical explicit zero remains a valid EV-only trip contribution.
+- **Remaining battery energy** — prefers a valid upstream `battery_residual` kWh value; otherwise derives remaining energy from current SOC × the existing trustworthy capacity hierarchy. Direct residual values are marked direct; SOC × capacity is marked estimated.
+- **Average electric consumption (500 km)** — reuses the existing rolling electric `trailing_consumption_500km` metric.
+- **Estimated fuel remaining** — estimates litres from configured per-vehicle tank capacity × current fuel-level percentage. It is explicitly an estimate, not measured tank volume.
+- **Average fuel consumption (500 km)** — derives l/100 km from canonical **completed-trip** `fuel_consumption_l` and distance over up to the latest 500 km. Invalid statistics rows and trips without fuel telemetry are excluded; a canonical explicit zero remains a valid EV-only trip contribution.
 
 The block is capability-gated rather than model-gated and is not added to BEV-only or thermic-only generated layouts in this scope. Dual-Energy values already represented by the Hero/reserve block are not repeated as raw fuel cards in the older Consumption & usage group.
 
