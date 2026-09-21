@@ -1,5 +1,5 @@
 import { LitElement, html, css, nothing } from "./vendor-lit.js?v=0.6.0-beta.7";
-import { localeFor, textFor } from "./i18n.js?v=0.6.0-beta.27";
+import { localeFor, textFor } from "./i18n.js?v=0.6.0-beta.28";
 import { insertOdometerGapRows, semanticTripTime, tripFilterTime } from "./trip-gap-core.js?v=0.6.0-beta.15";
 
 /**
