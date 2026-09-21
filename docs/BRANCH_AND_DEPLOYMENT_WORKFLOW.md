@@ -24,8 +24,10 @@ GitHub Issue
   -> build/redeploy replacement Candidate if needed
   -> Validated = exact Runtime SHA/version that passed required checks
   -> explicit maintainer/user acceptance
-  -> fast-forward that exact Validated SHA to main
-  -> tag/release from that exact main SHA
+  -> optional immutable external prerelease from that exact Validated develop SHA
+  -> external acceptance when required
+  -> fast-forward the accepted SHA to main
+  -> stable tag/release from the accepted main SHA
 ```
 
 ## Candidate, Runtime and Validated
@@ -87,8 +89,22 @@ A narrowly scoped compatibility shim for a third-party component is acceptable o
 3. Before stable promotion, `main` must be an ancestor of the validated `develop` SHA.
 4. Promotion is **fast-forward only** to the exact accepted SHA.
 5. Do not squash, rebase or cherry-pick between runtime acceptance and promotion.
-6. Tags/releases are created from promoted `main`, never an unvalidated development head.
-7. Emergency fixes use the same `develop -> validate -> accept -> fast-forward main` path.
+6. **External prerelease tags/releases** may be created from an exact, statically/runtime-validated `develop` candidate when the purpose is immutable external acceptance. They must never point at a moving branch head.
+7. **Stable tags/releases** are created only from the accepted `main` SHA.
+8. Emergency fixes use the same `develop -> validate -> accept -> fast-forward main` path.
+
+## External prerelease contract
+
+When an external tester is needed before stable promotion:
+
+1. freeze an exact validated `develop` SHA;
+2. create an immutable semantic prerelease tag for that SHA;
+3. publish it as a GitHub **Pre-release**;
+4. ask the tester to use HACS **Pre-release**, never a moving `develop` checkout;
+5. record tester acceptance against that exact tag/SHA;
+6. do not move/recreate the tag if `develop` advances later.
+
+A prerelease from `develop` is an acceptance artifact, not a stable-main promotion.
 
 ## Version and frontend cache
 
