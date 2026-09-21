@@ -4,7 +4,7 @@
 
 SV Dashboard is a HACS custom integration that builds a vehicle-focused Home Assistant dashboard on top of [Stellantis Vehicles](https://github.com/andreadegiovine/homeassistant-stellantis-vehicles).
 
-> **Beta status:** SV Dashboard is the successor to `CaneTLOTW/e_c3_dashboard`. The new Home Assistant domain is `sv_dashboard`. Owner runtime validation has progressed through beta.25; **beta.26 remains the frozen external DS N°4/French validation candidate**. Development has moved on to a beta.27 candidate with capability-gated Dual-Energy consumption/reserve metrics; beta.26 is not retagged or modified. Real-vehicle evidence now covers both field availability and vehicle-specific timing/behavior differences before promotion to `main`.
+> **Beta status:** SV Dashboard is the successor to `CaneTLOTW/e_c3_dashboard`. The new Home Assistant domain is `sv_dashboard`. Owner runtime validation has progressed through beta.25; **beta.26 remains the frozen external DS N°4/French validation candidate**. Development has moved on to a beta.28 candidate with capability-gated Dual-Energy consumption/reserve metrics and the owner-reviewed stacked reserve layout; beta.26 is not retagged or modified. Real-vehicle evidence now covers both field availability and vehicle-specific timing/behavior differences before promotion to `main`.
 
 [![Open the SV Dashboard repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=CaneTLOTW&repository=sv_dashboard&category=integration)
 
