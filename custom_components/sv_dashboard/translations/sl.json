@@ -93,6 +93,15 @@
       },
       "current_trip_consumption": {
         "name": "Poraba trenutne vožnje"
+      },
+      "remaining_battery_energy_kwh": {
+        "name": "Preostala energija baterije"
+      },
+      "remaining_fuel_liters": {
+        "name": "Ocenjeno preostalo gorivo"
+      },
+      "trailing_fuel_consumption_500km": {
+        "name": "Povprečna poraba goriva (500 km)"
       }
     },
     "number": {
