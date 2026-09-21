@@ -125,7 +125,7 @@ The existence or success of an upstream command entity is not proof that the sel
 
 Recipient selection belongs to Home Assistant integration options rather than hard-coded dashboard/repository configuration.
 
-The Notifications view shows controls only for explicitly selected recipients that currently exist as Home Assistant Notify services.
+The Notifications view creates controls from explicitly configured recipients. A recipient switch can remain defined while its underlying Home Assistant Notify entity is temporarily unavailable during provider reload; delivery still fails closed unless the destination is currently discoverable/available.
 
 No recipient credentials, mobile-app names, messaging-service configuration or household IDs belong in this repository.
 
@@ -149,9 +149,9 @@ The **Restore notification defaults** action resets only package-owned Number/Ti
 
 ## Current QA status
 
-The migrated SV implementation contains the notification/wake-up contract above, but focused real-event runtime acceptance is still open.
+The notification/wake-up contract above is implemented. The modern Notify-entity cutover and provider-reload lifecycle were runtime-accepted through beta.25: explicitly configured recipient switches survive a temporary provider-entity disappearance and recover availability without requiring an SV Dashboard reload.
 
-Recipient delivery, quiet-hours deferral, heartbeat outage/recovery and real trip/charge reports are tracked in **SV Dashboard issue #3**. Source behavior is hardened for beta.20. Runtime QA should validate the same generic contract for any vehicle state and must not add owner- or vehicle-specific behavior.
+Focused **natural-event** acceptance is still open for real trip/charge reports, quiet-hours deferral and outage/recovery behavior in **SV Dashboard issue #3**. Runtime QA should validate the same generic contract for any vehicle state and must not add owner- or vehicle-specific behavior.
 
 
 ## Recipient delivery
