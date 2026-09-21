@@ -40,6 +40,10 @@ test("generated dashboard adds a dual-energy reserves block without model checks
   assert.match(strategy, /reserveCard\(remainingBatteryEnergy, strings\.electricReserve/);
   assert.match(strategy, /reserveCard\(remainingFuelLiters, strings\.fuelReserve/);
   assert.match(strategy, /metricSubState\(trailingEntity, strings\.last500km/);
+  assert.match(strategy, /reserve_layout: true/);
+  assert.match(strategy, /const reserveLayoutCard =/);
+  assert.match(strategy, /"\(max-width: 600px\)"/);
+  assert.match(strategy, /"grid-template-columns": "1fr"/);
   assert.doesNotMatch(strategy, /DS N°4|DS4|Citroën|ë-C3/);
 });
 
