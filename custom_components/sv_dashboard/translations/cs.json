@@ -93,6 +93,15 @@
       },
       "current_trip_consumption": {
         "name": "Spotřeba aktuální jízdy"
+      },
+      "remaining_battery_energy_kwh": {
+        "name": "Zbývající energie baterie"
+      },
+      "remaining_fuel_liters": {
+        "name": "Odhad zbývajícího paliva"
+      },
+      "trailing_fuel_consumption_500km": {
+        "name": "Průměrná spotřeba paliva (500 km)"
       }
     },
     "number": {
