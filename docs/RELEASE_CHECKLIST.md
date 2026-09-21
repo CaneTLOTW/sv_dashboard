@@ -30,13 +30,14 @@ Documentation-only cleanup does not require a package version bump when no runti
 
 For prerelease validation:
 
+- [ ] freeze one exact validated `develop` SHA and tag that SHA; do not point an external tester at a moving branch;
 - [ ] the GitHub release is explicitly marked **prerelease**; do not publish a beta as a stable release merely to influence HACS;
 - [ ] beta testers enable the HACS per-repository **Pre-release** switch before testing update discovery;
 - [ ] after a HACS refresh, the update entity advertises the semantic `v0.6.0-beta.N` tag rather than a `develop` commit SHA;
 - [ ] the tester records the displayed installed/available versions and, when relevant, a screenshot of the Home Assistant update notification;
 - [ ] a HACS-generated external release-link 404 is tracked separately from package/runtime health; HACS 2.0.x currently constructs that link without GitHub's required `/tag/` segment (see #41).
 
-Before the first stable release, explicitly review the repository default-branch/release-channel policy so unaccepted `develop` commits cannot be mistaken for the stable update channel.
+Before the first stable release, explicitly review the repository default-branch/release-channel policy so unaccepted `develop` commits cannot be mistaken for the stable update channel. Stable tags/releases must come from the accepted `main` SHA; prerelease tags may come from an exact validated `develop` candidate used for external acceptance.
 
 ## 3. Repository validation
 
