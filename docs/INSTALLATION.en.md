@@ -22,13 +22,14 @@ The four frontend dependencies must also be loaded as Lovelace JavaScript module
 
 1. Open **HACS → Integrations → Custom repositories**.
 2. Add `CaneTLOTW/sv_dashboard` as category **Integration**.
-3. Download **SV Dashboard**.
-4. Restart Home Assistant.
-5. Open **Settings → Devices & services → Add integration**.
-6. Select **SV Dashboard**.
-7. Select the configured Stellantis vehicle and choose the desired modules/options.
-8. Complete setup. SV Dashboard creates a dedicated storage dashboard for that config entry.
-9. Refresh the browser/app once and open the generated dashboard.
+3. During beta testing, enable the repository's **Pre-release** option and install the exact published prerelease requested by the test issue. Do not use a moving `develop` commit as an external test target.
+4. Download **SV Dashboard**.
+5. Restart Home Assistant.
+6. Open **Settings → Devices & services → Add integration**.
+7. Select **SV Dashboard**.
+8. Select the configured Stellantis vehicle and choose the desired modules/options.
+9. Complete setup. SV Dashboard creates a dedicated storage dashboard for that config entry.
+10. Refresh the browser/app once and open the generated dashboard.
 
 ## Migration from e-C3 Dashboard
 
@@ -113,9 +114,9 @@ If you need 90 days of Recorder-backed data, configure Recorder accordingly. SV 
 
 ## Data quality expectations
 
-SV Dashboard distinguishes direct upstream values from derived estimates:
+SV Dashboard distinguishes direct upstream values from derived estimates and from behavior-qualified live values:
 
-- mileage/odometer deltas are used when valid;
+- mileage/odometer deltas are used only where the relevant calculation can trust the vehicle's observed update timing; a mapped odometer can be live on one vehicle and end-of-trip on another;
 - SOC × capacity energy is an estimate and requires trustworthy vehicle-specific capacity;
 - charging power derived from SOC/time is an estimate;
 - server-trip GPS lines can be start-to-stop approximations rather than complete routes.
@@ -152,4 +153,4 @@ Check Recorder retention and include filters. SV Dashboard cannot recreate Recor
 
 Install updates through HACS. Restart Home Assistant when release notes require it and refresh browser/app cache after frontend changes.
 
-During migration, development is validated on exact `develop` SHAs before any stable promotion to `main`.
+During beta testing, keep **Pre-release** enabled and use the exact semantic prerelease named by the active validation issue. Development is validated on exact `develop` SHAs; stable promotion to `main` happens only after the required runtime/external acceptance.
