@@ -44,9 +44,9 @@ const CAPABILITY_EXCEPTIONS = {
     "restoreNotificationDefaults",
     "reachability",
     "consumptionReserves",
-    "electricReserve",
-    "fuelReserve",
-    "last500km",
+    "remainingBatteryEnergy",
+    "trailingElectricConsumption",
+    "remainingFuel",
     "trailingFuelConsumption",
   ]),
 };
@@ -158,7 +158,7 @@ test("capability labels are sourced from the language catalogs for every languag
 test("dual-energy reserves and Fuel History semantics are localized", () => {
   for (const language of LANGUAGES) {
     const dashboard = FRONTEND_TEXT.dashboard[language];
-    for (const key of ["consumptionReserves", "electricReserve", "fuelReserve", "last500km", "trailingFuelConsumption"]) {
+    for (const key of ["consumptionReserves", "remainingBatteryEnergy", "trailingElectricConsumption", "remainingFuel", "trailingFuelConsumption"]) {
       assert.ok(dashboard[key]?.trim(), `missing ${language} dashboard.${key}`);
     }
     assert.match(FRONTEND_TEXT.fuelHistory[language].hint, /./);
