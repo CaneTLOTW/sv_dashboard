@@ -56,7 +56,7 @@ test("dashboard display name remains a per-entry option and current resource ver
   assert.match(configFlowSource, /OPTION_DASHBOARD_NAME/);
   assert.match(configFlowSource, /normalized\[OPTION_DASHBOARD_NAME\]/);
   assert.match(constSource, /OPTION_DASHBOARD_NAME = "dashboard_name"/);
-  assert.match(constSource, /FRONTEND_VERSION = "0\.6\.0-beta\.26"/);
+  assert.match(constSource, /FRONTEND_VERSION = "0\.6\.0-beta\.27"/);
 });
 
 
