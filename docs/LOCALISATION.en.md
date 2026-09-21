@@ -39,7 +39,7 @@ Regional variants are normalized, for example:
 - `nb-NO` / `no-NO` → `nb`
 - unsupported locales → `en`
 
-Trip history, charging history, fuel history, the compact vehicle overview, the Dual-Energy overview and generated dashboard views use the same locale resolver. Do not add language conditionals to business logic or private `TEXT` matrices to card files.
+Trip history, charging history, fuel history, the compact vehicle overview, the Dual-Energy overview, the Vehicle API audit card and generated dashboard views use the same locale resolver. Do not add language conditionals to business logic or private `TEXT` matrices to card files.
 
 The public Home Assistant card-picker names are also localized. The compact overview and the wide Dual-Energy overview must remain distinguishable in every language.
 
@@ -64,6 +64,10 @@ The current Dual-Energy Hero keeps range labels visible across vehicle states. P
 DE / EN / FR runtime language switching of the native Hero was visually checked during beta.9 owner QA; the long French labels remained stable without clipping or column drift.
 
 See [Dual-Energy vehicle overview card](DUAL_ENERGY_OVERVIEW_CARD.md).
+
+### Diagnostic/export exception
+
+Interactive diagnostic surfaces such as the Vehicle API audit use localized card controls and explanatory text. Machine/evidence exports intentionally keep stable technical identifiers: JSON keys/probe IDs/status enums are not translated, and the GitHub-ready Markdown audit export uses one canonical English structure so reports from different tester locales remain comparable.
 
 ## Backend messages
 
