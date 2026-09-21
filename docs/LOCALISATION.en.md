@@ -19,12 +19,15 @@ Package-owned sensors, switches, numbers, times and buttons use `translation_key
 Examples from the French entity surface include:
 
 - `dashboard_status` → `Statut du tableau de bord`
-- `current_trip_energy` → `Énergie consommée sur le trajet en cours`
-- `current_trip_consumption` → `Consommation du trajet en cours`
+- `current_trip_energy` → `Énergie électrique consommée depuis le début du trajet`
+- `current_trip_consumption` → `Consommation électrique du trajet en cours`
 - `current_charge_power` → `Puissance de recharge actuelle`
 - `last_trip_result` → `Dernier trajet enregistré par SV Dashboard`
 - `last_charge_result` → `Dernière recharge enregistrée par SV Dashboard`
-- `trailing_consumption_500km` → `Consommation moyenne (500 km)`
+- `trailing_consumption_500km` → `Consommation électrique moyenne sur les 500 derniers km`
+- `remaining_battery_energy_kwh` → `Énergie électrique restante`
+- `remaining_fuel_liters` → `Carburant restant estimé`
+- `trailing_fuel_consumption_500km` → `Consommation moyenne de carburant sur 500 km`
 
 The `local` result concept therefore means **observed/derived locally by SV Dashboard**, not "at home". Translations must not imply home charging or a geographic location.
 
@@ -64,6 +67,19 @@ The current Dual-Energy Hero keeps range labels visible across vehicle states. P
 DE / EN / FR runtime language switching of the native Hero was visually checked during beta.9 owner QA; the long French labels remained stable without clipping or column drift.
 
 See [Dual-Energy vehicle overview card](DUAL_ENERGY_OVERVIEW_CARD.md).
+
+### Consumption & reserves
+
+The generated Dual-Energy **Consumption & reserves** block is localized through the shared `dashboard` namespace in all 18 languages. Its user-facing concepts include:
+
+| Concept | DE | EN | FR |
+| --- | --- | --- | --- |
+| section | Verbrauch & Reserven | Consumption & reserves | Consommation et réserves |
+| electric reserve | Elektrisch · verbleibend | Electric · remaining | Électrique · restant |
+| fuel reserve | Kraftstoff · verbleibend | Fuel · remaining | Carburant · restant |
+| rolling period | Letzte 500 km | Last 500 km | 500 derniers km |
+
+Fuel History wording must remain provenance-correct. Litres can be direct or estimated from configured tank capacity, so helper text must not claim a direct source is mandatory. In French, generic refuelling uses neutral **ravitaillement** wording; `plein` is avoided because a refuelling event does not imply filling the tank completely.
 
 ### Diagnostic/export exception
 
