@@ -33,6 +33,11 @@ from .const import (
     METRIC_REMAINING_FUEL_LITERS,
     OPTION_HISTORY_HOURS,
 )
+from .consumption import (
+    remaining_battery_energy as derive_remaining_battery_energy,
+    remaining_fuel_liters as derive_remaining_fuel_liters,
+    trailing_fuel_consumption as derive_trailing_fuel_consumption,
+)
 from .distance import canonical_server_mileage, monotonic_mileage
 
 _LOGGER = logging.getLogger(__name__)
@@ -794,36 +799,10 @@ class VehicleMetricsManager:
                 "trip_count": 0,
                 "complete": False,
             }
-
-        remaining = _WINDOW_KM
-        distance = 0.0
-        fuel_liters = 0.0
-        count = 0
-        for trip in reversed(self.canonical_trips()):
-            if trip.get("valid_for_statistics") is False:
-                continue
-            trip_distance = self._as_float(trip.get("distance_km"))
-            raw_fuel = trip.get("fuel_consumption_l")
-            trip_fuel = self._as_float(raw_fuel)
-            if trip_distance is None or trip_distance <= 0 or raw_fuel is None or trip_fuel is None:
-                continue
-            if trip_fuel < 0:
-                continue
-            used_distance = min(remaining, trip_distance)
-            distance += used_distance
-            fuel_liters += trip_fuel * used_distance / trip_distance
-            count += 1
-            remaining -= used_distance
-            if remaining <= 0:
-                break
-
-        return {
-            "value": round(fuel_liters / distance * 100, 2) if distance > 0 else None,
-            "distance_km": round(distance, 2),
-            "fuel_liters": round(fuel_liters, 3),
-            "trip_count": count,
-            "complete": distance >= _WINDOW_KM,
-        }
+        return derive_trailing_fuel_consumption(
+            self.canonical_trips(),
+            window_km=_WINDOW_KM,
+        )
 
     def remaining_battery_energy(self) -> dict[str, Any]:
         """Return current usable battery energy with explicit provenance."""
@@ -836,38 +815,13 @@ class VehicleMetricsManager:
                 "source": None,
                 "estimated": False,
             }
-
-        residual = self._number("battery_residual")
-        soc = self._number("battery")
-        if residual is not None and residual >= 0:
-            return {
-                "value": round(residual, 3),
-                "soc_percent": soc,
-                "capacity_kwh": None,
-                "capacity_source": None,
-                "source": "upstream_battery_residual",
-                "estimated": False,
-            }
-
         capacity, capacity_source = self.battery_capacity()
-        if soc is None or not 0 <= soc <= 100 or capacity is None or capacity <= 0:
-            return {
-                "value": None,
-                "soc_percent": soc,
-                "capacity_kwh": capacity,
-                "capacity_source": capacity_source,
-                "source": None,
-                "estimated": True,
-            }
-
-        return {
-            "value": round(capacity * soc / 100, 3),
-            "soc_percent": soc,
-            "capacity_kwh": capacity,
-            "capacity_source": capacity_source,
-            "source": "soc_x_capacity",
-            "estimated": True,
-        }
+        return derive_remaining_battery_energy(
+            residual_kwh=self._number("battery_residual"),
+            soc_percent=self._number("battery"),
+            capacity_kwh=capacity,
+            capacity_source=capacity_source,
+        )
 
     def remaining_fuel_liters(self) -> dict[str, Any]:
         """Estimate current fuel volume from configured tank capacity and level."""
@@ -879,30 +833,10 @@ class VehicleMetricsManager:
                 "source": None,
                 "estimated": True,
             }
-
-        fuel_level = self._number("fuel")
-        tank_capacity = self._as_float(self.entry.data.get(CONF_TANK_CAPACITY_L))
-        if (
-            fuel_level is None
-            or not 0 <= fuel_level <= 100
-            or tank_capacity is None
-            or tank_capacity <= 0
-        ):
-            return {
-                "value": None,
-                "fuel_level_percent": fuel_level,
-                "tank_capacity_l": tank_capacity,
-                "source": None,
-                "estimated": True,
-            }
-
-        return {
-            "value": round(tank_capacity * fuel_level / 100, 3),
-            "fuel_level_percent": fuel_level,
-            "tank_capacity_l": round(tank_capacity, 3),
-            "source": "fuel_level_x_configured_tank_capacity",
-            "estimated": True,
-        }
+        return derive_remaining_fuel_liters(
+            fuel_level_percent=self._number("fuel"),
+            tank_capacity_l=self._as_float(self.entry.data.get(CONF_TANK_CAPACITY_L)),
+        )
 
     def distance_since_charge(self) -> float | None:
         if not self.capabilities.get("charge_history", bool(self.mapping.get("battery_charging"))):
