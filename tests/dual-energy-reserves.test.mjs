@@ -37,13 +37,12 @@ test("remaining energy and fuel provenance is exposed by dedicated sensors", () 
 test("generated dashboard adds a dual-energy reserves block without model checks", () => {
   assert.match(strategy, /supportsDualEnergy && \(remainingBatteryEnergy \|\| remainingFuelLiters \|\| trailingElectricConsumption \|\| trailingFuelConsumption\)/);
   assert.match(strategy, /separator\(strings\.consumptionReserves, "mdi:gauge"\)/);
-  assert.match(strategy, /reserveCard\(remainingBatteryEnergy, strings\.electricReserve/);
-  assert.match(strategy, /reserveCard\(remainingFuelLiters, strings\.fuelReserve/);
-  assert.match(strategy, /metricSubState\(trailingEntity, strings\.last500km/);
-  assert.match(strategy, /reserve_layout: true/);
-  assert.match(strategy, /const reserveLayoutCard =/);
-  assert.match(strategy, /"\(max-width: 600px\)"/);
-  assert.match(strategy, /"grid-template-columns": "1fr"/);
+  assert.match(strategy, /bubble\("remaining_battery_energy_kwh", strings\.remainingBatteryEnergy[\s\S]*"full", remainingBatteryEnergy\)/);
+  assert.match(strategy, /bubble\("trailing_consumption_500km", strings\.trailingElectricConsumption[\s\S]*"full", trailingElectricConsumption\)/);
+  assert.match(strategy, /bubble\("remaining_fuel_liters", strings\.remainingFuel[\s\S]*"full", remainingFuelLiters\)/);
+  assert.match(strategy, /bubble\("trailing_fuel_consumption_500km", strings\.trailingFuelConsumption[\s\S]*"full", trailingFuelConsumption\)/);
+  assert.doesNotMatch(strategy, /reserveCard|metricSubState|reserveLayoutCard|reserve_layout/);
+  assert.doesNotMatch(strategy, /strings\.last500km/);
   assert.doesNotMatch(strategy, /DS N°4|DS4|Citroën|ë-C3/);
 });
 
@@ -64,9 +63,9 @@ test("all new generated-dashboard labels come from the shared i18n contract", ()
   assert.match(i18n, /const CONSUMPTION_RESERVES_TEXT/);
   for (const key of [
     "consumptionReserves",
-    "electricReserve",
-    "fuelReserve",
-    "last500km",
+    "remainingBatteryEnergy",
+    "trailingElectricConsumption",
+    "remainingFuel",
     "trailingFuelConsumption",
   ]) {
     assert.match(i18n, new RegExp(key));
