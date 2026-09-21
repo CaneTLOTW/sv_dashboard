@@ -93,6 +93,15 @@
       },
       "current_trip_consumption": {
         "name": "Förbrukning aktuell resa"
+      },
+      "remaining_battery_energy_kwh": {
+        "name": "Återstående batterienergi"
+      },
+      "remaining_fuel_liters": {
+        "name": "Uppskattat kvarvarande bränsle"
+      },
+      "trailing_fuel_consumption_500km": {
+        "name": "Genomsnittlig bränsleförbrukning (500 km)"
       }
     },
     "number": {
