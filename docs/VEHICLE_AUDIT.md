@@ -152,10 +152,40 @@ Top-level sections:
 
 The audit ID is a stable one-way hash for correlating repeated reports from the same SV config entry/vehicle without exporting the VIN or vehicle identifier.
 
+## Accepted runtime QA status
+
+The audit has completed owner-runtime acceptance across the beta.22–beta.24 hardening cycle and is included in the beta.26 external validation candidate.
+
+Accepted behavior:
+
+- the audit resolves the **currently loaded** Stellantis Vehicles client at run time and rejects a stale client that is already shutting down;
+- browser export supports both the normal Clipboard API and a local-HTTP fallback for Home Assistant origins where `navigator.clipboard` is unavailable;
+- vehicle/status/maintenance/branding/pictures and bounded Trips probes can complete independently of optional HAL resources;
+- optional resources can remain unavailable or authorization-limited without turning the full audit into a false global failure;
+- probe failures retain a privacy-safe error class/status summary rather than triggering a second request/authentication path;
+- raw Stellantis status aliases are normalized **for audit comparison only** so already mapped battery/SOC/range/charging/preconditioning fields are not falsely reported as new unmapped capabilities.
+
+The owner-runtime acceptance established that a successful audit does **not** mean every optional endpoint is available. In the accepted run, ordinary vehicle/status/history probes succeeded while some optional resources remained unavailable or authorization-limited. This is valid capability evidence rather than a product failure.
+
+### Audit-only alias reconciliation
+
+Real status payloads can expose raw paths that differ from the canonical upstream mapping paths. The audit keeps the raw inventory intact for diagnostics but canonicalizes known aliases when deciding whether a field is already represented upstream.
+
+Examples include:
+
+- raw `energy[].battery.*` versus mapped `energies[].extension.electric.battery.*`;
+- raw electric range/SOC/charging aliases under `energy[]`;
+- observed `preconditionning.*` spelling versus the existing upstream `preconditioning.*` mapping;
+- `charging.nextDelayedTime` represented by the upstream charging-start time entity.
+
+This reconciliation is deliberately narrow. It does **not** create new Home Assistant entities, rewrite the raw export or infer semantics from unknown fields.
+
+At the end of the beta.24 reconciliation, the remaining actionable unmapped evidence was intentionally limited to naturally unobserved/empty data such as charging schedules and `stolen.*` state/timestamps. Those remain future-evidence items rather than reasons to add speculative entities.
+
 ## Evidence policy
 
 Audit results update [Vehicle capability matrix](VEHICLE_CAPABILITY_MATRIX.md) only as evidence for the vehicle/runtime that produced them.
 
 A returned or advertised field must not be generalized to another model, model year or powertrain without separate evidence. Likewise, a field being absent or forbidden in one audit does not prove platform-wide absence.
 
-Current implementation/testing is tracked in [issue #70](https://github.com/CaneTLOTW/sv_dashboard/issues/70).
+Implementation history and future natural-capability evidence are tracked in [issue #70](https://github.com/CaneTLOTW/sv_dashboard/issues/70). The core audit/runtime/path-normalization work is accepted; #70 should now be used only for genuinely new vehicle/API evidence rather than cosmetic reclassification.
