@@ -21,6 +21,8 @@ test("dual-energy trip history keeps the compact six-column primary row", () => 
 test("canonical server trips recover only missing positive local electric energy", () => {
   assert.match(history, /def enrich_trips_with_local_energy\(/);
   assert.match(history, /if _number\(trip\.get\("energy_kwh"\)\) is not None:/);
+  assert.match(history, /server_soc_end >= server_soc_start/);
+  assert.match(history, /Local enrichment remains allowed when the server SOC boundary is/);
   assert.match(history, /local_energy <= 0/);
   assert.match(history, /mileage_delta > 0\.25/);
   assert.match(history, /distance_delta > 2\.0/);
@@ -36,4 +38,19 @@ test("trip history inserts provenance-only odometer gaps and uses semantic trip 
   assert.match(trip, /semanticTripTime\(trip\)/);
   assert.match(trip, /text\.reconstructedGap/);
   assert.doesNotMatch(trip, /_formatDate\(trip\.last_updated \?\? trip\.last_changed\)/);
+});
+
+
+test("canonical trip does not show positive local electric energy against unchanged server SOC", () => {
+  const enrichmentStart = history.indexOf("def enrich_trips_with_local_energy");
+  const enrichmentEnd = history.indexOf("class ServerHistoryManager", enrichmentStart);
+  const enrichment = history.slice(enrichmentStart, enrichmentEnd);
+  assert.match(enrichment, /server_soc_start = _number\(trip\.get\("soc_start"\)\)/);
+  assert.match(enrichment, /server_soc_end = _number\(trip\.get\("soc_end"\)\)/);
+  assert.match(enrichment, /server_soc_end >= server_soc_start[\s\S]{0,100}continue/);
+  assert.ok(
+    enrichment.indexOf("server_soc_end >= server_soc_start")
+      < enrichment.indexOf('trip["energy_kwh"] = round(local_energy, 3)'),
+    "server SOC conflict gate must run before local energy injection",
+  );
 });
