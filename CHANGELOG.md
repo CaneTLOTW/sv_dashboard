@@ -9,6 +9,7 @@ No changes yet.
 - Fixes stale canonical Trip/Charge History after a locally detected completed trip or charging session when notifications already succeeded but no automatic server-history rebuild followed.
 - Makes `ServerHistoryManager` listen to the existing package `trip_completed` and `charge_completed` events, matching the notification event path instead of requiring the user to press **Sync server history**.
 - Uses one coalesced, cancellable worker per vehicle with bounded delayed attempts at 25 s, +60 s and +120 s so normal Stellantis trip-publication lag can settle without uncontrolled polling.
+- Marks the completion-event callbacks with Home Assistant's `@callback` contract so the reconciliation worker is scheduled on the event loop rather than from an executor thread; this fixes the first owner-runtime beta.29 deployment blocker.
 - Automatic attempts use the existing incremental history path with its two-hour overlap and stable-id merge; the manual Sync button remains the explicit full-history recovery operation.
 - Confirms success only when the completed trip/charge is represented in canonical history, with conservative time/mileage/distance/SOC matching and no locally invented server trip.
 - Persists lightweight automatic-reconciliation diagnostics in sync metadata and preserves prior canonical data on failed upstream attempts.
