@@ -7,6 +7,14 @@ const source = fs.readFileSync(
   "utf8",
 );
 
+test("completion callbacks stay on the Home Assistant event loop", () => {
+  assert.match(source, /from homeassistant\.core import callback/);
+  assert.match(source, /@callback\s+def _handle_trip_completed/);
+  assert.match(source, /@callback\s+def _handle_charge_completed/);
+  assert.match(source, /@callback\s+def _queue_auto_reconcile/);
+  assert.match(source, /self\.hass\.async_create_task\(\s*self\._async_auto_reconcile\(\)/);
+});
+
 test("server history listens to both completion events", () => {
   assert.match(source, /f"\{DOMAIN\}_trip_completed"/);
   assert.match(source, /f"\{DOMAIN\}_charge_completed"/);
