@@ -60,32 +60,41 @@ def _trip_matches(expected: dict[str, Any], candidate: dict[str, Any]) -> bool:
     ):
         return False
 
-    evidence_available = False
-    evidence_matches = False
-
     expected_start = _number(expected.get("start_mileage"))
     candidate_start = _number(
         candidate.get("start_mileage", candidate.get("start_mileage_km"))
     )
-    if expected_start is not None and candidate_start is not None:
-        evidence_available = True
-        evidence_matches |= abs(expected_start - candidate_start) <= 1.0
+    if (
+        expected_start is not None
+        and candidate_start is not None
+        and abs(expected_start - candidate_start) > 1.0
+    ):
+        return False
 
     expected_distance = _number(expected.get("distance_km"))
     candidate_distance = _number(candidate.get("distance_km"))
-    if expected_distance is not None and candidate_distance is not None:
-        evidence_available = True
-        evidence_matches |= abs(expected_distance - candidate_distance) <= 2.0
+    if (
+        expected_distance is not None
+        and candidate_distance is not None
+        and abs(expected_distance - candidate_distance) > 2.0
+    ):
+        return False
 
-    if expected.get("start_time") and candidate.get("start_time"):
-        evidence_available = True
-        evidence_matches |= _close_time(
+    if (
+        expected.get("start_time")
+        and candidate.get("start_time")
+        and not _close_time(
             expected.get("start_time"),
             candidate.get("start_time"),
             _TRIP_TIME_TOLERANCE_SECONDS,
         )
+    ):
+        return False
 
-    return evidence_matches if evidence_available else True
+    # End time is mandatory above. Any additional evidence that exists must be
+    # compatible rather than allowing one matching field to mask an odometer
+    # or distance sentinel/outlier returned by the server.
+    return True
 
 
 def _soc_compatible(left: Any, right: Any, tolerance: float = 3.0) -> bool:
