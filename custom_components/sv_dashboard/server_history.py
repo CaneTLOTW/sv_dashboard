@@ -656,6 +656,23 @@ def enrich_trips_with_local_energy(
     for trip in server_trips:
         if _number(trip.get("energy_kwh")) is not None:
             continue
+
+        # Keep one canonical row internally consistent. The N°4 API exposes
+        # integer-percent SOC trip endpoints. If the server explicitly reports
+        # both endpoints and they show no decrease, do not inject a positive
+        # local SOC-derived energy value captured on slightly different live
+        # boundaries (for example server 96→96 paired with local 99→96).
+        # Local enrichment remains allowed when the server SOC boundary is
+        # missing; otherwise the server trip's own SOC semantics win.
+        server_soc_start = _number(trip.get("soc_start"))
+        server_soc_end = _number(trip.get("soc_end"))
+        if (
+            server_soc_start is not None
+            and server_soc_end is not None
+            and server_soc_end >= server_soc_start
+        ):
+            continue
+
         start_mileage = _number(trip.get("start_mileage"))
         distance = _number(trip.get("distance_km"))
         if start_mileage is None or distance is None or distance <= 0:
