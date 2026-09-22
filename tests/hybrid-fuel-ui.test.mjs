@@ -182,7 +182,7 @@ test("frontend cache-busts changed modules", () => {
     assert.match(frontend, new RegExp(`${module}\\.js\\?v=0\\.6\\.0-beta\\.28`));
   }
   assert.match(frontend, /vehicle-audit-card\.js\?v=0\.6\.0-beta\.28/);
-  assert.match(frontend, /sv_dashboard\.js\?v=0\.6\.0-beta\.28/);
-  assert.match(strategy, /i18n\.js\?v=0\.6\.0-beta\.28/);
+  assert.match(frontend, /sv_dashboard\.js\?v=0\.6\.0-beta\.29/);
+  assert.match(strategy, /i18n\.js\?v=0\.6\.0-beta\.29/);
   assert.match(strategy, /modules\.trips && supportsFuel \? \{ type: "custom:sv-dashboard-fuel-history-card"/);
 });
