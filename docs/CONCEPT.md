@@ -156,6 +156,8 @@ Stellantis collection/pagination behavior, production probes and upstream API-re
 
 Implausible rows do not feed derived statistics. A derived boundary can be repaired only when strong continuity evidence exists; the original upstream value remains unchanged.
 
+When SV Dashboard locally finalizes a trip or charge it emits a package completion event. Canonical history listens to those events and performs a **bounded, coalesced automatic reconciliation** using the normal incremental server-history overlap. This keeps Trip/Charge History current without requiring a manual refresh after every event. A short delayed retry window covers server publication lag; the explicit **Sync server history** button remains the manual full-sync recovery path.
+
 ### Recorder history
 
 Home Assistant Recorder provides HA-side state/tracker history and local timeline reconstruction. The SV history window is only a display/query boundary and does not change Recorder retention.
