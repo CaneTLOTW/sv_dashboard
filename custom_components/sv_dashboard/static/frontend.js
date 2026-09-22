@@ -101,4 +101,4 @@ window.customCards = (window.customCards || []).filter(
   (card) => !INTERNAL_CARD_TYPES.has(card?.type),
 );
 window.__svDashboardDependencyReadiness = await dependencyReadiness;
-await import("./sv_dashboard.js?v=0.6.0-beta.28");
+await import("./sv_dashboard.js?v=0.6.0-beta.29");
