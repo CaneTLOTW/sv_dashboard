@@ -13,7 +13,9 @@ No changes yet.
 - Confirms success only when the completed trip/charge is represented in canonical history, with conservative time/mileage/distance/SOC matching and no locally invented server trip.
 - Persists lightweight automatic-reconciliation diagnostics in sync metadata and preserves prior canonical data on failed upstream attempts.
 - Adds pure matching tests plus source-contract coverage for event subscription, coalescing, bounded retries, unload cancellation and manual full-sync separation.
-- Bumps the backend/package candidate to beta.29. Unchanged internal frontend modules intentionally retain their beta.28 content cache keys.
+- Fixes a real DS N°4 provenance conflict where a canonical server trip could display unchanged server SOC (for example 96 % → 96 %) while inheriting positive local SOC-derived electric energy captured on different live boundaries. Local electric-energy enrichment is now rejected when explicit server SOC endpoints show no decrease.
+- Clarifies the Trip History provenance text in all 18 frontend languages: direct server electric energy is preferred, SOC is only a consistency-guarded fallback, and fuel consumption uses server trip telemetry. The French text is updated accordingly.
+- Bumps the package candidate to beta.29 and cache-busts only the changed dashboard strategy/i18n path; unchanged internal cards retain beta.28 content keys.
 - Does not modify or retag the frozen external `v0.6.0-beta.26` candidate.
 
 ## 0.6.0-beta.28 stacked Consumption & reserves layout correction
