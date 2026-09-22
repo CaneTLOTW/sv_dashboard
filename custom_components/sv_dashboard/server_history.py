@@ -28,6 +28,11 @@ from .const import (
 )
 from .trip_repair import repair_trip_odometer_continuity
 from .entity_identity import vehicle_vin
+from .history_reconcile import (
+    AUTO_RECONCILE_DELAYS_SECONDS,
+    completion_key,
+    completion_represented,
+)
 from .server_history_transport import (
     HistoricalTripsTransportUnavailable,
     async_fetch_historical_trips,
@@ -726,6 +731,16 @@ class ServerHistoryManager:
         self._latest_recorder_capacity_samples: list[dict[str, Any]] = []
         self._initialize_lock = asyncio.Lock()
         self._reacquire_task: asyncio.Task | None = None
+        self._auto_reconcile_task: asyncio.Task | None = None
+        self._pending_auto_reconcile: dict[str, dict[str, Any]] = {}
+        self._event_unsubs = [
+            self.hass.bus.async_listen(
+                f"{DOMAIN}_trip_completed", self._handle_trip_completed
+            ),
+            self.hass.bus.async_listen(
+                f"{DOMAIN}_charge_completed", self._handle_charge_completed
+            ),
+        ]
         self._shutdown_requested = False
 
     @staticmethod
@@ -1394,7 +1409,11 @@ class ServerHistoryManager:
                     "updated_at": now,
                     "last_sync": now,
                     "sync_mode": mode,
-                    "sync_metadata": {"last_sync": now, "sync_mode": mode},
+                    "sync_metadata": {
+                        **self.data.get("sync_metadata", {}),
+                        "last_sync": now,
+                        "sync_mode": mode,
+                    },
                     "error": None,
                 }
             )
@@ -1436,6 +1455,156 @@ class ServerHistoryManager:
         for entity in self._entities:
             entity.async_write_ha_state()
 
+    def _handle_trip_completed(self, event) -> None:
+        """Queue one bounded canonical refresh after a local trip finalises."""
+        self._queue_auto_reconcile("trip", dict(event.data or {}))
+
+    def _handle_charge_completed(self, event) -> None:
+        """Queue one bounded canonical refresh after a local charge finalises."""
+        self._queue_auto_reconcile("charge", dict(event.data or {}))
+
+    def _queue_auto_reconcile(
+        self, event_type: str, payload: dict[str, Any]
+    ) -> None:
+        """Coalesce completion events into one cancellable reconciliation worker."""
+        if self._shutdown_requested:
+            return
+        key = completion_key(event_type, payload)
+        self._pending_auto_reconcile[key] = {
+            "event_type": event_type,
+            "payload": payload,
+            "requested_at": dt_util.utcnow().isoformat(),
+        }
+        self.data["sync_metadata"] = {
+            **self.data.get("sync_metadata", {}),
+            "auto_reconcile_event_type": event_type,
+            "auto_reconcile_requested_at": dt_util.utcnow().isoformat(),
+            "auto_reconcile_result": "pending",
+            "auto_reconcile_attempt": 0,
+        }
+        if self._auto_reconcile_task is None or self._auto_reconcile_task.done():
+            self._auto_reconcile_task = self.hass.async_create_task(
+                self._async_auto_reconcile()
+            )
+
+    def _completion_is_represented(self, pending: dict[str, Any]) -> bool:
+        return completion_represented(
+            str(pending.get("event_type") or ""),
+            pending.get("payload") if isinstance(pending.get("payload"), dict) else {},
+            trips=[
+                item
+                for item in self.data.get("canonical_trips", [])
+                if isinstance(item, dict)
+            ],
+            charges=[
+                item
+                for item in self.data.get("canonical_charges", [])
+                if isinstance(item, dict)
+            ],
+        )
+
+    async def _save_auto_reconcile_metadata(
+        self,
+        *,
+        event_type: str,
+        attempt: int,
+        result: str,
+    ) -> None:
+        now = dt_util.utcnow().isoformat()
+        self.data["sync_metadata"] = {
+            **self.data.get("sync_metadata", {}),
+            "auto_reconcile_event_type": event_type,
+            "auto_reconcile_completed_at": now,
+            "auto_reconcile_attempt": attempt,
+            "auto_reconcile_result": result,
+        }
+        await self._store.async_save(self._persistable_data())
+        for entity in self._entities:
+            entity.async_write_ha_state()
+
+    async def _async_auto_reconcile(self) -> None:
+        """Refresh canonical history after completion with bounded delayed retries."""
+        try:
+            for attempt, delay_seconds in enumerate(
+                AUTO_RECONCILE_DELAYS_SECONDS, start=1
+            ):
+                await asyncio.sleep(delay_seconds)
+                if self._shutdown_requested:
+                    return
+                if not self._pending_auto_reconcile:
+                    return
+
+                pending_before = list(self._pending_auto_reconcile.values())
+                event_types = sorted(
+                    {
+                        str(item.get("event_type") or "")
+                        for item in pending_before
+                        if item.get("event_type")
+                    }
+                )
+                event_type = "+".join(event_types) or "unknown"
+
+                try:
+                    # Normal initialize uses the existing two-hour incremental
+                    # overlap and stable-id merge. Manual async_full_sync remains
+                    # the explicit all-pages recovery action.
+                    await self.async_initialize()
+                except asyncio.CancelledError:
+                    raise
+                except Exception as err:
+                    _LOGGER.warning(
+                        "Automatic history reconciliation attempt %s failed: %s",
+                        attempt,
+                        err,
+                    )
+                    await self._save_auto_reconcile_metadata(
+                        event_type=event_type,
+                        attempt=attempt,
+                        result="sync_failed",
+                    )
+                    continue
+
+                represented_keys = [
+                    key
+                    for key, item in self._pending_auto_reconcile.items()
+                    if self._completion_is_represented(item)
+                ]
+                for key in represented_keys:
+                    self._pending_auto_reconcile.pop(key, None)
+
+                if not self._pending_auto_reconcile:
+                    await self._save_auto_reconcile_metadata(
+                        event_type=event_type,
+                        attempt=attempt,
+                        result="represented",
+                    )
+                    return
+
+                await self._save_auto_reconcile_metadata(
+                    event_type=event_type,
+                    attempt=attempt,
+                    result="retry_pending",
+                )
+
+            if self._pending_auto_reconcile:
+                event_types = sorted(
+                    {
+                        str(item.get("event_type") or "")
+                        for item in self._pending_auto_reconcile.values()
+                        if item.get("event_type")
+                    }
+                )
+                await self._save_auto_reconcile_metadata(
+                    event_type="+".join(event_types) or "unknown",
+                    attempt=len(AUTO_RECONCILE_DELAYS_SECONDS),
+                    result="exhausted",
+                )
+                self._pending_auto_reconcile.clear()
+        except asyncio.CancelledError:
+            raise
+        finally:
+            self._auto_reconcile_task = None
+
     def _schedule_reacquisition(self) -> None:
         """Start at most one cancellable delayed resolver worker."""
         if self._reacquire_task is not None and not self._reacquire_task.done():
@@ -1462,10 +1631,16 @@ class ServerHistoryManager:
             raise
 
     def async_cancel_background_tasks(self) -> None:
-        """Cancel delayed reacquisition during config-entry unload."""
+        """Cancel delayed background workers and event listeners on unload."""
         self._shutdown_requested = True
         if self._reacquire_task is not None:
             self._reacquire_task.cancel()
+        if self._auto_reconcile_task is not None:
+            self._auto_reconcile_task.cancel()
+        self._pending_auto_reconcile.clear()
+        for unsubscribe in self._event_unsubs:
+            unsubscribe()
+        self._event_unsubs.clear()
 
     @staticmethod
     def _state_value(state: Any) -> Any:
