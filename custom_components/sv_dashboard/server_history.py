@@ -1604,6 +1604,13 @@ class ServerHistoryManager:
             raise
         finally:
             self._auto_reconcile_task = None
+            # A completion event can arrive during the final await/save window.
+            # Do not strand that newly queued event merely because the previous
+            # worker was still technically alive when it was queued.
+            if self._pending_auto_reconcile and not self._shutdown_requested:
+                self._auto_reconcile_task = self.hass.async_create_task(
+                    self._async_auto_reconcile()
+                )
 
     def _schedule_reacquisition(self) -> None:
         """Start at most one cancellable delayed resolver worker."""
