@@ -37,6 +37,15 @@ def main() -> None:
         charges=[],
     )
 
+    malformed_same_time = {
+        **canonical_trip,
+        "start_mileage": 0,
+        "distance_km": 1977,
+    }
+    assert not history.completion_represented(
+        "trip", trip, trips=[malformed_same_time], charges=[]
+    )
+
     charge = {
         "id": "local-charge",
         "start_time": "2026-09-22T14:08:06+00:00",
