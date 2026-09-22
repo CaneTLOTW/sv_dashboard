@@ -4,6 +4,18 @@
 
 No changes yet.
 
+## 0.6.0-beta.29 automatic Trip/Charge History reconciliation candidate
+
+- Fixes stale canonical Trip/Charge History after a locally detected completed trip or charging session when notifications already succeeded but no automatic server-history rebuild followed.
+- Makes `ServerHistoryManager` listen to the existing package `trip_completed` and `charge_completed` events, matching the notification event path instead of requiring the user to press **Sync server history**.
+- Uses one coalesced, cancellable worker per vehicle with bounded delayed attempts at 25 s, +60 s and +120 s so normal Stellantis trip-publication lag can settle without uncontrolled polling.
+- Automatic attempts use the existing incremental history path with its two-hour overlap and stable-id merge; the manual Sync button remains the explicit full-history recovery operation.
+- Confirms success only when the completed trip/charge is represented in canonical history, with conservative time/mileage/distance/SOC matching and no locally invented server trip.
+- Persists lightweight automatic-reconciliation diagnostics in sync metadata and preserves prior canonical data on failed upstream attempts.
+- Adds pure matching tests plus source-contract coverage for event subscription, coalescing, bounded retries, unload cancellation and manual full-sync separation.
+- Bumps the backend/package candidate to beta.29. Unchanged internal frontend modules intentionally retain their beta.28 content cache keys.
+- Does not modify or retag the frozen external `v0.6.0-beta.26` candidate.
+
 ## 0.6.0-beta.28 stacked Consumption & reserves layout correction
 
 - Replaces the beta.27 half-width Electric/Fuel reserve cards with four full-width stacked Bubble state cards, matching the established **Consumption & usage** visual grammar.
