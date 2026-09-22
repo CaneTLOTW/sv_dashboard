@@ -46,7 +46,7 @@ Not every vehicle receives every package-owned metric. Setup is capability-gated
 | --- | --- |
 | **Wake vehicle now** | Calls the mapped upstream wake-up action and records diagnostics. |
 | **Test notification** | Sends a test only when notification policy and recipients permit it. |
-| **Sync server history** | Synchronizes canonical server history. |
+| **Sync server history** | Performs an explicit full canonical-history recovery sync. Normal trip/charge completion uses bounded automatic incremental reconciliation. |
 
 A successful Home Assistant/upstream command call does not prove the physical vehicle performed the action.
 
