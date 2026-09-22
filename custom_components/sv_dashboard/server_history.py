@@ -17,6 +17,7 @@ from typing import Any
 from homeassistant.components.recorder import get_instance
 from homeassistant.components.recorder import history as recorder_history
 from homeassistant.helpers.storage import Store
+from homeassistant.core import callback
 from homeassistant.util import dt as dt_util
 
 from .const import (
@@ -1472,14 +1473,17 @@ class ServerHistoryManager:
         for entity in self._entities:
             entity.async_write_ha_state()
 
+    @callback
     def _handle_trip_completed(self, event) -> None:
         """Queue one bounded canonical refresh after a local trip finalises."""
         self._queue_auto_reconcile("trip", dict(event.data or {}))
 
+    @callback
     def _handle_charge_completed(self, event) -> None:
         """Queue one bounded canonical refresh after a local charge finalises."""
         self._queue_auto_reconcile("charge", dict(event.data or {}))
 
+    @callback
     def _queue_auto_reconcile(
         self, event_type: str, payload: dict[str, Any]
     ) -> None:
