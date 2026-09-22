@@ -230,6 +230,19 @@ test("vehicle audit card consumes its localized namespace", () => {
   assert.doesNotMatch(audit, /Audit starten|Run audit|Lancer l’audit/);
 });
 
+test("trip history provenance copy distinguishes server telemetry from SOC fallback", () => {
+  for (const language of LANGUAGES) {
+    const intro = FRONTEND_TEXT.dashboard[language].tripHistoryIntro;
+    assert.ok(intro?.trim(), `missing ${language} dashboard.tripHistoryIntro`);
+  }
+  assert.match(FRONTEND_TEXT.dashboard.en.tripHistoryIntro, /direct server value/i);
+  assert.match(FRONTEND_TEXT.dashboard.en.tripHistoryIntro, /SOC only when/i);
+  assert.match(FRONTEND_TEXT.dashboard.fr.tripHistoryIntro, /valeur directe fiable du serveur/i);
+  assert.match(FRONTEND_TEXT.dashboard.fr.tripHistoryIntro, /SOC que si/i);
+  assert.match(FRONTEND_TEXT.dashboard.de.tripHistoryIntro, /direkt aus der Serverhistorie/i);
+  assert.match(FRONTEND_TEXT.dashboard.de.tripHistoryIntro, /konsistenten SOC-Daten/i);
+});
+
 test("dashboard strategy uses catalog strings without binary German branches", () => {
   assert.doesNotMatch(strategy, /language\(hass\) === "de"/);
   for (const key of [
