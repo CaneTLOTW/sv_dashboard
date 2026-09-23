@@ -63,6 +63,7 @@ def install(target: Path) -> None:
         strategy.write_text(text, encoding="utf-8")
 
     print(f"Owner test harness installed (module owner-{token}).")
+    print("Full Home Assistant restart required before using the fixture URLs.")
     print("Profiles:")
     print("  ?sv_owner_fixture=phev")
     print("  ?sv_owner_fixture=phev-idle")
