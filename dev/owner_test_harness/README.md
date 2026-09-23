@@ -40,8 +40,10 @@ After Codex installs or updates the normal candidate into Home Assistant, run:
 
 `python dev/owner_test_harness/install.py --target /config/custom_components/sv_dashboard/static`
 
-Then restart/reload Home Assistant/frontend as required by the normal install
-procedure and hard-refresh the browser.
+Then perform a **full Home Assistant restart** and hard-refresh the browser. A
+restart is required because SV Dashboard registers its static JavaScript routes
+at integration setup time; merely reloading the browser is not enough after the
+new local harness file has been copied.
 
 The installer:
 
