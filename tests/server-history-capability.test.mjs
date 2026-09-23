@@ -11,11 +11,10 @@ test("server history is an explicit upstream capability", () => {
   const transport = read("custom_components/sv_dashboard/server_history_transport.py");
   assert.match(history, /historical_transport_available/);
   assert.match(history, /async_fetch_historical_trips/);
+  assert.match(transport, /get_vehicle_trips/);
+  assert.match(transport, /native_get_vehicle_trips/);
+  assert.match(transport, /legacy_private_transport/);
   assert.match(transport, /CAR_API_GET_VEHICLE_TRIPS_URL/);
-  assert.match(transport, /CLIENT_ID_QUERY_PARAMS/);
-  assert.match(transport, /CAR_API_HEADERS/);
-  assert.match(transport, /apply_query_params/);
-  assert.match(transport, /apply_dict_params/);
   assert.match(transport, /make_http_request/);
   assert.doesNotMatch(history, /self\._client\.get_vehicle_trips_history/);
 });

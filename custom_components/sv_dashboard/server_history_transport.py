@@ -68,8 +68,17 @@ def _transport_parts(client: Any) -> tuple[Any, Any, Any, Any, Any, Any] | None:
 
 
 def historical_transport_available(client: Any) -> bool:
-    """Return whether the loaded client exposes the required auth transport."""
-    return _transport_parts(client) is not None
+    """Return whether native or legacy authenticated trip transport is available."""
+    return callable(getattr(client, "get_vehicle_trips", None)) or _transport_parts(client) is not None
+
+
+def historical_transport_mode(client: Any) -> str | None:
+    """Return the selected historical trip transport for diagnostics/tests."""
+    if callable(getattr(client, "get_vehicle_trips", None)):
+        return "native_get_vehicle_trips"
+    if _transport_parts(client) is not None:
+        return "legacy_private_transport"
+    return None
 
 
 def historical_transport_retryable(error: BaseException) -> bool:
@@ -287,26 +296,74 @@ async def _request_page(client: Any, request: Any, url: str, headers: dict[str, 
         return await request(url, method="GET", headers=headers)
 
 
+async def _request_native_trips_page(
+    client: Any,
+    vehicle: Any,
+    *,
+    since: str | None,
+    page_token: str | None,
+) -> Any:
+    """Request one page through the public upstream API added in 2026.9.4."""
+    if getattr(client, "_shutting_down", False):
+        raise HistoricalTripsTransportUnavailable("upstream_client_shutting_down")
+    request = getattr(client, "get_vehicle_trips", None)
+    if not callable(request):
+        raise HistoricalTripsTransportUnavailable("upstream_native_trips_unavailable")
+
+    # Keep the narrow closed-session compatibility repair until upstream fixes
+    # its session lifecycle. The public method still uses that shared session.
+    await _prepare_upstream_transport(client)
+    try:
+        return await request(vehicle, since=since, page_token=page_token)
+    except Exception as error:
+        if not _closed_transport_error(error):
+            raise
+        await _prepare_upstream_transport(client)
+        return await request(vehicle, since=since, page_token=page_token)
+
+
 async def async_fetch_historical_trips(
     client: Any,
     vehicle: Any,
     *,
     since: str | None = None,
 ) -> dict[str, list[dict[str, Any]]]:
-    """Fetch and deduplicate every historical trips page via upstream auth."""
+    """Fetch/dedupe history, preferring the public upstream transport API."""
+    native_request = getattr(client, "get_vehicle_trips", None)
     parts = _transport_parts(client)
-    if parts is None:
+    if not callable(native_request) and parts is None:
         raise HistoricalTripsTransportUnavailable(
             "upstream_authenticated_trips_transport_unavailable"
         )
+
+    trips_by_id: dict[str, dict[str, Any]] = {}
+    token: str | None = None
+    seen_tokens: set[str] = set()
+
+    if callable(native_request):
+        while True:
+            payload = await _request_native_trips_page(
+                client,
+                vehicle,
+                since=since,
+                page_token=token,
+            )
+            for trip in _page_trips(payload):
+                trips_by_id[str(trip["id"])] = trip
+
+            next_token = _next_page_token(payload)
+            if next_token is None or next_token in seen_tokens:
+                break
+            seen_tokens.add(next_token)
+            token = next_token
+        return {"trips": list(trips_by_id.values())}
+
+    # Compatibility fallback for Stellantis Vehicles versions before 2026.9.4.
     apply_query, apply_headers, request, base_url, query_params, header_template = parts
     url = apply_query(base_url, dict(query_params), vehicle)
     url = _append_query(url, {"distance": "0.1-"})
     headers = apply_headers(dict(header_template))
 
-    trips_by_id: dict[str, dict[str, Any]] = {}
-    token: str | None = None
-    seen_tokens: set[str] = set()
     while True:
         page_url = url
         if since:

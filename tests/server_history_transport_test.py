@@ -103,6 +103,68 @@ def one_page(trip_id="a"):
     return {"_embedded": {"trips": [{"id": trip_id}]}, "_links": {}}
 
 
+class NativeOnlyClient:
+    """2026.9.4+ public contract without private transport helpers."""
+
+    __module__ = "native_upstream.stellantis"
+
+    def __init__(self, pages):
+        self.pages = iter(pages)
+        self.calls = []
+        self._session = None
+        self._shutting_down = False
+
+    async def get_vehicle_trips(self, vehicle, since=None, page_token=None):
+        self.calls.append((vehicle, since, page_token))
+        return next(self.pages)
+
+
+def test_native_transport_is_preferred_and_paginates():
+    client = NativeOnlyClient(
+        [
+            {
+                "_embedded": {"trips": [{"id": "a"}, {"id": "b"}]},
+                "_links": {"next": {"href": "https://api.example/trips?pageToken=one"}},
+            },
+            {
+                "_embedded": {"trips": [{"id": "b", "updated": True}, {"id": "c"}]},
+                "_links": {},
+            },
+        ]
+    )
+    vehicle = {"vehicle_id": "vehicle-1"}
+    since = "2026-09-01T00:00:00+00:00"
+
+    assert MODULE.historical_transport_available(client)
+    assert MODULE.historical_transport_mode(client) == "native_get_vehicle_trips"
+    result = asyncio.run(MODULE.async_fetch_historical_trips(client, vehicle, since=since))
+
+    assert [item["id"] for item in result["trips"]] == ["a", "b", "c"]
+    assert client.calls == [
+        (vehicle, since, None),
+        (vehicle, since, "one"),
+    ]
+
+
+def test_native_transport_wins_over_legacy_private_helpers():
+    install_fake_upstream_constants()
+
+    class HybridClient(FakeClient):
+        async def get_vehicle_trips(self, vehicle, since=None, page_token=None):
+            self.native_called = True
+            return one_page("native")
+
+    client = HybridClient([one_page("legacy")])
+    client.native_called = False
+
+    result = asyncio.run(MODULE.async_fetch_historical_trips(client, {"vehicle_id": "vehicle-1"}))
+
+    assert [item["id"] for item in result["trips"]] == ["native"]
+    assert client.native_called is True
+    assert client.request_attempts == 0
+    assert MODULE.historical_transport_mode(client) == "native_get_vehicle_trips"
+
+
 def test_since_pagination_dedupe_and_cycle_guard():
     install_fake_upstream_constants()
     client = FakeClient(
@@ -277,6 +339,8 @@ def test_retry_state_machine_contract():
 
 
 if __name__ == "__main__":
+    test_native_transport_is_preferred_and_paginates()
+    test_native_transport_wins_over_legacy_private_helpers()
     test_since_pagination_dedupe_and_cycle_guard()
     test_stranded_closed_session_is_cleared_before_request()
     test_closed_connector_uses_upstream_cleanup_before_recreation()
