@@ -264,7 +264,7 @@ function buildConfig(hass, config, statusState) {
           styles: {
             card: [
               { height: "26px" }, { "min-height": "26px" }, { padding: "0 9px" }, { margin: 0 },
-              { "border-radius": "14px" }, { border: "none" }, { background: chargingState ? "rgba(20,20,20,0.62)" : `[[[ return ${freshVehicleDataTemplate(temperature).slice(3,-3)} ? "color-mix(in srgb, var(--primary-color) 24%, rgba(20,20,20,0.72))" : "rgba(20,20,20,0.62)"; ]]]` },
+              { "border-radius": "14px" }, { border: "none" }, { background: "rgba(20,20,20,0.62)" }, { border: "none" }, { background: chargingState ? "rgba(20,20,20,0.62)" : `[[[ return ${freshVehicleDataTemplate(temperature).slice(3,-3)} ? "color-mix(in srgb, var(--primary-color) 24%, rgba(20,20,20,0.72))" : "rgba(20,20,20,0.62)"; ]]]` },
               { color: "white" }, { "font-size": "12px" }, { "font-weight": 600 }, { "line-height": "16px" },
               { cursor: "pointer" },
               { "text-align": "right" }, { "text-shadow": "0 1px 2px rgba(0,0,0,0.5)" }, { border: "none" }, { "box-shadow": "none" },
