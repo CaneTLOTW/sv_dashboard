@@ -57,18 +57,18 @@ const metricEntity = (hass, attributes, key) =>
 
 const literal = (entityId) => JSON.stringify(entityId || "");
 
-const freshVehicleDataTemplate = (entityId) => `[[[
+const freshVehicleDataTemplate = (entityId, freshValue, staleValue) => `[[[
   const value = states[${literal(entityId)}];
-  if (!value || !Number.isFinite(Number(value.state))) return "white";
+  if (!value || !Number.isFinite(Number(value.state))) return ${literal(staleValue)};
   const attributes = value.attributes || {};
   let updated = NaN;
   for (const raw of [attributes["Last updated"], attributes.last_updated, attributes.updatedAt, attributes.updated_at, value.last_updated, value.last_changed]) {
     const parsed = Date.parse(raw || "");
     if (Number.isFinite(parsed)) { updated = parsed; break; }
   }
-  if (!Number.isFinite(updated)) return "white";
+  if (!Number.isFinite(updated)) return ${literal(staleValue)};
   const age = Date.now() - updated;
-  return age >= -5 * 60 * 1000 && age <= ${FRESH_VEHICLE_DATA_MS} ? "var(--primary-color)" : "white";
+  return age >= -5 * 60 * 1000 && age <= ${FRESH_VEHICLE_DATA_MS} ? ${literal(freshValue)} : ${literal(staleValue)};
 ]]]`;
 
 const dashboardPath = (attributes, override) => {
@@ -264,13 +264,15 @@ function buildConfig(hass, config, statusState) {
           styles: {
             card: [
               { height: "26px" }, { "min-height": "26px" }, { padding: "0 9px" }, { margin: 0 },
-              { "border-radius": "14px" }, { border: "none" }, { background: "rgba(20,20,20,0.62)" },
+              { "border-radius": "14px" },
+              { border: chargingState ? "none" : freshVehicleDataTemplate(temperature, "1px solid color-mix(in srgb, var(--primary-color) 45%, transparent)", "none") },
+              { background: chargingState ? "rgba(20,20,20,0.62)" : freshVehicleDataTemplate(temperature, "color-mix(in srgb, var(--primary-color) 14%, rgba(20,20,20,0.72))", "rgba(20,20,20,0.62)") },
               { color: "white" }, { "font-size": "12px" }, { "font-weight": 600 }, { "line-height": "16px" },
               { cursor: "pointer" },
               { "text-align": "right" }, { "text-shadow": "0 1px 2px rgba(0,0,0,0.5)" }, { border: "none" }, { "box-shadow": "none" },
             ],
             grid: [{ "grid-template-areas": "'i n'" }, { "grid-template-columns": "16px auto" }, { "column-gap": "4px" }, { "align-items": "center" }, { "justify-content": "center" }],
-            icon: [{ width: "16px" }, { height: "16px" }, { color: chargingState ? "white" : freshVehicleDataTemplate(temperature) }],
+            icon: [{ width: "16px" }, { height: "16px" }, { color: chargingState ? "white" : freshVehicleDataTemplate(temperature, "var(--primary-color)", "white") }],
             name: [{ "font-size": "12px" }, { "font-weight": 600 }, { "line-height": "16px" }, { color: "white" }, { "white-space": "nowrap" }, { padding: 0 }, { margin: 0 }],
           },
         },
