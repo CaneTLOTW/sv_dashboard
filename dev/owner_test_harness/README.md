@@ -8,8 +8,9 @@ does not import or reference this harness.
 
 The harness lets the owner test the real Dual-Energy/PHEV Hero using the live
 EV data of the installed vehicle plus synthetic fuel-side states. This keeps
-vehicle picture, battery/SOC, electric range, temperature and climate controls
-live while adding deterministic fuel/ICE data.
+vehicle picture, battery/SOC, electric range, temperature, charging and climate
+controls live in the default profile while adding deterministic fuel-side data.
+Scenario profiles override only the state needed for that scenario.
 
 Synthetic defaults:
 
@@ -20,13 +21,18 @@ Synthetic defaults:
 Profiles:
 
 - `?sv_owner_fixture=phev` — live EV values + synthetic fuel side
-- `?sv_owner_fixture=phev-idle` — deterministic idle
-- `?sv_owner_fixture=phev-driving` — synthetic engine ON + 5.4 l/100 km
-- `?sv_owner_fixture=phev-charging` — synthetic plugged/charging ON
-- `?sv_owner_fixture=phev-stale` — synthetic source timestamps one hour old
+- `?sv_owner_fixture=phev-idle` — deterministic engine/charging/plugged OFF
+- `?sv_owner_fixture=phev-driving` — engine ON, charging OFF + 5.4 l/100 km
+- `?sv_owner_fixture=phev-charging` — engine OFF, plugged/charging ON
+- `?sv_owner_fixture=phev-stale` — deterministic idle plus EV/fuel source timestamps one hour old
 
 Append the parameter to the normal generated vehicle view, for example:
 `/citroen-dashboard/vehicle?sv_owner_fixture=phev-driving`.
+
+The local patch deliberately replaces only the generated **Hero** with a wrapper
+around the production Dual-Energy card. It does not claim to turn every other
+EV-only dashboard section into a synthetic PHEV backend. This keeps the harness
+focused on the real component currently under cross-powertrain visual QA.
 
 ## Local install contract
 
@@ -34,8 +40,10 @@ After Codex installs or updates the normal candidate into Home Assistant, run:
 
 `python dev/owner_test_harness/install.py --target /config/custom_components/sv_dashboard/static`
 
-Then restart/reload Home Assistant/frontend as required by the normal install
-procedure and hard-refresh the browser.
+Then perform a **full Home Assistant restart** and hard-refresh the browser. A
+restart is required because SV Dashboard registers its static JavaScript routes
+at integration setup time; merely reloading the browser is not enough after the
+new local harness file has been copied.
 
 The installer:
 
