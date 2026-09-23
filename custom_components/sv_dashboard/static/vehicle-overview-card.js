@@ -269,7 +269,7 @@ function buildConfig(hass, config, statusState) {
               { background: chargingState ? "rgba(20,20,20,0.62)" : freshVehicleDataTemplate(temperature, "color-mix(in srgb, var(--primary-color) 14%, rgba(20,20,20,0.72))", "rgba(20,20,20,0.62)") },
               { color: "white" }, { "font-size": "12px" }, { "font-weight": 600 }, { "line-height": "16px" },
               { cursor: "pointer" },
-              { "text-align": "right" }, { "text-shadow": "0 1px 2px rgba(0,0,0,0.5)" }, { border: "none" }, { "box-shadow": "none" },
+              { "text-align": "right" }, { "text-shadow": "0 1px 2px rgba(0,0,0,0.5)" }, { "box-shadow": "none" },
             ],
             grid: [{ "grid-template-areas": "'i n'" }, { "grid-template-columns": "16px auto" }, { "column-gap": "4px" }, { "align-items": "center" }, { "justify-content": "center" }],
             icon: [{ width: "16px" }, { height: "16px" }, { color: chargingState ? "white" : freshVehicleDataTemplate(temperature, "var(--primary-color)", "white") }],
