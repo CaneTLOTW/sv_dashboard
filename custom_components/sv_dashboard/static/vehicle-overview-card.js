@@ -15,6 +15,7 @@ import { languageFor, textFor } from "./i18n.js?v=0.6.0-beta.28";
 const STATUS_DOMAIN = "sv_dashboard";
 const CARD_TAG = "sv-dashboard-vehicle-overview-card";
 const EDITOR_TAG = "sv-dashboard-vehicle-overview-card-editor";
+const FRESH_VEHICLE_DATA_MS = 15 * 60 * 1000;
 
 const unavailable = (state) =>
   !state || ["unknown", "unavailable", "none", ""].includes(String(state.state ?? "").toLowerCase());
@@ -55,6 +56,20 @@ const metricEntity = (hass, attributes, key) =>
   })?.[0];
 
 const literal = (entityId) => JSON.stringify(entityId || "");
+
+const freshVehicleDataTemplate = (entityId) => `[[[
+  const value = states[${literal(entityId)}];
+  if (!value || !Number.isFinite(Number(value.state))) return "white";
+  const attributes = value.attributes || {};
+  let updated = NaN;
+  for (const raw of [attributes["Last updated"], attributes.last_updated, attributes.updatedAt, attributes.updated_at, value.last_updated, value.last_changed]) {
+    const parsed = Date.parse(raw || "");
+    if (Number.isFinite(parsed)) { updated = parsed; break; }
+  }
+  if (!Number.isFinite(updated)) return "white";
+  const age = Date.now() - updated;
+  return age >= -5 * 60 * 1000 && age <= ${FRESH_VEHICLE_DATA_MS} ? "var(--primary-color)" : "white";
+]]]`;
 
 const dashboardPath = (attributes, override) => {
   if (override) return override;
@@ -255,7 +270,7 @@ function buildConfig(hass, config, statusState) {
               { "text-align": "right" }, { "text-shadow": "0 1px 2px rgba(0,0,0,0.5)" }, { border: "none" }, { "box-shadow": "none" },
             ],
             grid: [{ "grid-template-areas": "'i n'" }, { "grid-template-columns": "16px auto" }, { "column-gap": "4px" }, { "align-items": "center" }, { "justify-content": "center" }],
-            icon: [{ width: "16px" }, { height: "16px" }, { color: "white" }],
+            icon: [{ width: "16px" }, { height: "16px" }, { color: chargingState ? "white" : freshVehicleDataTemplate(temperature) }],
             name: [{ "font-size": "12px" }, { "font-weight": 600 }, { "line-height": "16px" }, { color: "white" }, { "white-space": "nowrap" }, { padding: 0 }, { margin: 0 }],
           },
         },
