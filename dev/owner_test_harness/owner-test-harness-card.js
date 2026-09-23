@@ -4,6 +4,11 @@
  * This file is versioned for reproducibility but is NOT imported by the
  * production package. dev/owner_test_harness/install.py copies it into a local
  * HA installation and patches the local frontend entry/Strategy only.
+ *
+ * The default "phev" profile keeps the owner's real EV-side mapping and values
+ * and overlays only the combustion-side fields needed by the production
+ * Dual-Energy Hero. Scenario profiles may additionally override motion/charge
+ * state so those UI branches can be reproduced deterministically.
  */
 const CARD_TAG = "sv-dashboard-owner-test-harness-card";
 const STATUS_DOMAIN = "sv_dashboard";
@@ -30,6 +35,21 @@ const candidates = (hass, entryId) => Object.entries(hass?.states || {}).filter(
     typeof a.entity_mapping === "object" && (!entryId || a.entry_id === entryId);
 });
 
+const withSourceTimestamp = (item, updated) => {
+  if (!item) return item;
+  const attributes = { ...(item.attributes || {}) };
+  const sourceKeys = ["Last updated", "last_updated", "updatedAt", "updated_at"];
+  let hadSourceTimestamp = false;
+  for (const key of sourceKeys) {
+    if (Object.prototype.hasOwnProperty.call(attributes, key)) {
+      attributes[key] = updated;
+      hadSourceTimestamp = true;
+    }
+  }
+  if (!hadSourceTimestamp) attributes["Last updated"] = updated;
+  return { ...item, attributes, last_changed: updated, last_updated: updated };
+};
+
 function fixtureHass(hass, entryId, profile) {
   const selected = candidates(hass, entryId);
   if (selected.length !== 1) return hass;
@@ -37,7 +57,8 @@ function fixtureHass(hass, entryId, profile) {
   const [statusId, originalStatus] = selected[0];
   const originalAttributes = originalStatus.attributes || {};
   const originalMapped = originalAttributes.entity_mapping || {};
-  const stamp = profile === "phev-stale"
+  const stale = profile === "phev-stale";
+  const stamp = stale
     ? new Date(Date.now() - 60 * 60 * 1000).toISOString()
     : nowIso();
 
@@ -54,9 +75,6 @@ function fixtureHass(hass, entryId, profile) {
     [ids.fuel]: state(ids.fuel, 63, { unit_of_measurement: "%", friendly_name: "Owner fixture fuel", "Last updated": stamp }, stamp),
     [ids.fuelAutonomy]: state(ids.fuelAutonomy, 410, { unit_of_measurement: "km", friendly_name: "Owner fixture fuel range", "Last updated": stamp }, stamp),
     [ids.fuelConsumption]: state(ids.fuelConsumption, profile === "phev-driving" ? 5.4 : 0, { unit_of_measurement: "l/100 km", friendly_name: "Owner fixture fuel consumption", "Last updated": stamp }, stamp),
-    [ids.engine]: state(ids.engine, profile === "phev-driving" ? "on" : "off", { friendly_name: "Owner fixture engine", "Last updated": stamp }, stamp),
-    [ids.charging]: state(ids.charging, profile === "phev-charging" ? "on" : "off", { friendly_name: "Owner fixture charging", "Last updated": stamp }, stamp),
-    [ids.plugged]: state(ids.plugged, profile === "phev-charging" ? "on" : "off", { friendly_name: "Owner fixture plugged", "Last updated": stamp }, stamp),
   };
 
   const mapped = {
@@ -64,10 +82,41 @@ function fixtureHass(hass, entryId, profile) {
     fuel: ids.fuel,
     fuel_autonomy: ids.fuelAutonomy,
     fuel_consumption_instant: ids.fuelConsumption,
-    engine: ids.engine,
-    battery_charging: ids.charging,
-    battery_plugged: ids.plugged,
   };
+
+  if (profile === "phev-idle" || stale) {
+    synthetic[ids.engine] = state(ids.engine, "off", { friendly_name: "Owner fixture engine", "Last updated": stamp }, stamp);
+    synthetic[ids.charging] = state(ids.charging, "off", { friendly_name: "Owner fixture charging", "Last updated": stamp }, stamp);
+    synthetic[ids.plugged] = state(ids.plugged, "off", { friendly_name: "Owner fixture plugged", "Last updated": stamp }, stamp);
+    mapped.engine = ids.engine;
+    mapped.battery_charging = ids.charging;
+    mapped.battery_plugged = ids.plugged;
+  } else if (profile === "phev-driving") {
+    synthetic[ids.engine] = state(ids.engine, "on", { friendly_name: "Owner fixture engine", "Last updated": stamp }, stamp);
+    synthetic[ids.charging] = state(ids.charging, "off", { friendly_name: "Owner fixture charging", "Last updated": stamp }, stamp);
+    synthetic[ids.plugged] = state(ids.plugged, "off", { friendly_name: "Owner fixture plugged", "Last updated": stamp }, stamp);
+    mapped.engine = ids.engine;
+    mapped.battery_charging = ids.charging;
+    mapped.battery_plugged = ids.plugged;
+  } else if (profile === "phev-charging") {
+    synthetic[ids.engine] = state(ids.engine, "off", { friendly_name: "Owner fixture engine", "Last updated": stamp }, stamp);
+    synthetic[ids.charging] = state(ids.charging, "on", { friendly_name: "Owner fixture charging", "Last updated": stamp }, stamp);
+    synthetic[ids.plugged] = state(ids.plugged, "on", { friendly_name: "Owner fixture plugged", "Last updated": stamp }, stamp);
+    mapped.engine = ids.engine;
+    mapped.battery_charging = ids.charging;
+    mapped.battery_plugged = ids.plugged;
+  }
+
+  const states = { ...hass.states, ...synthetic };
+  if (stale) {
+    for (const key of ["battery", "battery_residual", "autonomy", "temperature", "battery_charging_rate"]) {
+      const entityId = originalMapped[key];
+      if (entityId && hass.states?.[entityId]) {
+        states[entityId] = withSourceTimestamp(hass.states[entityId], stamp);
+      }
+    }
+  }
+
   const status = {
     ...originalStatus,
     attributes: {
@@ -82,7 +131,8 @@ function fixtureHass(hass, entryId, profile) {
     },
   };
 
-  return { ...hass, states: { ...hass.states, ...synthetic, [statusId]: status } };
+  states[statusId] = status;
+  return { ...hass, states };
 }
 
 class SvDashboardOwnerTestHarnessCard extends HTMLElement {
