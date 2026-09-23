@@ -14,6 +14,8 @@ test("normal EV Hero mirrors Dual-Energy 15 minute temperature freshness semanti
   assert.match(overview, /attributes\.updatedAt/);
   assert.match(overview, /age <= \$\{FRESH_VEHICLE_DATA_MS\}/);
   assert.match(overview, /"var\(--primary-color\)"/);
+  assert.match(overview, /color-mix\(in srgb, var\(--primary-color\) 14%/);
+  assert.match(overview, /1px solid color-mix\(in srgb, var\(--primary-color\) 45%/);
 });
 
 test("owner fixture stays outside the production frontend and Strategy", () => {
@@ -21,16 +23,16 @@ test("owner fixture stays outside the production frontend and Strategy", () => {
   assert.doesNotMatch(strategy, /owner-test-harness|sv_owner_fixture/);
 });
 
-test("owner harness overlays fuel states while retaining the live vehicle mapping", () => {
+test("owner harness overlays only fuel by default and preserves live EV-side mapping", () => {
   assert.match(harness, /\.\.\.originalMapped/);
   assert.match(harness, /fuel: ids\.fuel/);
   assert.match(harness, /fuel_autonomy: ids\.fuelAutonomy/);
   assert.match(harness, /fuel_consumption_instant: ids\.fuelConsumption/);
   assert.match(harness, /electric_energy: true/);
   assert.match(harness, /fuel: true/);
-  assert.match(harness, /if \\(profile === \"phev-idle\" \\|\\| stale\\\)/);
-  assert.match(harness, /else if \\(profile === \"phev-driving\"\\\)/);
-  assert.match(harness, /else if \\(profile === \"phev-charging\"\\\)/);
+  assert.match(harness, /if \(profile === "phev-idle" \|\| stale\)/);
+  assert.match(harness, /else if \(profile === "phev-driving"\)/);
+  assert.match(harness, /else if \(profile === "phev-charging"\)/);
   assert.match(harness, /withSourceTimestamp/);
 });
 
@@ -38,6 +40,7 @@ test("owner harness exposes deterministic idle, driving, charging and stale prof
   for (const profile of ["phev-idle", "phev-driving", "phev-charging", "phev-stale"]) {
     assert.match(harness, new RegExp(profile));
   }
+  assert.match(harness, /"battery", "battery_residual", "autonomy", "temperature", "battery_charging_rate"/);
   assert.match(installer, /sv_owner_fixture=phev-driving/);
   assert.match(installer, /ownerFixtureActive/);
 });
