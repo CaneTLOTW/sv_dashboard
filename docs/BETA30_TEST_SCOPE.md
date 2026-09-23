@@ -27,7 +27,7 @@ The owner-only PHEV fixture is development infrastructure and must remain outsid
 
 ### Owner-only PHEV Hero harness
 
-Only after the normal package smoke passes, run the documented local installer in `dev/owner_test_harness/README.md` against the installed static directory.
+Only after the normal package smoke passes, run the documented local installer in `dev/owner_test_harness/README.md` against the installed static directory. Then perform a **full Home Assistant restart** so the newly copied owner-only JavaScript file receives a registered static route, and hard-refresh the browser.
 
 Test these URLs:
 
