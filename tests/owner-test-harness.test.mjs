@@ -28,6 +28,10 @@ test("owner harness overlays fuel states while retaining the live vehicle mappin
   assert.match(harness, /fuel_consumption_instant: ids\.fuelConsumption/);
   assert.match(harness, /electric_energy: true/);
   assert.match(harness, /fuel: true/);
+  assert.match(harness, /if \\(profile === \"phev-idle\" \\|\\| stale\\\)/);
+  assert.match(harness, /else if \\(profile === \"phev-driving\"\\\)/);
+  assert.match(harness, /else if \\(profile === \"phev-charging\"\\\)/);
+  assert.match(harness, /withSourceTimestamp/);
 });
 
 test("owner harness exposes deterministic idle, driving, charging and stale profiles", () => {
