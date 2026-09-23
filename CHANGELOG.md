@@ -4,6 +4,15 @@
 
 No changes yet.
 
+## 0.6.0-beta.30 native history + Hero freshness candidate
+
+- Uses the public Stellantis Vehicles `get_vehicle_trips(...)` transport when available (upstream 2026.9.4+) while retaining the existing compatibility fallback for older upstream installations; canonical pagination, deduplication and reconciliation semantics remain SV-owned and unchanged.
+- Brings the compact/EV Hero's temperature freshness cue in line with the Dual-Energy Hero: a source timestamp no older than 15 minutes highlights the thermometer plus its badge border/background without claiming continuous vehicle connectivity.
+- Cache-busts the changed `vehicle-overview-card.js` module and bumps the package/top-level frontend resource generation to beta.30; unchanged dashboard strategy/i18n and other internal cards keep their prior validated content keys.
+- Adds an **owner-only** PHEV Hero test harness under `dev/owner_test_harness/`. It is versioned for reproducible owner QA but is not imported by the production package and is not part of the HACS runtime payload.
+- The default owner fixture keeps live EV-side battery/range/temperature/charging/climate data and overlays only synthetic fuel-side values. Dedicated idle, driving and charging profiles override only the state required for that scenario; the stale profile also rewrites source timestamps so freshness behavior can be tested deterministically.
+- Explicitly scopes the local fixture to the production Dual-Energy **Hero**. It does not pretend to provide a synthetic PHEV backend for every other generated-dashboard section.
+
 ## 0.6.0-beta.29 automatic Trip/Charge History reconciliation candidate
 
 - Fixes stale canonical Trip/Charge History after a locally detected completed trip or charging session when notifications already succeeded but no automatic server-history rebuild followed.
