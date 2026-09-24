@@ -205,6 +205,18 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
   _selected() { if (!this._hass) return undefined; const candidates = statusCandidates(this._hass, this._config.entry_id); return candidates.length === 1 ? candidates[0] : undefined; }
   _showMore(entityId) { if (!entityId) return; this.dispatchEvent(new CustomEvent("hass-more-info", { bubbles: true, composed: true, detail: { entityId } })); }
   _formatValue(entityId, digits = 0) { const value = numeric(this._hass?.states?.[entityId]); if (value === null) return "—"; return new Intl.NumberFormat(localeFor(this._i18nContext()), { maximumFractionDigits: digits, minimumFractionDigits: digits }).format(value); }
+  _formatTime(entityId) {
+    const state = this._hass?.states?.[entityId];
+    if (!usable(state)) return "—";
+    const raw = String(state.state ?? "").trim();
+    if (/^[0-9]{1,2}:[0-9]{2}$/.test(raw)) return raw.padStart(5, "0");
+    const parsed = new Date(raw);
+    if (Number.isNaN(parsed.getTime())) return "—";
+    return new Intl.DateTimeFormat(localeFor(this._i18nContext()), {
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(parsed);
+  }
   _percent(entityId) { return clampPercent(numeric(this._hass?.states?.[entityId])); }
 
   _navigate(path) {
@@ -315,6 +327,7 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
     const batteryPercent = this._percent(mapped.battery);
     const fuelPercent = this._percent(mapped.fuel);
     const chargePower = mode.charging ? this._formatValue(mode.chargePower, 1) : "—";
+    const chargeEnd = mode.charging ? this._formatTime(mapped.battery_charging_end) : "—";
     const fuelConsumptionEntity = this._fuelConsumptionEntity(mapped, mode);
     const fuelConsumption = fuelConsumptionEntity ? this._formatValue(fuelConsumptionEntity, 1) : "—";
 
@@ -370,7 +383,10 @@ ${showInfo ? html`
   <div class="fill ${batteryPercent === null ? "unavailable" : ""}" aria-hidden="true"><div class="fill-value" style=${`width:${batteryPercent ?? 0}%`}></div></div>
   <div class="detail-label">${dashboardText.range}</div>
   <button class="metric-button detail-value" type="button" @click=${() => this._showMore(mapped.autonomy)}>${electricRange}<small>${electricRange === "—" ? "" : " km"}</small></button>
-  <div class="secondary">${mode.charging && chargePower !== "—" ? html`${text.chargePower}<button class="metric-button" type="button" @click=${() => this._showMore(mode.chargePower)}>${chargePower} kW</button>` : nothing}</div>
+  <div class="secondary">
+    ${mode.charging && chargePower !== "—" ? html`${text.chargePower}<button class="metric-button" type="button" @click=${() => this._showMore(mode.chargePower)}>${chargePower} kW</button>` : nothing}
+    ${mode.charging && chargeEnd !== "—" ? html`<span>${chargePower !== "—" ? " · " : ""}${dashboardText.chargeEndShort || dashboardText.chargeEnd || "End"} ${chargeEnd}</span>` : nothing}
+  </div>
 </div>
 
 <div class="energy fuel">
