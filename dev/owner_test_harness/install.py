@@ -39,20 +39,34 @@ SELECTOR_CARD_PATCH = '        separator(strings.live, "mdi:car-connected"),\n  
 
 def _patch_frontend(frontend: Path, source: Path) -> str:
     token = hashlib.sha256(source.read_bytes()).hexdigest()[:12]
-    import_line = f'  import("./owner-test-harness-card.js?v=owner-{token}"),\n'
+    marker_begin = "/* OWNER-HARNESS-IMPORT-BEGIN */"
+    marker_end = "/* OWNER-HARNESS-IMPORT-END */"
     text = frontend.read_text(encoding="utf-8")
 
-    # Re-running the installer must also refresh the module URL when the local
-    # harness source changed; remove any prior owner-only import first.
+    # Re-running the installer must refresh the local module URL and must also
+    # clean up the older beta.31 overlay form that inserted the harness import
+    # into the critical packageModules Promise.all.
+    if marker_begin in text and marker_end in text:
+        before, remainder = text.split(marker_begin, 1)
+        _, after = remainder.split(marker_end, 1)
+        text = before + after.lstrip("\n")
     text = "".join(
         line
         for line in text.splitlines(keepends=True)
         if "owner-test-harness-card.js?v=owner-" not in line
     )
-    anchor = "const packageModules = Promise.all([\n"
+
+    anchor = "installTransparentMapMarkerCompatibility();\n"
     if anchor not in text:
-        raise SystemExit("frontend.js packageModules anchor not found")
-    text = text.replace(anchor, anchor + import_line, 1)
+        raise SystemExit("frontend.js compatibility bootstrap anchor not found")
+
+    import_block = f'''{marker_begin}
+void import("./owner-test-harness-card.js?v=owner-{token}").catch((error) => {{
+  console.error("[SV Dashboard owner harness] local module failed to load", error);
+}});
+{marker_end}
+'''
+    text = text.replace(anchor, anchor + "\n" + import_block, 1)
     frontend.write_text(text, encoding="utf-8")
     return token
 
