@@ -44,3 +44,19 @@ test("owner harness exposes deterministic idle, driving, charging and stale prof
   assert.match(installer, /sv_owner_fixture=phev-driving/);
   assert.match(installer, /ownerFixtureActive/);
 });
+
+
+test("owner harness exposes a local selector including the real standard view", () => {
+  assert.match(harness, /sv-dashboard-owner-test-selector-card/);
+  assert.match(harness, /Standard · echter Fahrzeug-Hero/);
+  assert.match(harness, /PHEV · Live EV \+ Fuel-Dummy/);
+  assert.match(harness, /PHEV · Idle/);
+  assert.match(harness, /PHEV · Fahrt/);
+  assert.match(harness, /PHEV · Laden/);
+  assert.match(harness, /PHEV · Stale\/Freshness-Test/);
+  assert.match(harness, /url\.searchParams\.delete\(PROFILE_PARAM\)/);
+  assert.match(harness, /window\.location\.assign\(url\.toString\(\)\)/);
+  assert.match(installer, /ownerTestSelector/);
+  assert.match(installer, /sv-dashboard-owner-test-selector-card/);
+  assert.match(installer, /separator\(strings\.live, "mdi:car-connected"\)/);
+});
