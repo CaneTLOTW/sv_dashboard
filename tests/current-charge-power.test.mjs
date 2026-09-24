@@ -11,6 +11,9 @@ test("live charge power samples react to residual-energy updates as well as SOC"
   assert.match(metrics, /source_candidates/);
   assert.match(metrics, /max\(\s*source_candidates, key=lambda item: item\[0\]\s*\)/);
   assert.match(metrics, /"residual_kwh": self\._as_float\(/);
+  assert.match(metrics, /same_source_update = bool\(/);
+  assert.match(metrics, /reference = \(\s*samples\[-2\]/);
+  assert.match(metrics, /samples\[-1\] = merged/);
 });
 
 test("charging UI never labels upstream chargingRate km per hour as kW", () => {
