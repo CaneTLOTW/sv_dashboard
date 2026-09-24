@@ -77,7 +77,7 @@ test("dual-energy hero uses one stacked information hierarchy at every width", (
   assert.doesNotMatch(dualHero, /@media \(max-width:/);
   assert.match(dualHero, /getGridOptions\(\) \{ return \{ columns: 12, rows: 5, min_columns: 6, min_rows: 4 \}; \}/);
   assert.match(dualHero, /class="top-control climate-control/);
-  assert.match(dualHero, /class="top-control temperature-badge \$\{temperatureFresh \? "fresh" : ""\}"/);
+  assert.match(dualHero, /class="top-control temperature-badge \$\{temperatureFresh \? "fresh" : ""\} \$\{showInfo \? "with-info" : ""\}"/);
   assert.match(dualHero, /mapped\.fuel_autonomy/);
   assert.match(dualHero, /class="energy fuel"/);
   assert.match(dualHero, /fuelPercent === null \? "unavailable"/);
