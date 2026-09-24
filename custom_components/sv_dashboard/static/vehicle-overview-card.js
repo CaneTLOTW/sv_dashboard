@@ -20,6 +20,8 @@ const CLIMATE_COMMAND_GUARD_MS = 90 * 1000;
 
 const unavailable = (state) =>
   !state || ["unknown", "unavailable", "none", ""].includes(String(state.state ?? "").toLowerCase());
+const stateIsOn = (value) =>
+  ["on", "true", "inprogress", "running"].includes(String(value ?? "").toLowerCase());
 
 const statusCandidates = (hass, entryId) =>
   Object.entries(hass?.states || {}).filter(([entityId, state]) => {
@@ -114,7 +116,7 @@ function buildConfig(hass, config, statusState) {
   const tripConsumption = metricEntity(hass, attributes, "current_trip_consumption");
   const vehicleInfo = metricEntity(hass, attributes, "vehicle_info");
   const navigationPath = liveVariant ? undefined : dashboardPath(attributes, config.navigation_path);
-  const chargingState = supportsElectric && charging ? hass.states?.[charging]?.state === "on" : false;
+  const chargingState = supportsElectric && charging ? stateIsOn(hass.states?.[charging]?.state) : false;
   const rightStatusEntity = chargingState && chargingEnd && hass.states?.[chargingEnd]
     ? chargingEnd
     : chargingState
@@ -577,6 +579,8 @@ class SvDashboardVehicleOverviewCard extends HTMLElement {
     const attributes = state.attributes || {};
     const tracker = attributes.vehicle_tracker;
     const picture = tracker ? this._hass.states?.[tracker]?.attributes?.entity_picture : "";
+    const chargingEntity = attributes.entity_mapping?.battery_charging;
+    const chargingEndEntity = attributes.entity_mapping?.battery_charging_end;
     return JSON.stringify([
       languageFor(this._hass),
       entityId,
@@ -586,6 +590,8 @@ class SvDashboardVehicleOverviewCard extends HTMLElement {
       attributes.metric_entities,
       attributes.control_entities,
       picture || "",
+      chargingEntity ? this._hass.states?.[chargingEntity]?.state || "" : "",
+      chargingEndEntity ? this._hass.states?.[chargingEndEntity]?.state || "" : "",
       this._config.navigation_path || "",
       this._config.heading || "",
       this._config.heading_icon || "",
