@@ -4,6 +4,17 @@
 
 No changes yet.
 
+## 0.6.0-beta.31 Hero parity + charging UX candidate
+
+- Keeps the compact EV Hero strictly electric in its driving branch: current-trip **kWh** is again the preferred in-bar driving value, with kWh/100 km only as an electric fallback. Fuel live values remain outside the EV path.
+- Aligns compact EV Hero preconditioning with the newer Dual-Energy interaction model: one-tap START/STOP, normalized ON states, a 90-second pending guard, pending START/STOP feedback and duplicate-command blocking while the upstream state catches up.
+- Keeps the 15-minute temperature freshness cue as a **recent vehicle-data** signal, not connectivity, and gives both Hero cards the same visible primary-color badge treatment.
+- Adds the existing vehicle-information popup action to the generated Dual-Energy Hero.
+- Creates an explicit local stacking context for the Dual-Energy Hero so transformed vehicle imagery and top controls cannot paint over Home Assistant's sticky dashboard/view navigation while scrolling.
+- Fixes the Charging/Range current-power path: upstream `battery_charging_rate` is correctly treated as **km/h**, never mislabeled as kW; package-owned `current_charge_power` remains the only kW value.
+- Improves live current-charge-power derivation by sampling both SOC and residual-energy updates and merging same-upstream-timestamp entity fan-out, so a residual-kWh change can produce current power even when whole-percent SOC is unchanged.
+- Bumps package/frontend generation to beta.31 and cache-busts both Hero modules plus the changed dashboard Strategy. The published beta.30 tag remains immutable.
+
 ## 0.6.0-beta.30 native history + Hero freshness candidate
 
 - Uses the public Stellantis Vehicles `get_vehicle_trips(...)` transport when available (upstream 2026.9.4+) while retaining the existing compatibility fallback for older upstream installations; canonical pagination, deduplication and reconciliation semantics remain SV-owned and unchanged.
