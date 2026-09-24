@@ -12,6 +12,9 @@ No changes yet.
 - Adds an **owner-only** PHEV Hero test harness under `dev/owner_test_harness/`. It is versioned for reproducible owner QA but is not imported by the production package and is not part of the HACS runtime payload.
 - The default owner fixture keeps live EV-side battery/range/temperature/charging/climate data and overlays only synthetic fuel-side values. Dedicated idle, driving and charging profiles override only the state required for that scenario; the stale profile also rewrites source timestamps so freshness behavior can be tested deterministically.
 - Explicitly scopes the local fixture to the production Dual-Energy **Hero**. It does not pretend to provide a synthetic PHEV backend for every other generated-dashboard section.
+- Bounds oversized canonical charge identifiers before exposing them as a Home Assistant sensor state; the original full charge id remains available in attributes/storage, avoiding the 255-character HA state failure seen on the DS N°4 tester.
+- Suppresses ambiguous trip-to-trip SOC-only charge reconstruction for Dual-Energy/PHEV trip pairs. Real observed plugged/charging sessions remain canonical; the BEV SOC fallback stays available for non-fuel vehicles.
+- Confirms a newest fuel-level refill jump from the still-elevated live fuel state after the existing 90-second hold and schedules one bounded recheck when needed, so a real terminal 23 % → 100 % refuel is no longer stranded waiting for a later significant Recorder sample.
 
 ## 0.6.0-beta.29 automatic Trip/Charge History reconciliation candidate
 

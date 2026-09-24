@@ -35,6 +35,9 @@ jobs:
           python3 tests/canonical_mileage_test.py
           python3 tests/consumption_metrics_test.py
           python3 tests/history_reconcile_test.py
+          python3 tests/state_contract_test.py
+          python3 tests/charge_policy_test.py
+          python3 tests/fuel_policy_test.py
 
       - name: Check frontend JavaScript
         run: |

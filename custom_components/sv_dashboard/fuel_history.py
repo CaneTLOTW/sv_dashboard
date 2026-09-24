@@ -24,6 +24,7 @@ from .const import (
     DOMAIN,
     OPTION_HISTORY_HOURS,
 )
+from .fuel_policy import tail_refill_confirmation
 
 _LOGGER = logging.getLogger(__name__)
 _STORE_VERSION = 1
@@ -85,8 +86,10 @@ class FuelHistoryManager:
         self._unsub: list[callable] = []
         self._cancel_rebuild: callable | None = None
         self._rebuild_running = False
+        self._shutdown_requested = False
 
     async def async_initialize(self) -> None:
+        self._shutdown_requested = False
         stored = await self._store.async_load()
         if isinstance(stored, dict):
             self.data.update(stored)
@@ -97,6 +100,7 @@ class FuelHistoryManager:
             self.hass.async_create_task(self.async_rebuild())
 
     async def async_shutdown(self) -> None:
+        self._shutdown_requested = True
         if self._cancel_rebuild:
             self._cancel_rebuild()
             self._cancel_rebuild = None
@@ -131,9 +135,10 @@ class FuelHistoryManager:
     async def async_rebuild(self) -> None:
         """Rebuild the retained Recorder window while preserving older stored events."""
         fuel_entity = self.mapping.get("fuel")
-        if not fuel_entity or self._rebuild_running:
+        if not fuel_entity or self._rebuild_running or self._shutdown_requested:
             return
         self._rebuild_running = True
+        tail_recheck_seconds: float | None = None
         try:
             end = dt_util.utcnow()
             start = end - timedelta(hours=self._history_hours())
@@ -143,8 +148,15 @@ class FuelHistoryManager:
             ) if self.mapping.get("mileage") else []
             refill_entity = self.mapping.get("fuel_refill_amount") or self.mapping.get("refill_amount")
             refill_states = await self._async_get_history(refill_entity, start, end) if refill_entity else []
+            current_fuel_state = self.hass.states.get(fuel_entity)
 
-            rebuilt = self._detect_events(fuel_states, mileage_states, refill_states)
+            rebuilt, tail_recheck_seconds = self._detect_events(
+                fuel_states,
+                mileage_states,
+                refill_states,
+                current_fuel_state=current_fuel_state,
+                now=end,
+            )
             retained = []
             for event in self.data.get("events", []):
                 event_time = _parse_datetime(event.get("source_time")) if isinstance(event, dict) else None
@@ -159,7 +171,31 @@ class FuelHistoryManager:
         finally:
             self._rebuild_running = False
 
-    def _detect_events(self, fuel_states, mileage_states, refill_states) -> list[dict[str, Any]]:
+        # A refill can be the newest significant Recorder state, so there may
+        # be no later equal fuel sample to confirm it. If the current live
+        # state is still elevated but the 90-second hold has not elapsed yet,
+        # schedule exactly one bounded recheck. This also recovers cleanly
+        # after a restart during the hold window.
+        if (
+            tail_recheck_seconds is not None
+            and not self._shutdown_requested
+            and self._cancel_rebuild is None
+        ):
+            self._cancel_rebuild = async_call_later(
+                self.hass,
+                timedelta(seconds=max(1.0, tail_recheck_seconds)),
+                self._rebuild_callback,
+            )
+
+    def _detect_events(
+        self,
+        fuel_states,
+        mileage_states,
+        refill_states,
+        *,
+        current_fuel_state=None,
+        now: datetime | None = None,
+    ) -> tuple[list[dict[str, Any]], float | None]:
         samples = []
         seen = set()
         for state in fuel_states:
@@ -180,10 +216,21 @@ class FuelHistoryManager:
         samples.sort(key=lambda item: item["source_time"])
         events: list[dict[str, Any]] = []
         tank_capacity, tank_source = self.tank_capacity()
+        tail_recheck_seconds: float | None = None
+        check_now = now or dt_util.utcnow()
+        current_value = (
+            _as_float(_state_value(current_fuel_state))
+            if current_fuel_state is not None
+            else None
+        )
+        current_source_time = (
+            _source_timestamp(current_fuel_state)[0]
+            if current_fuel_state is not None
+            else None
+        )
 
-        for index in range(1, len(samples) - 1):
+        for index in range(1, len(samples)):
             after = samples[index]
-            confirmation = samples[index + 1]
             prior_values = [item["value"] for item in samples[max(0, index - 3):index]]
             if not prior_values:
                 continue
@@ -191,11 +238,39 @@ class FuelHistoryManager:
             increase = after["value"] - baseline
             if increase < _MIN_REFILL_PERCENT:
                 continue
-            sustained_floor = baseline + max(1.0, _MIN_REFILL_PERCENT * 0.6)
-            if confirmation["value"] < sustained_floor:
-                continue
 
-            confirmed_after = max(after["value"], confirmation["value"])
+            sustained_floor = baseline + max(1.0, _MIN_REFILL_PERCENT * 0.6)
+            if index + 1 < len(samples):
+                confirmation_value = samples[index + 1]["value"]
+                if confirmation_value < sustained_floor:
+                    continue
+            else:
+                confirmed, recheck_seconds = tail_refill_confirmation(
+                    baseline=baseline,
+                    after_value=after["value"],
+                    after_time=after["source_time"],
+                    current_value=current_value,
+                    current_source_time=current_source_time,
+                    now=check_now,
+                    minimum_refill_percent=_MIN_REFILL_PERCENT,
+                    hold_seconds=_REBUILD_DELAY.total_seconds(),
+                )
+                if recheck_seconds is not None:
+                    tail_recheck_seconds = (
+                        recheck_seconds
+                        if tail_recheck_seconds is None
+                        else min(tail_recheck_seconds, recheck_seconds)
+                    )
+                if not confirmed:
+                    continue
+                confirmation_value = current_value
+
+            confirmed_after = max(
+                after["value"],
+                confirmation_value
+                if confirmation_value is not None
+                else after["value"],
+            )
             mileage = self._nearest_numeric(mileage_states, after["source_time"], prefer_before=True)
             actual_liters = self._nearest_numeric(refill_states, after["source_time"], max_delta=timedelta(minutes=30))
             if actual_liters is not None and actual_liters > 0:
@@ -236,7 +311,7 @@ class FuelHistoryManager:
                     events[-1] = candidate
                 continue
             events.append(candidate)
-        return events
+        return events, tail_recheck_seconds
 
     @staticmethod
     def _same_refuel(first: dict[str, Any], second: dict[str, Any]) -> bool:

@@ -34,6 +34,7 @@ from .entity_identity import (
     registry_technical_key,
     vehicle_vin,
 )
+from .state_contract import bounded_state_identifier
 
 
 def _compact_curve_samples(samples: Any, limit: int = 12) -> list[dict[str, Any]]:
@@ -961,7 +962,11 @@ class SvLastChargeResultSensor(SvMetricSensor):
     @property
     def native_value(self) -> str | None:
         charge = self.metrics.canonical_last_charge()
-        return charge.get("id") if isinstance(charge, dict) else None
+        return (
+            bounded_state_identifier(charge.get("id"), prefix="charge")
+            if isinstance(charge, dict)
+            else None
+        )
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
