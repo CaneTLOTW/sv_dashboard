@@ -18,6 +18,20 @@ Synthetic defaults:
 - fuel range: 410 km
 - driving fuel consumption: 5.4 l/100 km
 
+After installation the generated LIVE view also shows a local-only **Owner-Testmodus**
+selector. It changes the same URL parameter and reloads the view, so the URL
+remains the single source of truth and profiles can still be bookmarked/shared
+locally.
+
+Selector choices:
+
+- **Standard · echter Fahrzeug-Hero** — removes the fixture parameter completely
+- **PHEV · Live EV + Fuel-Dummy** — `?sv_owner_fixture=phev`
+- **PHEV · Idle** — `?sv_owner_fixture=phev-idle`
+- **PHEV · Fahrt** — `?sv_owner_fixture=phev-driving`
+- **PHEV · Laden** — `?sv_owner_fixture=phev-charging`
+- **PHEV · Stale/Freshness-Test** — `?sv_owner_fixture=phev-stale`
+
 Profiles:
 
 - `?sv_owner_fixture=phev` — live EV values + synthetic fuel side
@@ -50,7 +64,7 @@ The installer:
 1. copies `owner-test-harness-card.js` into the local installed static folder;
 2. locally imports it from `frontend.js`;
 3. locally patches the generated dashboard Strategy so the query parameter uses
-   the harness card;
+   the harness card and adds the local Owner-Testmodus selector to the LIVE view;
 4. leaves the repository's production `custom_components/` package untouched.
 
 Re-run the installer after every normal SV Dashboard install/update because the

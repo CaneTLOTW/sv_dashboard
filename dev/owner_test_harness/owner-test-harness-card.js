@@ -13,6 +13,17 @@
 const CARD_TAG = "sv-dashboard-owner-test-harness-card";
 const STATUS_DOMAIN = "sv_dashboard";
 const SYNTH_PREFIX = "sensor.sv_owner_fixture_";
+const SELECTOR_TAG = "sv-dashboard-owner-test-selector-card";
+const PROFILE_PARAM = "sv_owner_fixture";
+const PROFILE_OPTIONS = [
+  ["", "Standard · echter Fahrzeug-Hero"],
+  ["phev", "PHEV · Live EV + Fuel-Dummy"],
+  ["phev-idle", "PHEV · Idle"],
+  ["phev-driving", "PHEV · Fahrt"],
+  ["phev-charging", "PHEV · Laden"],
+  ["phev-stale", "PHEV · Stale/Freshness-Test"],
+];
+
 
 const nowIso = () => new Date().toISOString();
 const state = (entityId, value, attributes = {}, updated = nowIso()) => ({
@@ -25,7 +36,7 @@ const state = (entityId, value, attributes = {}, updated = nowIso()) => ({
 });
 
 const profileFromUrl = () => {
-  const raw = new URLSearchParams(window.location.search).get("sv_owner_fixture") || "phev";
+  const raw = new URLSearchParams(window.location.search).get(PROFILE_PARAM) || "phev";
   return ["phev", "phev-idle", "phev-driving", "phev-charging", "phev-stale"].includes(raw) ? raw : "phev";
 };
 
@@ -134,6 +145,113 @@ function fixtureHass(hass, entryId, profile) {
   states[statusId] = status;
   return { ...hass, states };
 }
+
+
+class SvDashboardOwnerTestSelectorCard extends HTMLElement {
+  constructor() {
+    super();
+    this._config = {};
+    this.attachShadow({ mode: "open" });
+  }
+
+  setConfig(config) {
+    this._config = config || {};
+    this._render();
+  }
+
+  set hass(_hass) {
+    // Selection is URL-driven; normal HA state updates must not rebuild the
+    // control while the user is interacting with the dropdown.
+  }
+
+  connectedCallback() {
+    this._render();
+  }
+
+  getCardSize() { return 1; }
+  getGridOptions() { return { columns: 12, rows: 1, min_columns: 6, min_rows: 1 }; }
+
+  _activeProfile() {
+    return new URLSearchParams(window.location.search).get(PROFILE_PARAM) || "";
+  }
+
+  _setProfile(profile) {
+    if (profile === this._activeProfile()) return;
+    const url = new URL(window.location.href);
+    if (profile) url.searchParams.set(PROFILE_PARAM, profile);
+    else url.searchParams.delete(PROFILE_PARAM);
+    window.location.assign(url.toString());
+  }
+
+  _render() {
+    if (!this.shadowRoot) return;
+    const active = this._activeProfile();
+    const options = PROFILE_OPTIONS.map(([value, label]) =>
+      `<option value="${value}"${value === active ? " selected" : ""}>${label}</option>`
+    ).join("");
+
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host { display:block; }
+        ha-card {
+          padding: 10px 14px;
+          border-radius: var(--ha-card-border-radius, 12px);
+          box-shadow: var(--ha-card-box-shadow, none);
+          background: var(--ha-card-background, var(--card-background-color));
+        }
+        .row {
+          display:grid;
+          grid-template-columns:auto minmax(180px, 320px);
+          align-items:center;
+          gap:12px;
+        }
+        .label {
+          display:flex;
+          align-items:center;
+          gap:8px;
+          font-size:14px;
+          font-weight:600;
+          color:var(--primary-text-color);
+        }
+        .badge {
+          font-size:11px;
+          font-weight:700;
+          padding:2px 7px;
+          border-radius:999px;
+          color:var(--warning-color, #ff9800);
+          background:color-mix(in srgb, var(--warning-color, #ff9800) 14%, transparent);
+        }
+        select {
+          width:100%;
+          min-height:36px;
+          padding:6px 10px;
+          border:1px solid var(--divider-color);
+          border-radius:8px;
+          color:var(--primary-text-color);
+          background:var(--secondary-background-color);
+          font:inherit;
+        }
+        @media (max-width: 620px) {
+          .row { grid-template-columns:1fr; }
+        }
+      </style>
+      <ha-card>
+        <div class="row">
+          <div class="label">
+            <span>Owner-Testmodus</span>
+            <span class="badge">LOKAL</span>
+          </div>
+          <select aria-label="Owner-Testprofil">${options}</select>
+        </div>
+      </ha-card>
+    `;
+    this.shadowRoot.querySelector("select")?.addEventListener("change", (event) => {
+      this._setProfile(event.target.value);
+    }, { once: true });
+  }
+}
+
+if (!customElements.get(SELECTOR_TAG)) customElements.define(SELECTOR_TAG, SvDashboardOwnerTestSelectorCard);
 
 class SvDashboardOwnerTestHarnessCard extends HTMLElement {
   constructor() {
