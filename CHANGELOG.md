@@ -4,6 +4,13 @@
 
 No changes yet.
 
+## 0.6.0-beta.32 Strategy bootstrap hardening candidate
+
+- Fixes a Home Assistant dashboard bootstrap race where the package entry point could wait up to 10 seconds for external custom-card dependencies **before** importing/registering `ll-strategy-dashboard-sv-dashboard`. Home Assistant can time out waiting for the Strategy element during the same window.
+- Keeps the existing 10-second dependency grace, but moves that wait into `generateDashboard()` after the Strategy custom element is already registered.
+- Makes the local owner-only harness module import fail-open and independent of the critical production `packageModules` Promise, so a missing/broken local harness file cannot prevent the normal dashboard Strategy from registering.
+- Bumps package/frontend resource generation to beta.32; Hero modules remain on their unchanged beta.31 content keys.
+
 ## 0.6.0-beta.31 Hero parity + charging UX candidate
 
 - Keeps the compact EV Hero strictly electric in its driving branch: current-trip **kWh** is again the preferred in-bar driving value, with kWh/100 km only as an electric fallback. Fuel live values remain outside the EV path.

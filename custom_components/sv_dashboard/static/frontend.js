@@ -94,11 +94,23 @@ const packageModules = Promise.all([
   import("./fuel-history-card.js?v=0.6.0-beta.28"),
   import("./vehicle-audit-card.js?v=0.6.0-beta.28"),
 ]);
-const dependencyReadiness = Promise.all(REQUIRED_ELEMENTS.map(waitForElement));
+
+/*
+ * Start the third-party dependency grace period immediately, but never block
+ * registration of the Lovelace strategy element on it. Home Assistant has its
+ * own bounded wait for the SV Dashboard Strategy element; if both waits are
+ * roughly equal, awaiting dependencies here can make HA time out just before
+ * the strategy module is finally imported.
+ *
+ * The Strategy itself awaits this promise inside generateDashboard(), so the
+ * existing grace period still prevents a false "missing dependency" page.
+ */
+window.__svDashboardDependencyReadiness = Promise.all(
+  REQUIRED_ELEMENTS.map(waitForElement),
+);
 
 await packageModules;
 window.customCards = (window.customCards || []).filter(
   (card) => !INTERNAL_CARD_TYPES.has(card?.type),
 );
-window.__svDashboardDependencyReadiness = await dependencyReadiness;
-await import("./sv_dashboard.js?v=0.6.0-beta.31");
+await import("./sv_dashboard.js?v=0.6.0-beta.32");
