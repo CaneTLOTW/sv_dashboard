@@ -160,7 +160,8 @@ class SvDashboardOwnerTestSelectorCard extends HTMLElement {
   }
 
   set hass(_hass) {
-    this._render();
+    // Selection is URL-driven; normal HA state updates must not rebuild the
+    // control while the user is interacting with the dropdown.
   }
 
   connectedCallback() {
@@ -175,6 +176,7 @@ class SvDashboardOwnerTestSelectorCard extends HTMLElement {
   }
 
   _setProfile(profile) {
+    if (profile === this._activeProfile()) return;
     const url = new URL(window.location.href);
     if (profile) url.searchParams.set(PROFILE_PARAM, profile);
     else url.searchParams.delete(PROFILE_PARAM);
