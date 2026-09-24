@@ -24,6 +24,18 @@ HERO_PATCH = '''    const ownerFixture = typeof window !== "undefined"
       grid_options: { columns: "full", rows: 5 },
     } : supportsDualEnergy ? {'''
 
+SELECTOR_DECL_ANCHOR = "    const overviewSections = [\n"
+SELECTOR_DECL_PATCH = '''    const ownerTestSelector = {
+      type: "custom:sv-dashboard-owner-test-selector-card",
+      entry_id: attributes.entry_id,
+      grid_options: { columns: "full", rows: 1 },
+    };
+
+    const overviewSections = [
+'''
+SELECTOR_CARD_ANCHOR = '        separator(strings.live, "mdi:car-connected"),\n        hero,\n'
+SELECTOR_CARD_PATCH = '        separator(strings.live, "mdi:car-connected"),\n        ownerTestSelector,\n        hero,\n'
+
 
 def _patch_frontend(frontend: Path, source: Path) -> str:
     token = hashlib.sha256(source.read_bytes()).hexdigest()[:12]
@@ -60,11 +72,21 @@ def install(target: Path) -> None:
         if HERO_ANCHOR not in text:
             raise SystemExit("sv_dashboard.js Hero anchor not found")
         text = text.replace(HERO_ANCHOR, HERO_PATCH, 1)
-        strategy.write_text(text, encoding="utf-8")
+
+    if "ownerTestSelector" not in text:
+        if SELECTOR_DECL_ANCHOR not in text:
+            raise SystemExit("sv_dashboard.js overviewSections anchor not found")
+        if SELECTOR_CARD_ANCHOR not in text:
+            raise SystemExit("sv_dashboard.js LIVE card anchor not found")
+        text = text.replace(SELECTOR_DECL_ANCHOR, SELECTOR_DECL_PATCH, 1)
+        text = text.replace(SELECTOR_CARD_ANCHOR, SELECTOR_CARD_PATCH, 1)
+
+    strategy.write_text(text, encoding="utf-8")
 
     print(f"Owner test harness installed (module owner-{token}).")
     print("Full Home Assistant restart required before using the fixture URLs.")
-    print("Profiles:")
+    print("The generated LIVE view now contains an Owner-Testmodus selector.")
+    print("URL profiles remain supported:")
     print("  ?sv_owner_fixture=phev")
     print("  ?sv_owner_fixture=phev-idle")
     print("  ?sv_owner_fixture=phev-driving")
