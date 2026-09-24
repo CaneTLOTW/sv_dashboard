@@ -81,5 +81,58 @@ def main() -> None:
     assert filtered["complete"] is False
 
 
+    direct_trips = [
+        {
+            "distance_km": 30,
+            "energy_kwh": 6,
+            "energy_source": "stellantis_trip.energy_consumptions",
+            "energy_estimated": False,
+            "valid_for_statistics": True,
+        }
+        for _ in range(4)
+    ]
+    strict = consumption.trailing_electric_consumption(
+        direct_trips,
+        strict_direct=True,
+    )
+    assert strict["value"] == 20
+    assert strict["window_distance_km"] == 120
+    assert strict["coverage_distance_km"] == 120
+    assert strict["coverage_ratio"] == 1.0
+    assert strict["coverage_sufficient"] is True
+    assert strict["trip_count"] == 4
+
+    incomplete = [dict(trip) for trip in direct_trips]
+    incomplete[-1]["energy_source"] = "derived_from_trip_soc"
+    incomplete[-1]["energy_estimated"] = True
+    strict_incomplete = consumption.trailing_electric_consumption(
+        incomplete,
+        strict_direct=True,
+    )
+    assert strict_incomplete["window_distance_km"] == 120
+    assert strict_incomplete["coverage_distance_km"] == 90
+    assert strict_incomplete["coverage_ratio"] == 0.75
+    assert strict_incomplete["coverage_sufficient"] is False
+    assert strict_incomplete["value"] is None
+
+    # BEV/non-strict semantics stay backwards-compatible: any usable
+    # canonical energy can contribute, including SOC-derived fallback.
+    legacy = consumption.trailing_electric_consumption(
+        [
+            {
+                "distance_km": 25,
+                "energy_kwh": 5,
+                "energy_source": "derived_from_trip_soc",
+                "energy_estimated": True,
+                "valid_for_statistics": True,
+            }
+        ],
+        strict_direct=False,
+    )
+    assert legacy["value"] == 20
+    assert legacy["distance_km"] == 25
+    assert legacy["strict_direct"] is False
+
+
 if __name__ == "__main__":
     main()
