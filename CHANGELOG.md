@@ -10,6 +10,7 @@ No changes yet.
 - Aligns compact EV Hero preconditioning with the newer Dual-Energy interaction model: one-tap START/STOP, normalized ON states, a 90-second pending guard, pending START/STOP feedback and duplicate-command blocking while the upstream state catches up.
 - Keeps the 15-minute temperature freshness cue as a **recent vehicle-data** signal, not connectivity, and gives both Hero cards the same visible primary-color badge treatment.
 - Adds the existing vehicle-information popup action to the generated Dual-Energy Hero.
+- Shows the upstream charging end time as an additional secondary detail in the Dual-Energy battery row while charging, alongside current kW when available.
 - Creates an explicit local stacking context for the Dual-Energy Hero so transformed vehicle imagery and top controls cannot paint over Home Assistant's sticky dashboard/view navigation while scrolling.
 - Fixes the Charging/Range current-power path: upstream `battery_charging_rate` is correctly treated as **km/h**, never mislabeled as kW; package-owned `current_charge_power` remains the only kW value.
 - Improves live current-charge-power derivation by sampling both SOC and residual-energy updates and merging same-upstream-timestamp entity fan-out, so a residual-kWh change can produce current power even when whole-percent SOC is unchanged.
