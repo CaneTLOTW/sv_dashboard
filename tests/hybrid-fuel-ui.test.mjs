@@ -127,6 +127,21 @@ test("temperature badge indicates recent upstream vehicle payload without claimi
   assert.doesNotMatch(dualHero, /dashboardText\.(connected|disconnected)|text\.(connected|disconnected)/i);
 });
 
+test("dual-energy Hero keeps its stacking inside the card and exposes the generated vehicle-info action", () => {
+  assert.match(dualHero, /:host \{ display: block; position: relative; z-index: 0; isolation: isolate; \}/);
+  assert.match(dualHero, /ha-card \{ position: relative; z-index: 0; isolation: isolate;/);
+  assert.match(dualHero, /const vehicleInfo = metricEntity\(this\._hass, attributes, "vehicle_info"\)/);
+  assert.match(dualHero, /const showInfo = this\._config\.show_info === true && Boolean\(vehicleInfo\)/);
+  assert.match(dualHero, /class="top-control info-control"/);
+  assert.match(dualHero, /this\._navigate\("#sv-vehicle-info"\)/);
+  assert.match(strategy, /show_info: true/);
+});
+
+test("dual-energy fresh temperature cue uses the same visible blue treatment as the EV Hero", () => {
+  assert.match(dualHero, /color-mix\(in srgb, var\(--primary-color\) 45%/);
+  assert.match(dualHero, /color-mix\(in srgb, var\(--primary-color\) 14%/);
+});
+
 test("charging state does not redundantly append plugged-in status", () => {
   assert.match(dualHero, /if \(mode\.charging\) return \{ icon: "mdi:battery-charging", label: text\.charging \}/);
   assert.doesNotMatch(dualHero, /text\.charging\} · \$\{text\.plugged/);
