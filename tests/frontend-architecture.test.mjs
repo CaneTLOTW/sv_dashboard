@@ -22,25 +22,30 @@ const times = read("time.py");
 
 test("Home Assistant registers one SV frontend resource", () => {
   assert.match(constants, /FRONTEND_URL = "\/sv_dashboard\/frontend\.js"/);
-  assert.match(constants, /FRONTEND_VERSION = "0\.6\.0-beta\.31"/);
-  assert.equal(manifest.version, "0.6.0-beta.31");
+  assert.match(constants, /FRONTEND_VERSION = "0\.6\.0-beta\.32"/);
+  assert.equal(manifest.version, "0.6.0-beta.32");
   assert.match(constants, /FRONTEND_RESOURCE_URLS = \(FRONTEND_URL,\)/);
-  // beta.31 changes both Hero modules plus the generated dashboard Strategy; unchanged i18n/history modules retain prior content keys.
+  // beta.32 changes frontend bootstrap/Strategy loading; unchanged Hero/i18n/history modules retain prior content keys.
   assert.match(frontend, /import\("\.\/vehicle-overview-card\.js\?v=0\.6\.0-beta\.31"\)/);
   assert.match(frontend, /import\("\.\/gps-history-card\.js\?v=0\.6\.0-beta\.28"\)/);
   assert.match(frontend, /import\("\.\/dual-energy-overview-card\.js\?v=0\.6\.0-beta\.31"\)/);
-  assert.match(frontend, /import\("\.\/sv_dashboard\.js\?v=0\.6\.0-beta\.31"\)/);
+  assert.match(frontend, /import\("\.\/sv_dashboard\.js\?v=0\.6\.0-beta\.32"\)/);
   assert.match(strategy, /from "\.\/i18n\.js\?v=0\.6\.0-beta\.29"/);
   assert.doesNotMatch(frontend, /gps-history-fix\.js/);
   assert.doesNotMatch(frontend, /map-marker-fix\.js/);
   assert.match(frontend, /import\("\.\/vehicle-audit-card\.js\?v=0\.6\.0-beta\.28"\)/);
 });
 
-test("dependency preflight waits instead of failing on first customElements lookup", () => {
+test("dependency preflight never delays Strategy registration", () => {
   assert.match(frontend, /customElements\.whenDefined\(tag\)/);
   assert.match(frontend, /DEPENDENCY_GRACE_MS = 10000/);
-  assert.match(frontend, /await dependencyReadiness/);
-  assert.match(frontend, /await import\("\.\/sv_dashboard\.js\?v=0\.6\.0-beta\.31"\)/);
+  assert.match(frontend, /window\.__svDashboardDependencyReadiness = Promise\.all/);
+  assert.doesNotMatch(frontend, /await dependencyReadiness/);
+  assert.match(frontend, /await import\("\.\/sv_dashboard\.js\?v=0\.6\.0-beta\.32"\)/);
+  const strategyImport = frontend.indexOf('await import("./sv_dashboard.js?v=0.6.0-beta.32")');
+  assert.ok(strategyImport >= 0);
+  assert.match(strategy, /window\.__svDashboardDependencyReadiness/);
+  assert.match(strategy, /await readiness/);
 });
 
 test("LIVE reuses the validated vehicle overview lifecycle instead of owning a second compact hero", () => {
