@@ -14,6 +14,7 @@ The owner-only PHEV fixture is development infrastructure and must remain outsid
 - bound oversized canonical charge IDs before they become Home Assistant sensor state values while retaining the full canonical id in attributes/storage;
 - disable SOC-only trip-to-trip charge reconstruction for Dual-Energy/PHEV pairs while preserving real observed charging sessions and the BEV fallback;
 - allow the newest refuel jump to be confirmed from the still-elevated current fuel state after the existing 90-second hold, with one bounded recheck if the hold is not complete yet.
+- gate the Dual-Energy/PHEV electric 500-km average on direct Stellantis trip-energy provenance plus minimum coverage (≥80% of the latest driving window, ≥100 km, ≥3 trusted trips); otherwise expose no value. BEV rolling-consumption behavior is unchanged.
 
 ## Owner runtime checks
 
@@ -60,6 +61,7 @@ Before publishing the prerelease, validate the release-blocker fixes on the real
 - a new terminal refuel jump (the reproduced 23 % → 100 % case) must appear after the bounded confirmation delay even when no later significant equal fuel sample is recorded;
 - `last_charge_result` must no longer generate Home Assistant state-length errors;
 - beta.29 Trip Auto-Reconcile and the unchanged-SOC electric-energy guard must remain PASS.
+- the prior absurd electric 500-km value (224.98 kWh/100 km) must no longer be shown from sparse/SOC-derived PHEV evidence; until sufficient direct coverage exists the metric should be unavailable/`—` and expose coverage diagnostics in attributes.
 
 ## Regression / safety gates
 
