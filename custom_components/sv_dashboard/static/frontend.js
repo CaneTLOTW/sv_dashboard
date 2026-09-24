@@ -98,7 +98,7 @@ const packageModules = Promise.all([
 /*
  * Start the third-party dependency grace period immediately, but never block
  * registration of the Lovelace strategy element on it. Home Assistant has its
- * own bounded wait for ll-strategy-dashboard-sv-dashboard; if both waits are
+ * own bounded wait for the SV Dashboard Strategy element; if both waits are
  * roughly equal, awaiting dependencies here can make HA time out just before
  * the strategy module is finally imported.
  *
