@@ -279,7 +279,14 @@ class VehicleMetricsManager:
                 self.hass.async_create_task(
                     self._async_mark_charge_end_candidate(new_state)
                 )
-        elif entity_id == self.mapping.get("battery") and self._is_on("battery_charging"):
+        elif entity_id in {
+            self.mapping.get("battery"),
+            self.mapping.get("battery_residual"),
+        } and self._is_on("battery_charging"):
+            # Charge power can be derived from either a SOC step or a direct
+            # residual-energy step. Some vehicles update residual kWh while
+            # whole-percent SOC remains unchanged, so both entities must feed
+            # the live charge sampler.
             self.hass.async_create_task(self.async_track_charge_sample())
         elif entity_id == self.mapping.get("battery_capacity"):
             self.hass.async_create_task(self._async_capture_capacity())
@@ -559,10 +566,24 @@ class VehicleMetricsManager:
             return
         samples = [item for item in active.get("samples", []) if isinstance(item, dict)]
         previous = samples[-1] if samples else None
-        previous_soc = self._as_float(previous.get("soc")) if previous else None
-        previous_time = self._sample_time(previous) if previous else None
+        same_source_update = bool(
+            previous and previous.get("source_time") == sample.get("source_time")
+        )
+
+        # One Stellantis payload fans out to several HA entities. The battery
+        # entity may therefore fire before battery_residual even though both
+        # belong to the same upstream timestamp. For a same-timestamp follow-up
+        # compare against the preceding distinct sample, then merge the richer
+        # values into the existing timeline point.
+        reference = (
+            samples[-2]
+            if same_source_update and len(samples) >= 2
+            else previous
+        )
+        previous_soc = self._as_float(reference.get("soc")) if reference else None
+        previous_time = self._sample_time(reference) if reference else None
         current_time = self._sample_time(sample)
-        previous_residual = self._as_float(previous.get("residual_kwh")) if previous else None
+        previous_residual = self._as_float(reference.get("residual_kwh")) if reference else None
         residual = self._as_float(sample.get("residual_kwh"))
         seconds = (current_time - previous_time).total_seconds() if previous_time and current_time else None
         power = None
@@ -579,12 +600,20 @@ class VehicleMetricsManager:
             sample["derived_power_kw"] = round(power, 2)
             sample["power_source"] = power_source
             self.data["current_charge_power_kw"] = sample["derived_power_kw"]
-        # Preserve repeated whole-percent SOC reports as raw timeline points;
-        # they simply have no derived power. Suppress only an actual duplicate
-        # of the same upstream timestamp (for example a HA attribute refresh).
-        if previous and previous.get("source_time") == sample.get("source_time"):
-            return
-        samples.append(sample)
+
+        if same_source_update:
+            merged = dict(previous)
+            merged.update(sample)
+            # Do not erase a power result already derived by the first entity
+            # update of this payload unless the follow-up derived a better one.
+            if sample.get("derived_power_kw") is None and previous.get("derived_power_kw") is not None:
+                merged["derived_power_kw"] = previous.get("derived_power_kw")
+                merged["power_source"] = previous.get("power_source")
+            samples[-1] = merged
+        else:
+            # Preserve repeated whole-percent SOC reports as raw timeline
+            # points; only co-timestamp entity fan-out is merged above.
+            samples.append(sample)
         active["samples"] = samples[-_MAX_CHARGE_SAMPLES:]
         await self._save_and_refresh()
 
@@ -1002,16 +1031,35 @@ class VehicleMetricsManager:
         """Capture the best available timestamp and unmodified upstream values."""
         received_at = dt_util.utcnow()
         battery_entity = self.mapping.get("battery")
+        residual_entity = self.mapping.get("battery_residual")
         state = self.hass.states.get(battery_entity) if battery_entity else None
-        attributes = getattr(state, "attributes", {}) or {}
-        source_time = self._parse_sample_timestamp(attributes.get("Last updated"))
-        timestamp_source = "stellantis" if source_time else None
-        if source_time is None and state is not None:
-            source_time = getattr(state, "last_updated", None)
-            timestamp_source = "home_assistant" if source_time else None
-        if source_time is None:
+        residual_state = (
+            self.hass.states.get(residual_entity) if residual_entity else None
+        )
+
+        # Use the freshest upstream energy timestamp available. Whole-percent
+        # SOC can remain unchanged while residual kWh advances, and using only
+        # the battery entity timestamp can otherwise make two real samples look
+        # identical.
+        source_candidates: list[tuple[datetime, str]] = []
+        for candidate in (state, residual_state):
+            attributes = getattr(candidate, "attributes", {}) or {}
+            source = self._parse_sample_timestamp(attributes.get("Last updated"))
+            if source is not None:
+                source_candidates.append((source, "stellantis"))
+            elif candidate is not None:
+                fallback = getattr(candidate, "last_updated", None)
+                if fallback is not None:
+                    source_candidates.append((fallback, "home_assistant"))
+
+        if source_candidates:
+            source_time, timestamp_source = max(
+                source_candidates, key=lambda item: item[0]
+            )
+        else:
             source_time = received_at
             timestamp_source = "received_at"
+
         capacity, capacity_source = self.battery_capacity()
         return {
             "source_time": source_time.isoformat(),
@@ -1022,7 +1070,11 @@ class VehicleMetricsManager:
             "soc": self._as_float(state.state if state else None),
             "capacity_kwh": capacity,
             "capacity_source": capacity_source,
-            "residual_kwh": self._number("battery_residual"),
+            "residual_kwh": self._as_float(
+                residual_state.state if residual_state else None
+            ),
+            # Upstream battery_charging_rate is km/h, not kW. Keep the raw
+            # value in the session timeline but never expose it as charge power.
             "charging_rate_kmh": self._number("battery_charging_rate"),
             "charge_type": self._state("battery_charging_type") or "Unknown",
             "derived_power_kw": None,

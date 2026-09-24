@@ -89,8 +89,8 @@ const packageModules = Promise.all([
   import("./trip-history-card.js?v=0.6.0-beta.28"),
   import("./charge-history-card.js?v=0.6.0-beta.28"),
   import("./gps-history-card.js?v=0.6.0-beta.28"),
-  import("./vehicle-overview-card.js?v=0.6.0-beta.30"),
-  import("./dual-energy-overview-card.js?v=0.6.0-beta.28"),
+  import("./vehicle-overview-card.js?v=0.6.0-beta.31"),
+  import("./dual-energy-overview-card.js?v=0.6.0-beta.31"),
   import("./fuel-history-card.js?v=0.6.0-beta.28"),
   import("./vehicle-audit-card.js?v=0.6.0-beta.28"),
 ]);
@@ -101,4 +101,4 @@ window.customCards = (window.customCards || []).filter(
   (card) => !INTERNAL_CARD_TYPES.has(card?.type),
 );
 window.__svDashboardDependencyReadiness = await dependencyReadiness;
-await import("./sv_dashboard.js?v=0.6.0-beta.29");
+await import("./sv_dashboard.js?v=0.6.0-beta.31");

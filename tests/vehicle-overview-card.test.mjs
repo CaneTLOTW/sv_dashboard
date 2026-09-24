@@ -64,30 +64,34 @@ test("vehicle overview resolves every household value through the config-entry m
   assert.match(source, /attributes\.vehicle_slug/);
 });
 
-test("battery bar keeps charging and driving semantics and adds trustworthy parked residual energy", () => {
+test("battery bar keeps EV energy semantics without injecting fuel into the EV branch", () => {
   assert.match(source, /const batteryResidual = mapped\.battery_residual/);
   assert.match(source, /if \(isCharging\)[\s\S]*literal\(strings\.charging\)/);
   assert.match(source, /if \(isDriving\)[\s\S]*literal\(strings\.driving\)/);
   assert.match(source, /const residual = states\[/);
   assert.match(source, /literal\(strings\.battery\)/);
-  assert.match(source, /const fuelConsumptionEntity = mapped\.fuel_consumption_instant/);
-  assert.match(source, /const electric = states\[\$\{literal\(tripConsumption\)\}\]/);
-  assert.match(source, /const fuelNow = states\[\$\{literal\(fuelConsumptionEntity\)\}\]/);
+  assert.match(source, /const energy = states\[\$\{literal\(tripEnergy\)\}\]/);
+  assert.match(source, /Number\(energy\.state\).*\+ ' kWh'/);
+  assert.match(source, /const consumption = states\[\$\{literal\(tripConsumption\)\}\]/);
   assert.match(source, /kWh\/100 km/);
+  assert.match(source, /if \(\$\{supportsElectric \? "true" : "false"\}\)[\s\S]*return \$\{literal\(strings\.driving\)\};[\s\S]*const fuelNow/);
   assert.match(source, /l\/100 km/);
-  assert.match(source, /values\.join\(' · '\)/);
   assert.match(source, /triggers_update: \[primaryLevel, battery, batteryResidual, fuel, fuelConsumptionEntity, charging, engine, chargePower, tripEnergy, tripConsumption\]/);
 });
 
-test("preconditioning visual follows live state and bridges a delayed upstream status", () => {
-  assert.match(source, /const liveActive = entity\?\.state === 'on'/);
-  assert.match(source, /Date\.parse\(String\(item\?\.state \?\? ''\)\)/);
-  assert.match(source, /startAt > stopAt/);
-  assert.match(source, /Date\.now\(\) - startAt <= 20 \* 60 \* 1000/);
-  assert.match(source, /sourceUpdated >= startAt/);
-  assert.match(source, /liveActive \|\| \(recentStart && !sourceAnsweredAfterStart\)/);
-  assert.match(source, /Number\(temp\.state\) > 20 \? 'rgba\(33,150,243,0\.22\)' : 'rgba\(244,67,54,0\.22\)'/);
-  assert.match(source, /Number\(temp\.state\) > 20 \? 'rgb\(33,150,243\)' : 'rgb\(244,67,54\)'/);
+test("EV Hero preconditioning uses one-tap start/stop with a 90 second pending guard", () => {
+  assert.match(source, /const CLIMATE_COMMAND_GUARD_MS = 90 \* 1000/);
+  assert.match(source, /const isOn = \(value\) => \['on','true','inprogress','running'\]/);
+  assert.match(source, /const latestAction = startAt > stopAt \? 'start' : stopAt > startAt \? 'stop' : null/);
+  assert.match(source, /Date\.now\(\) - latestAt <= \$\{CLIMATE_COMMAND_GUARD_MS\}/);
+  assert.match(source, /const pendingAction = pending \? latestAction : null/);
+  assert.match(source, /return liveActive \? \$\{literal\(preconditioningStop\)\} : \$\{literal\(preconditioningStart\)\}/);
+  assert.match(source, /"pointer-events": climateRuntimeTemplate\("return pending \? 'none' : 'auto';"\)/);
+  assert.match(source, /pendingAction === 'stop'/);
+  assert.match(source, /pendingAction === 'start'/);
+  assert.match(source, /perform_action: "button\.press"/);
+  assert.match(source, /hold_action: \{ action: "none" \}/);
+  assert.match(source, /kfzClimatePending/);
   assert.match(source, /triggers_update: \[preconditioning, preconditioningStart, preconditioningStop, temperature\]/);
 });
 
@@ -144,4 +148,15 @@ test("vehicle overview localizes runtime and editor text through the shared cata
   assert.match(source, /languageFor\(this\._hass\)/);
   assert.match(source, /registrationStrings\.cardName/);
   assert.doesNotMatch(source, /Wird geladen|In Fahrt|mehrere Fahrzeuge gefunden|Fahrzeug auswählen/);
+});
+
+test("EV Hero current charge power never treats upstream km/h chargingRate as kW", () => {
+  assert.match(source, /const chargePower = metricEntity\(hass, attributes, "current_charge_power"\);/);
+  assert.doesNotMatch(source, /current_charge_power"\) \|\| mapped\.battery_charging_rate/);
+});
+
+test("EV Hero freshness badge remains a recent-source cue", () => {
+  assert.match(source, /FRESH_VEHICLE_DATA_MS = 15 \* 60 \* 1000/);
+  assert.match(source, /color-mix\(in srgb, var\(--primary-color\) 14%/);
+  assert.match(source, /color-mix\(in srgb, var\(--primary-color\) 45%/);
 });

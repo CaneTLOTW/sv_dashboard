@@ -280,6 +280,7 @@ class SvDashboardOwnerTestHarnessCard extends HTMLElement {
       const inner = helpers.createCardElement({
         type: "custom:sv-dashboard-dual-energy-overview-card",
         entry_id: this._config.entry_id,
+        show_info: true,
         grid_options: { columns: "full", rows: 5 },
       });
       this._inner = inner;

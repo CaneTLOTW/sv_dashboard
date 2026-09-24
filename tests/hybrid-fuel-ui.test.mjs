@@ -77,7 +77,7 @@ test("dual-energy hero uses one stacked information hierarchy at every width", (
   assert.doesNotMatch(dualHero, /@media \(max-width:/);
   assert.match(dualHero, /getGridOptions\(\) \{ return \{ columns: 12, rows: 5, min_columns: 6, min_rows: 4 \}; \}/);
   assert.match(dualHero, /class="top-control climate-control/);
-  assert.match(dualHero, /class="top-control temperature-badge \$\{temperatureFresh \? "fresh" : ""\}"/);
+  assert.match(dualHero, /class="top-control temperature-badge \$\{temperatureFresh \? "fresh" : ""\} \$\{showInfo \? "with-info" : ""\}"/);
   assert.match(dualHero, /mapped\.fuel_autonomy/);
   assert.match(dualHero, /class="energy fuel"/);
   assert.match(dualHero, /fuelPercent === null \? "unavailable"/);
@@ -125,6 +125,21 @@ test("temperature badge indicates recent upstream vehicle payload without claimi
   assert.match(dualHero, /temperature-badge\.fresh/);
   assert.match(dualHero, /var\(--primary-color\)/);
   assert.doesNotMatch(dualHero, /dashboardText\.(connected|disconnected)|text\.(connected|disconnected)/i);
+});
+
+test("dual-energy Hero keeps its stacking inside the card and exposes the generated vehicle-info action", () => {
+  assert.match(dualHero, /:host \{ display: block; position: relative; z-index: 0; isolation: isolate; \}/);
+  assert.match(dualHero, /ha-card \{ position: relative; z-index: 0; isolation: isolate;/);
+  assert.match(dualHero, /const vehicleInfo = metricEntity\(this\._hass, attributes, "vehicle_info"\)/);
+  assert.match(dualHero, /const showInfo = this\._config\.show_info === true && Boolean\(vehicleInfo\)/);
+  assert.match(dualHero, /class="top-control info-control"/);
+  assert.match(dualHero, /this\._navigate\("#sv-vehicle-info"\)/);
+  assert.match(strategy, /show_info: true/);
+});
+
+test("dual-energy fresh temperature cue uses the same visible blue treatment as the EV Hero", () => {
+  assert.match(dualHero, /color-mix\(in srgb, var\(--primary-color\) 45%/);
+  assert.match(dualHero, /color-mix\(in srgb, var\(--primary-color\) 14%/);
 });
 
 test("charging state does not redundantly append plugged-in status", () => {
@@ -178,12 +193,13 @@ test("new card strings cover 18 languages", () => {
 });
 
 test("frontend cache-busts changed modules", () => {
-  for (const module of ["trip-history-card", "charge-history-card", "gps-history-card", "dual-energy-overview-card", "fuel-history-card"]) {
+  for (const module of ["trip-history-card", "charge-history-card", "gps-history-card", "fuel-history-card"]) {
     assert.match(frontend, new RegExp(`${module}\\.js\\?v=0\\.6\\.0-beta\\.28`));
   }
-  assert.match(frontend, /vehicle-overview-card\.js\?v=0\.6\.0-beta\.30/);
+  assert.match(frontend, /vehicle-overview-card\.js\?v=0\.6\.0-beta\.31/);
+  assert.match(frontend, /dual-energy-overview-card\.js\?v=0\.6\.0-beta\.31/);
   assert.match(frontend, /vehicle-audit-card\.js\?v=0\.6\.0-beta\.28/);
-  assert.match(frontend, /sv_dashboard\.js\?v=0\.6\.0-beta\.29/);
+  assert.match(frontend, /sv_dashboard\.js\?v=0\.6\.0-beta\.31/);
   assert.match(strategy, /i18n\.js\?v=0\.6\.0-beta\.29/);
   assert.match(strategy, /modules\.trips && supportsFuel \? \{ type: "custom:sv-dashboard-fuel-history-card"/);
 });
