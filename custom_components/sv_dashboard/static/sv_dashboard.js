@@ -192,7 +192,10 @@ class SvDashboardStrategy extends HTMLElement {
       grid_options: { columns },
     } : null;
 
-    const currentChargePower = metric("current_charge_power") || entity("battery_charging_rate");
+    // Upstream battery_charging_rate is expressed in km/h, not kW. The
+    // package-owned current_charge_power entity is the only power value that
+    // may be rendered as kW.
+    const currentChargePower = metric("current_charge_power");
     const canonicalMileage = metric("canonical_mileage");
     const remainingBatteryEnergy = metric("remaining_battery_energy_kwh");
     const remainingFuelLiters = metric("remaining_fuel_liters");
@@ -419,6 +422,7 @@ class SvDashboardStrategy extends HTMLElement {
     const hero = tracker && (entity("battery") || entity("fuel")) ? (supportsDualEnergy ? {
       type: "custom:sv-dashboard-dual-energy-overview-card",
       entry_id: attributes.entry_id,
+      show_info: true,
       grid_options: { columns: "full", rows: 5 },
     } : {
       type: "custom:sv-dashboard-vehicle-overview-card",
