@@ -36,6 +36,30 @@ SELECTOR_DECL_PATCH = '''    const ownerTestSelector = {
 SELECTOR_CARD_ANCHOR = '        separator(strings.live, "mdi:car-connected"),\n        hero,\n'
 SELECTOR_CARD_PATCH = '        separator(strings.live, "mdi:car-connected"),\n        ownerTestSelector,\n        hero,\n'
 
+OWNER_READY_ANCHOR = '''  static async generateDashboard({ hass, config }) {
+    const readiness = typeof window !== "undefined"
+      ? window.__svDashboardDependencyReadiness
+      : null;
+    if (readiness && typeof readiness.then === "function") {
+      await readiness;
+    }
+'''
+OWNER_READY_PATCH = '''  static async generateDashboard({ hass, config }) {
+    const readiness = typeof window !== "undefined"
+      ? window.__svDashboardDependencyReadiness
+      : null;
+    if (readiness && typeof readiness.then === "function") {
+      await readiness;
+    }
+    const ownerHarnessReady = typeof window !== "undefined"
+      ? window.__svDashboardOwnerHarnessReady
+      : null;
+    if (ownerHarnessReady && typeof ownerHarnessReady.then === "function") {
+      await ownerHarnessReady;
+    }
+'''
+
+
 
 def _patch_frontend(frontend: Path, source: Path) -> str:
     token = hashlib.sha256(source.read_bytes()).hexdigest()[:12]
@@ -60,10 +84,16 @@ def _patch_frontend(frontend: Path, source: Path) -> str:
     if anchor not in text:
         raise SystemExit("frontend.js compatibility bootstrap anchor not found")
 
+    # Do not await this promise at frontend top level: the production Strategy
+    # must still register immediately. The locally patched Strategy awaits the
+    # promise inside generateDashboard(), where it is safe to do so.
     import_block = f'''{marker_begin}
-void import("./owner-test-harness-card.js?v=owner-{token}").catch((error) => {{
-  console.error("[SV Dashboard owner harness] local module failed to load", error);
-}});
+window.__svDashboardOwnerHarnessReady = import("./owner-test-harness-card.js?v=owner-{token}")
+  .then(() => true)
+  .catch((error) => {{
+    console.error("[SV Dashboard owner harness] local module failed to load", error);
+    return false;
+  }});
 {marker_end}
 '''
     text = text.replace(anchor, anchor + "\n" + import_block, 1)
@@ -82,6 +112,12 @@ def install(target: Path) -> None:
     token = _patch_frontend(frontend, source)
 
     text = strategy.read_text(encoding="utf-8")
+
+    if "__svDashboardOwnerHarnessReady" not in text:
+        if OWNER_READY_ANCHOR not in text:
+            raise SystemExit("sv_dashboard.js generateDashboard readiness anchor not found")
+        text = text.replace(OWNER_READY_ANCHOR, OWNER_READY_PATCH, 1)
+
     if "ownerFixtureActive" not in text:
         if HERO_ANCHOR not in text:
             raise SystemExit("sv_dashboard.js Hero anchor not found")
@@ -94,6 +130,27 @@ def install(target: Path) -> None:
             raise SystemExit("sv_dashboard.js LIVE card anchor not found")
         text = text.replace(SELECTOR_DECL_ANCHOR, SELECTOR_DECL_PATCH, 1)
         text = text.replace(SELECTOR_CARD_ANCHOR, SELECTOR_CARD_PATCH, 1)
+
+    # If the owner module failed to register, degrade to the normal product
+    # dashboard instead of rendering an unknown custom card.
+    text = text.replace(
+        '    const ownerFixtureActive = Boolean(ownerFixture);\n',
+        '    const ownerHarnessAvailable = typeof customElements !== "undefined"'
+        ' && Boolean(customElements.get("sv-dashboard-owner-test-harness-card"))'
+        ' && Boolean(customElements.get("sv-dashboard-owner-test-selector-card"));\n'
+        '    const ownerFixtureActive = ownerHarnessAvailable && Boolean(ownerFixture);\n',
+        1,
+    )
+    text = text.replace(
+        '    const ownerTestSelector = {\n',
+        '    const ownerTestSelector = ownerHarnessAvailable ? {\n',
+        1,
+    )
+    text = text.replace(
+        '      grid_options: { columns: "full", rows: 1 },\n    };\n\n    const overviewSections = [\n',
+        '      grid_options: { columns: "full", rows: 1 },\n    } : null;\n\n    const overviewSections = [\n',
+        1,
+    )
 
     strategy.write_text(text, encoding="utf-8")
 
