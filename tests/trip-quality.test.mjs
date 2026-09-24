@@ -28,8 +28,13 @@ test("trailing consumption uses canonical validated trips", () => {
     new URL("../custom_components/sv_dashboard/metrics.py", import.meta.url),
     "utf8",
   );
-  assert.match(metrics, /reversed\(self\.canonical_trips\(\)\)/);
-  assert.match(metrics, /valid_for_statistics.*is False/);
+  const consumption = fs.readFileSync(
+    new URL("../custom_components/sv_dashboard/consumption.py", import.meta.url),
+    "utf8",
+  );
+  assert.match(metrics, /derive_trailing_electric_consumption\(\s*self\.canonical_trips\(\)/);
+  assert.match(consumption, /for trip in reversed\(rows\)/);
+  assert.match(consumption, /valid_for_statistics.*is False/);
 });
 
 test("packed trip attributes preserve quality metadata for the frontend", () => {
