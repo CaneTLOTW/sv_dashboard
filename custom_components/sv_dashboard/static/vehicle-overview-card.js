@@ -16,6 +16,7 @@ const STATUS_DOMAIN = "sv_dashboard";
 const CARD_TAG = "sv-dashboard-vehicle-overview-card";
 const EDITOR_TAG = "sv-dashboard-vehicle-overview-card-editor";
 const FRESH_VEHICLE_DATA_MS = 15 * 60 * 1000;
+const CLIMATE_COMMAND_GUARD_MS = 90 * 1000;
 
 const unavailable = (state) =>
   !state || ["unknown", "unavailable", "none", ""].includes(String(state.state ?? "").toLowerCase());
@@ -108,7 +109,7 @@ function buildConfig(hass, config, statusState) {
   const preconditioning = mapped.preconditioning;
   const preconditioningStart = mapped.preconditioning_start;
   const preconditioningStop = mapped.preconditioning_stop;
-  const chargePower = metricEntity(hass, attributes, "current_charge_power") || mapped.battery_charging_rate;
+  const chargePower = metricEntity(hass, attributes, "current_charge_power");
   const tripEnergy = metricEntity(hass, attributes, "current_trip_energy");
   const tripConsumption = metricEntity(hass, attributes, "current_trip_consumption");
   const vehicleInfo = metricEntity(hass, attributes, "vehicle_info");
@@ -145,8 +146,30 @@ function buildConfig(hass, config, statusState) {
     vehicleInfo,
   ].filter(Boolean);
 
-  const climateDisplay = preconditioningStart ? "block" : "none";
+  const climateDisplay = (preconditioningStart || preconditioningStop) ? "block" : "none";
   const showInfo = liveVariant && Boolean(vehicleInfo);
+
+  const climateRuntimeTemplate = (body) => `[[[
+    const isOn = (value) => ['on','true','inprogress','running'].includes(String(value ?? '').toLowerCase());
+    const actionTime = (item) => {
+      const stateTime = Date.parse(String(item?.state ?? ''));
+      if (Number.isFinite(stateTime)) return stateTime;
+      const changed = Date.parse(item?.last_changed || '');
+      return Number.isFinite(changed) ? changed : 0;
+    };
+    const live = states[${literal(preconditioning)}];
+    const liveActive = isOn(live?.state);
+    const startAt = actionTime(states[${literal(preconditioningStart)}]);
+    const stopAt = actionTime(states[${literal(preconditioningStop)}]);
+    const sourceUpdated = Date.parse(live?.last_updated || live?.last_changed || '');
+    const latestAction = startAt > stopAt ? 'start' : stopAt > startAt ? 'stop' : null;
+    const latestAt = latestAction === 'start' ? startAt : latestAction === 'stop' ? stopAt : 0;
+    const sourceAnswered = latestAt > 0 && Number.isFinite(sourceUpdated) && sourceUpdated >= latestAt;
+    const pending = latestAt > 0 && Date.now() - latestAt <= ${CLIMATE_COMMAND_GUARD_MS} && !sourceAnswered;
+    const pendingAction = pending ? latestAction : null;
+    const active = liveActive || pendingAction === 'start';
+    ${body}
+  ]]]`;
 
   const heroCard = {
     type: "custom:button-card",
@@ -192,7 +215,7 @@ function buildConfig(hass, config, statusState) {
           { width: "28px" }, { height: "28px" }, { "border-radius": "50%" },
           { background: "rgba(76,175,80,0.88)" }, { color: "white" }, { "align-items": "center" },
           { "justify-content": "center" }, { "box-shadow": "0 1px 4px rgba(0,0,0,0.22)" },
-          { display: `[[[ return states[${literal(plugged)}]?.state === 'on' ? 'flex' : 'none'; ]]]` },
+          { display: `[[[ return ['on','true','inprogress','running'].includes(String(states[${literal(plugged)}]?.state ?? '').toLowerCase()) ? 'flex' : 'none'; ]]]` },
         ],
         driving: [
           { position: "absolute" }, { top: "115px" }, { left: "140px" }, { transform: "translateX(-50%)" },
@@ -201,7 +224,7 @@ function buildConfig(hass, config, statusState) {
           { "border-radius": "50%" }, { background: "rgba(76,175,80,0.92)" }, { color: "white" },
           { "align-items": "center" }, { "justify-content": "center" }, { "line-height": 0 },
           { "box-shadow": "0 1px 4px rgba(0,0,0,0.28)" },
-          { display: `[[[ return states[${literal(engine)}]?.state === 'on' ? 'flex' : 'none'; ]]]` },
+          { display: `[[[ return ['on','true','inprogress','running'].includes(String(states[${literal(engine)}]?.state ?? '').toLowerCase()) ? 'flex' : 'none'; ]]]` },
         ],
         nav: [
           { position: "absolute" }, { top: "78px" }, { left: "50%" }, { transform: "translateX(-50%)" },
@@ -298,7 +321,7 @@ function buildConfig(hass, config, statusState) {
           },
         },
       } : "",
-      climate: preconditioningStart ? {
+      climate: (preconditioningStart || preconditioningStop) ? {
         card: {
           type: "custom:button-card",
           entity: preconditioning,
@@ -306,58 +329,37 @@ function buildConfig(hass, config, statusState) {
           show_state: false,
           show_label: false,
           show_icon: true,
-          icon: `[[[
-            const liveActive = entity?.state === 'on';
-            const actionTime = (item) => {
-              const stateTime = Date.parse(String(item?.state ?? ''));
-              if (Number.isFinite(stateTime)) return stateTime;
-              const changed = Date.parse(item?.last_changed || '');
-              return Number.isFinite(changed) ? changed : 0;
-            };
-            const startAt = actionTime(states[${literal(preconditioningStart)}]);
-            const stopAt = actionTime(states[${literal(preconditioningStop)}]);
-            const sourceUpdated = Date.parse(entity?.last_updated || entity?.last_changed || '');
-            const recentStart = startAt > 0 && Date.now() - startAt <= 20 * 60 * 1000 && startAt > stopAt;
-            const sourceAnsweredAfterStart = Number.isFinite(sourceUpdated) && sourceUpdated >= startAt;
-            const active = liveActive || (recentStart && !sourceAnsweredAfterStart);
+          icon: climateRuntimeTemplate(`
             const temp = states[${literal(temperature)}];
-            if (!active || !temp || ['unknown','unavailable'].includes(temp.state) || !Number.isFinite(Number(temp.state))) return 'mdi:air-conditioner';
+            if (!active || !temp || ['unknown','unavailable'].includes(String(temp.state).toLowerCase()) || !Number.isFinite(Number(temp.state))) return 'mdi:air-conditioner';
             return Number(temp.state) > 20 ? 'mdi:air-conditioner' : 'mdi:radiator';
-          ]]]`,
+          `),
           tap_action: {
-            action: "call-service",
-            service: "button.press",
-            service_data: { entity_id: preconditioningStart },
+            action: "perform-action",
+            perform_action: "button.press",
+            target: {
+              entity_id: climateRuntimeTemplate(`
+                if (pending) return '';
+                return liveActive ? ${literal(preconditioningStop)} : ${literal(preconditioningStart)};
+              `),
+            },
           },
-          hold_action: preconditioningStop ? {
-            action: "call-service",
-            service: "button.press",
-            service_data: { entity_id: preconditioningStop },
-          } : { action: "none" },
+          hold_action: { action: "none" },
           styles: {
             card: [
               { width: "30px" }, { height: "30px" }, { "min-width": "30px" }, { "min-height": "30px" },
               { padding: 0 }, { margin: 0 }, { "border-radius": "50%" }, { border: "none" },
               { "box-shadow": "0 1px 4px rgba(0,0,0,0.25)" },
-              { background: `[[[
-                const liveActive = entity?.state === 'on';
-                const actionTime = (item) => {
-                  const stateTime = Date.parse(String(item?.state ?? ''));
-                  if (Number.isFinite(stateTime)) return stateTime;
-                  const changed = Date.parse(item?.last_changed || '');
-                  return Number.isFinite(changed) ? changed : 0;
-                };
-                const startAt = actionTime(states[${literal(preconditioningStart)}]);
-                const stopAt = actionTime(states[${literal(preconditioningStop)}]);
-                const sourceUpdated = Date.parse(entity?.last_updated || entity?.last_changed || '');
-                const recentStart = startAt > 0 && Date.now() - startAt <= 20 * 60 * 1000 && startAt > stopAt;
-                const sourceAnsweredAfterStart = Number.isFinite(sourceUpdated) && sourceUpdated >= startAt;
-                const active = liveActive || (recentStart && !sourceAnsweredAfterStart);
+              { "pointer-events": climateRuntimeTemplate("return pending ? 'none' : 'auto';") },
+              { cursor: climateRuntimeTemplate("return pending ? 'default' : 'pointer';") },
+              { background: climateRuntimeTemplate(`
+                if (pendingAction === 'stop') return 'color-mix(in srgb, var(--error-color) 12%, rgba(20,20,20,0.72))';
+                if (pendingAction === 'start') return 'color-mix(in srgb, var(--primary-color) 12%, rgba(20,20,20,0.72))';
                 if (!active) return 'rgba(20,20,20,0.62)';
                 const temp = states[${literal(temperature)}];
-                if (!temp || ['unknown','unavailable'].includes(temp.state) || !Number.isFinite(Number(temp.state))) return 'rgba(90,90,90,0.40)';
+                if (!temp || ['unknown','unavailable'].includes(String(temp.state).toLowerCase()) || !Number.isFinite(Number(temp.state))) return 'rgba(90,90,90,0.40)';
                 return Number(temp.state) > 20 ? 'rgba(33,150,243,0.22)' : 'rgba(244,67,54,0.22)';
-              ]]]` },
+              `) },
             ],
             grid: [
               { "grid-template-areas": "'i'" }, { "grid-template-columns": "30px" },
@@ -365,28 +367,24 @@ function buildConfig(hass, config, statusState) {
             ],
             icon: [
               { width: "18px" }, { height: "18px" },
-              { color: `[[[
-                const liveActive = entity?.state === 'on';
-                const actionTime = (item) => {
-                  const stateTime = Date.parse(String(item?.state ?? ''));
-                  if (Number.isFinite(stateTime)) return stateTime;
-                  const changed = Date.parse(item?.last_changed || '');
-                  return Number.isFinite(changed) ? changed : 0;
-                };
-                const startAt = actionTime(states[${literal(preconditioningStart)}]);
-                const stopAt = actionTime(states[${literal(preconditioningStop)}]);
-                const sourceUpdated = Date.parse(entity?.last_updated || entity?.last_changed || '');
-                const recentStart = startAt > 0 && Date.now() - startAt <= 20 * 60 * 1000 && startAt > stopAt;
-                const sourceAnsweredAfterStart = Number.isFinite(sourceUpdated) && sourceUpdated >= startAt;
-                const active = liveActive || (recentStart && !sourceAnsweredAfterStart);
+              { color: climateRuntimeTemplate(`
+                if (pendingAction === 'stop') return 'var(--error-color)';
+                if (pendingAction === 'start') return 'var(--primary-color)';
                 if (!active) return 'white';
                 const temp = states[${literal(temperature)}];
-                if (!temp || ['unknown','unavailable'].includes(temp.state) || !Number.isFinite(Number(temp.state))) return 'white';
+                if (!temp || ['unknown','unavailable'].includes(String(temp.state).toLowerCase()) || !Number.isFinite(Number(temp.state))) return 'white';
                 return Number(temp.state) > 20 ? 'rgb(33,150,243)' : 'rgb(244,67,54)';
-              ]]]` },
+              `) },
+              { animation: climateRuntimeTemplate("return pending ? 'kfzClimatePending 1.2s ease-in-out infinite' : 'none';") },
               { margin: 0 }, { padding: 0 },
             ],
           },
+          extra_styles: `
+            @keyframes kfzClimatePending {
+              0%,100% { opacity:.55; }
+              50% { opacity:1; }
+            }
+          `,
           triggers_update: [preconditioning, preconditioningStart, preconditioningStop, temperature].filter(Boolean),
         },
       } : "",
@@ -418,8 +416,8 @@ function buildConfig(hass, config, statusState) {
           tap_action: { action: "more-info" },
           triggers_update: [primaryLevel, battery, batteryResidual, fuel, fuelConsumptionEntity, charging, engine, chargePower, tripEnergy, tripConsumption].filter(Boolean),
           name: `[[[
-            const isCharging = states[${literal(charging)}]?.state === 'on';
-            const isDriving = states[${literal(engine)}]?.state === 'on';
+            const isCharging = ['on','true','inprogress','running'].includes(String(states[${literal(charging)}]?.state ?? '').toLowerCase());
+            const isDriving = ['on','true','inprogress','running'].includes(String(states[${literal(engine)}]?.state ?? '').toLowerCase());
             if (isCharging) {
               const power = states[${literal(chargePower)}];
               if (power && !['unknown','unavailable','none',''].includes(power.state) && Number.isFinite(Number(power.state))) {
@@ -428,16 +426,22 @@ function buildConfig(hass, config, statusState) {
               return ${literal(strings.charging)};
             }
             if (isDriving) {
-              const values = [];
-              const electric = states[${literal(tripConsumption)}];
+              if (${supportsElectric ? "true" : "false"}) {
+                const energy = states[${literal(tripEnergy)}];
+                if (energy && !['unknown','unavailable','none',''].includes(String(energy.state).toLowerCase()) && Number.isFinite(Number(energy.state))) {
+                  return ${literal(strings.driving)} + ' · ' + Number(energy.state).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' kWh';
+                }
+                const consumption = states[${literal(tripConsumption)}];
+                if (consumption && !['unknown','unavailable','none',''].includes(String(consumption.state).toLowerCase()) && Number.isFinite(Number(consumption.state))) {
+                  return ${literal(strings.driving)} + ' · ' + Number(consumption.state).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' kWh/100 km';
+                }
+                return ${literal(strings.driving)};
+              }
               const fuelNow = states[${literal(fuelConsumptionEntity)}];
-              if (electric && !['unknown','unavailable','none',''].includes(String(electric.state).toLowerCase()) && Number.isFinite(Number(electric.state))) {
-                values.push(Number(electric.state).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' kWh/100 km');
-              }
               if (fuelNow && !['unknown','unavailable','none',''].includes(String(fuelNow.state).toLowerCase()) && Number.isFinite(Number(fuelNow.state))) {
-                values.push(Number(fuelNow.state).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' l/100 km');
+                return ${literal(strings.driving)} + ' · ' + Number(fuelNow.state).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' l/100 km';
               }
-              return ${literal(strings.driving)} + (values.length ? ' · ' + values.join(' · ') : '');
+              return ${literal(strings.driving)};
             }
             if (${supportsElectric ? "true" : "false"}) {
               const residual = states[${literal(batteryResidual)}];
@@ -463,13 +467,13 @@ function buildConfig(hass, config, statusState) {
               { color: "white" }, { "text-shadow": "0 1px 2px rgba(0,0,0,0.65)" },
               { background: `[[[
                 const value = Math.min(100, Math.max(0, Number(entity?.state) || 0));
-                const isCharging = states[${literal(charging)}]?.state === 'on';
+                const isCharging = ['on','true','inprogress','running'].includes(String(states[${literal(charging)}]?.state ?? '').toLowerCase());
                 const color = isCharging ? 'rgba(76,175,80,0.95)' : 'rgba(33,150,243,0.95)';
                 return 'linear-gradient(90deg,' + color + ' ' + value + '%,rgba(20,20,20,0.62) ' + value + '%)';
               ]]]` },
               { animation: `[[[
-                const isCharging = states[${literal(charging)}]?.state === 'on';
-                const isDriving = states[${literal(engine)}]?.state === 'on';
+                const isCharging = ['on','true','inprogress','running'].includes(String(states[${literal(charging)}]?.state ?? '').toLowerCase());
+                const isDriving = ['on','true','inprogress','running'].includes(String(states[${literal(engine)}]?.state ?? '').toLowerCase());
                 if (isCharging) return 'kfzBatteryChargePulse 1.5s ease-in-out infinite';
                 if (isDriving) return 'kfzBatteryDrivePulse 1.7s ease-in-out infinite';
                 return 'none';
