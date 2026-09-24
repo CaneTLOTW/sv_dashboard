@@ -15,6 +15,7 @@ No changes yet.
 - Bounds oversized canonical charge identifiers before exposing them as a Home Assistant sensor state; the original full charge id remains available in attributes/storage, avoiding the 255-character HA state failure seen on the DS N°4 tester.
 - Suppresses ambiguous trip-to-trip SOC-only charge reconstruction for Dual-Energy/PHEV trip pairs. Real observed plugged/charging sessions remain canonical; the BEV SOC fallback stays available for non-fuel vehicles.
 - Confirms a newest fuel-level refill jump from the still-elevated live fuel state after the existing 90-second hold and schedules one bounded recheck when needed, so a real terminal 23 % → 100 % refuel is no longer stranded waiting for a later significant Recorder sample.
+- Hardens the Dual-Energy/PHEV electric 500-km average: only direct Stellantis trip-energy telemetry is eligible, and the value is withheld unless at least 80% of the latest driving window, 100 km and three trips have trustworthy coverage. BEV rolling-consumption semantics remain unchanged.
 
 ## 0.6.0-beta.29 automatic Trip/Charge History reconciliation candidate
 
