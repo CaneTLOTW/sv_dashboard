@@ -36,6 +36,7 @@ from .const import (
 from .consumption import (
     remaining_battery_energy as derive_remaining_battery_energy,
     remaining_fuel_liters as derive_remaining_fuel_liters,
+    trailing_electric_consumption as derive_trailing_electric_consumption,
     trailing_fuel_consumption as derive_trailing_fuel_consumption,
 )
 from .distance import canonical_server_mileage, monotonic_mileage
@@ -760,34 +761,24 @@ class VehicleMetricsManager:
                 "trip_count": 0,
                 "complete": False,
             }
-        remaining = _WINDOW_KM
-        distance = 0.0
-        energy = 0.0
-        count = 0
-        # Use the canonical server history when it is available.  The local
-        # Store is a live-session fallback only; mixing it into this metric
-        # caused stale/duplicate rows to affect the 500-km result.
-        for trip in reversed(self.canonical_trips()):
-            if trip.get("valid_for_statistics") is False:
-                continue
-            trip_distance = self._as_float(trip.get("distance_km"))
-            trip_energy = self._as_float(trip.get("energy_kwh"))
-            if trip_distance is None or trip_energy is None or trip_distance <= 0:
-                continue
-            used_distance = min(remaining, trip_distance)
-            distance += used_distance
-            energy += trip_energy * used_distance / trip_distance
-            count += 1
-            remaining -= used_distance
-            if remaining <= 0:
-                break
-        return {
-            "value": round(energy / distance * 100, 2) if distance > 0 else None,
-            "distance_km": round(distance, 2),
-            "energy_kwh": round(energy, 3),
-            "trip_count": count,
-            "complete": distance >= _WINDOW_KM,
-        }
+
+        # Preserve the established BEV behaviour. Dual-Energy/PHEV vehicles
+        # are stricter because their trip SOC can move independently of
+        # external charging and coarse SOC-derived energy is not a defensible
+        # basis for a "500 km" average. They require direct Stellantis trip
+        # energy plus substantial coverage of the latest physical driving
+        # window; otherwise the dashboard deliberately shows no value.
+        dual_energy = self.capabilities.get(
+            "fuel_metrics", bool(self.mapping.get("fuel"))
+        )
+        return derive_trailing_electric_consumption(
+            self.canonical_trips(),
+            window_km=_WINDOW_KM,
+            strict_direct=dual_energy,
+            minimum_coverage_ratio=0.8,
+            minimum_trusted_distance_km=100.0,
+            minimum_trusted_trip_count=3,
+        )
 
     def trailing_fuel_consumption(self) -> dict[str, Any]:
         """Return completed-trip fuel consumption over up to the latest 500 km."""
