@@ -85,6 +85,12 @@ class SvDashboardStrategy extends HTMLElement {
   }
 
   static async generateDashboard({ hass, config }) {
+    const readiness = typeof window !== "undefined"
+      ? window.__svDashboardDependencyReadiness
+      : null;
+    if (readiness && typeof readiness.then === "function") {
+      await readiness;
+    }
     const strategyConfig = config?.strategy?.options ?? config?.strategy ?? config ?? {};
     return SvDashboardStrategy.generate(strategyConfig, hass);
   }
