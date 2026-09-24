@@ -22,13 +22,14 @@ const times = read("time.py");
 
 test("Home Assistant registers one SV frontend resource", () => {
   assert.match(constants, /FRONTEND_URL = "\/sv_dashboard\/frontend\.js"/);
-  assert.match(constants, /FRONTEND_VERSION = "0\.6\.0-beta\.30"/);
-  assert.equal(manifest.version, "0.6.0-beta.30");
+  assert.match(constants, /FRONTEND_VERSION = "0\.6\.0-beta\.31"/);
+  assert.equal(manifest.version, "0.6.0-beta.31");
   assert.match(constants, /FRONTEND_RESOURCE_URLS = \(FRONTEND_URL,\)/);
-  // beta.30 changes only the compact/EV Hero frontend module; unchanged strategy/i18n and other internal cards retain prior content keys.
-  assert.match(frontend, /import\("\.\/vehicle-overview-card\.js\?v=0\.6\.0-beta\.30"\)/);
+  // beta.31 changes both Hero modules plus the generated dashboard Strategy; unchanged i18n/history modules retain prior content keys.
+  assert.match(frontend, /import\("\.\/vehicle-overview-card\.js\?v=0\.6\.0-beta\.31"\)/);
   assert.match(frontend, /import\("\.\/gps-history-card\.js\?v=0\.6\.0-beta\.28"\)/);
-  assert.match(frontend, /import\("\.\/sv_dashboard\.js\?v=0\.6\.0-beta\.29"\)/);
+  assert.match(frontend, /import\("\.\/dual-energy-overview-card\.js\?v=0\.6\.0-beta\.31"\)/);
+  assert.match(frontend, /import\("\.\/sv_dashboard\.js\?v=0\.6\.0-beta\.31"\)/);
   assert.match(strategy, /from "\.\/i18n\.js\?v=0\.6\.0-beta\.29"/);
   assert.doesNotMatch(frontend, /gps-history-fix\.js/);
   assert.doesNotMatch(frontend, /map-marker-fix\.js/);
@@ -39,7 +40,7 @@ test("dependency preflight waits instead of failing on first customElements look
   assert.match(frontend, /customElements\.whenDefined\(tag\)/);
   assert.match(frontend, /DEPENDENCY_GRACE_MS = 10000/);
   assert.match(frontend, /await dependencyReadiness/);
-  assert.match(frontend, /await import\("\.\/sv_dashboard\.js\?v=0\.6\.0-beta\.29"\)/);
+  assert.match(frontend, /await import\("\.\/sv_dashboard\.js\?v=0\.6\.0-beta\.31"\)/);
 });
 
 test("LIVE reuses the validated vehicle overview lifecycle instead of owning a second compact hero", () => {
