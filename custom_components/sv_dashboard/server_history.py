@@ -27,6 +27,7 @@ from .const import (
     OPTION_HISTORY_HOURS,
     UPSTREAM_DOMAIN,
 )
+from .charge_policy import allow_soc_only_charge_reconstruction
 from .trip_repair import repair_trip_odometer_continuity
 from .entity_identity import vehicle_vin
 from .history_reconcile import (
@@ -381,6 +382,13 @@ def reconstruct_charge_windows(trips: list[dict[str, Any]]) -> list[dict[str, An
     real_trips = [trip for trip in sorted(trips, key=_trip_sort_key) if _is_real_trip(trip)]
     charges: list[dict[str, Any]] = []
     for previous, following in zip(real_trips, real_trips[1:]):
+        # A positive SOC delta between two trips is a useful BEV fallback, but
+        # it is not proof of external charging on a PHEV/Hybrid. Those vehicles
+        # can gain SOC through powertrain operation or regeneration. Real
+        # plugged/charging sessions are still retained through observed charge
+        # evidence and merged independently below.
+        if not allow_soc_only_charge_reconstruction(previous, following):
+            continue
         soc_start, soc_end = _number(previous.get("soc_end")), _number(following.get("soc_start"))
         window_start, window_end = previous.get("end_time"), following.get("start_time")
         if (
