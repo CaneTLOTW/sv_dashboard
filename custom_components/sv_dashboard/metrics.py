@@ -566,10 +566,24 @@ class VehicleMetricsManager:
             return
         samples = [item for item in active.get("samples", []) if isinstance(item, dict)]
         previous = samples[-1] if samples else None
-        previous_soc = self._as_float(previous.get("soc")) if previous else None
-        previous_time = self._sample_time(previous) if previous else None
+        same_source_update = bool(
+            previous and previous.get("source_time") == sample.get("source_time")
+        )
+
+        # One Stellantis payload fans out to several HA entities. The battery
+        # entity may therefore fire before battery_residual even though both
+        # belong to the same upstream timestamp. For a same-timestamp follow-up
+        # compare against the preceding distinct sample, then merge the richer
+        # values into the existing timeline point.
+        reference = (
+            samples[-2]
+            if same_source_update and len(samples) >= 2
+            else previous
+        )
+        previous_soc = self._as_float(reference.get("soc")) if reference else None
+        previous_time = self._sample_time(reference) if reference else None
         current_time = self._sample_time(sample)
-        previous_residual = self._as_float(previous.get("residual_kwh")) if previous else None
+        previous_residual = self._as_float(reference.get("residual_kwh")) if reference else None
         residual = self._as_float(sample.get("residual_kwh"))
         seconds = (current_time - previous_time).total_seconds() if previous_time and current_time else None
         power = None
@@ -586,12 +600,20 @@ class VehicleMetricsManager:
             sample["derived_power_kw"] = round(power, 2)
             sample["power_source"] = power_source
             self.data["current_charge_power_kw"] = sample["derived_power_kw"]
-        # Preserve repeated whole-percent SOC reports as raw timeline points;
-        # they simply have no derived power. Suppress only an actual duplicate
-        # of the same upstream timestamp (for example a HA attribute refresh).
-        if previous and previous.get("source_time") == sample.get("source_time"):
-            return
-        samples.append(sample)
+
+        if same_source_update:
+            merged = dict(previous)
+            merged.update(sample)
+            # Do not erase a power result already derived by the first entity
+            # update of this payload unless the follow-up derived a better one.
+            if sample.get("derived_power_kw") is None and previous.get("derived_power_kw") is not None:
+                merged["derived_power_kw"] = previous.get("derived_power_kw")
+                merged["power_source"] = previous.get("power_source")
+            samples[-1] = merged
+        else:
+            # Preserve repeated whole-percent SOC reports as raw timeline
+            # points; only co-timestamp entity fan-out is merged above.
+            samples.append(sample)
         active["samples"] = samples[-_MAX_CHARGE_SAMPLES:]
         await self._save_and_refresh()
 
