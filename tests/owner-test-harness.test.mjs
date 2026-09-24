@@ -60,3 +60,12 @@ test("owner harness exposes a local selector including the real standard view", 
   assert.match(installer, /sv-dashboard-owner-test-selector-card/);
   assert.match(installer, /separator\(strings\.live, "mdi:car-connected"\)/);
 });
+
+
+test("owner harness import is fail-open and outside the critical packageModules gate", () => {
+  assert.match(installer, /OWNER-HARNESS-IMPORT-BEGIN/);
+  assert.match(installer, /void import\("\.\/owner-test-harness-card\.js\?v=owner-/);
+  assert.match(installer, /\.catch\(\(error\) =>/);
+  assert.match(installer, /local module failed to load/);
+  assert.doesNotMatch(installer, /anchor = "const packageModules = Promise\.all\(\[\\n"/);
+});
