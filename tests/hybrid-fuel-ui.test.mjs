@@ -89,6 +89,8 @@ test("dual-energy hero keeps both ranges visible and only adds trustworthy secon
   assert.match(dualHero, /<div class="detail-label">\$\{dashboardText\.range\}<\/div>/);
   assert.match(dualHero, /this\._showMore\(mapped\.fuel_autonomy\)/);
   assert.match(dualHero, /mode\.charging && chargePower !== "—"/);
+  assert.match(dualHero, /const chargeEnd = mode\.charging \? this\._formatTime\(mapped\.battery_charging_end\) : "—"/);
+  assert.match(dualHero, /dashboardText\.chargeEndShort/);
   assert.match(dualHero, /fuelConsumptionEntity && fuelConsumption !== "—"/);
   assert.doesNotMatch(dualHero, /current_trip_energy/);
   assert.doesNotMatch(dualHero, /current_trip_consumption/);
