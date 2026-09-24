@@ -57,8 +57,8 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
   };
 
   static styles = css`
-    :host { display: block; }
-    ha-card { container-type: inline-size; overflow: hidden; border-radius: var(--ha-card-border-radius, 16px); }
+    :host { display: block; position: relative; z-index: 0; isolation: isolate; }
+    ha-card { position: relative; z-index: 0; isolation: isolate; container-type: inline-size; overflow: hidden; border-radius: var(--ha-card-border-radius, 16px); }
     .hero {
       position: relative;
       display: grid;
@@ -94,7 +94,14 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
       display: inline-flex; align-items: center; gap: 6px; cursor: pointer; box-shadow: 0 2px 9px rgba(0,0,0,.07); font-size: 14px; font-weight: 600;
     }
     .temperature-badge ha-icon { --mdc-icon-size: 18px; color: var(--secondary-text-color); }
-    .temperature-badge.fresh { border-color: color-mix(in srgb, var(--primary-color) 36%, var(--divider-color)); background: color-mix(in srgb, var(--primary-color) 8%, var(--card-background-color)); }
+    .temperature-badge.with-info { right: 64px; }
+    .info-control {
+      right: 18px; width: 36px; height: 36px; border: 1px solid var(--divider-color); border-radius: 50%;
+      background: color-mix(in srgb, var(--card-background-color) 92%, transparent); color: var(--primary-text-color);
+      display: grid; place-items: center; padding: 0; cursor: pointer; box-shadow: 0 2px 9px rgba(0,0,0,.07);
+    }
+    .info-control ha-icon { --mdc-icon-size: 20px; color: var(--secondary-text-color); }
+    .temperature-badge.fresh { border-color: color-mix(in srgb, var(--primary-color) 45%, var(--divider-color)); background: color-mix(in srgb, var(--primary-color) 14%, var(--card-background-color)); }
     .temperature-badge.fresh ha-icon { color: var(--primary-color); }
     .status { min-height: 8px; margin-top: -4px; display: flex; justify-content: center; align-items: center; }
     .status:not(:empty) { min-height: 34px; margin-bottom: 3px; }
@@ -135,6 +142,8 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
       .top-control { top: 12px; }
       .climate-control { left: 12px; width: 44px; height: 44px; }
       .temperature-badge { right: 12px; min-height: 34px; padding: 0 10px; }
+      .temperature-badge.with-info { right: 58px; }
+      .info-control { right: 12px; width: 34px; height: 34px; }
       .energy { grid-template-columns: 40px minmax(0, 1fr) minmax(105px, .8fr); column-gap: 10px; padding: 7px 4px 3px; }
       .icon { width: 40px; height: 40px; }
       .level { font-size: 30px; }
@@ -200,7 +209,10 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
 
   _navigate(path) {
     if (!path || typeof window === "undefined") return;
-    const target = new URL(path, window.location.origin);
+    const target = path.startsWith("#")
+      ? new URL(window.location.href)
+      : new URL(path, window.location.origin);
+    if (path.startsWith("#")) target.hash = path;
     window.history.pushState(null, "", `${target.pathname}${target.search}${target.hash}`);
     window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false } }));
   }
@@ -290,6 +302,8 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
     const mapped = attributes.entity_mapping || {};
     const tracker = attributes.vehicle_tracker;
     const picture = tracker ? this._hass.states?.[tracker]?.attributes?.entity_picture : undefined;
+    const vehicleInfo = metricEntity(this._hass, attributes, "vehicle_info");
+    const showInfo = this._config.show_info === true && Boolean(vehicleInfo);
     const vehicleDashboardPath = dashboardPath(attributes, this._config.navigation_path);
     const mode = this._mode(attributes, mapped);
     const statusLine = this._status(mode);
@@ -331,8 +345,13 @@ ${(mapped.preconditioning_start || mapped.preconditioning_stop) ? html`
     <ha-icon icon=${climateIcon}></ha-icon>
   </button>` : nothing}
 ${mapped.temperature ? html`
-  <button class="top-control temperature-badge ${temperatureFresh ? "fresh" : ""}" type="button" @click=${(event) => { event.stopPropagation(); this._showMore(mapped.temperature); }}>
+  <button class="top-control temperature-badge ${temperatureFresh ? "fresh" : ""} ${showInfo ? "with-info" : ""}" type="button" @click=${(event) => { event.stopPropagation(); this._showMore(mapped.temperature); }}>
     <ha-icon icon="mdi:thermometer"></ha-icon><span>${temperature}${temperature === "—" ? "" : ` ${temperatureUnit}`}</span>
+  </button>` : nothing}
+${showInfo ? html`
+  <button class="top-control info-control" type="button" aria-label=${dashboardText.vehicleMaintenanceData || text.vehicle} title=${dashboardText.vehicleMaintenanceData || text.vehicle}
+    @click=${(event) => { event.stopPropagation(); this._navigate("#sv-vehicle-info"); }}>
+    <ha-icon icon="mdi:information-outline"></ha-icon>
   </button>` : nothing}
 
 <div class="vehicle">
