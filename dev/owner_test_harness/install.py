@@ -93,7 +93,20 @@ def _patch_frontend_resource_version(integration_root: Path, token: str) -> str:
     owner_version = f"{product_version}-owner-{token}"
 
     text = constants.read_text(encoding="utf-8")
-    pattern = re.compile(r'^FRONTEND_VERSION = "[^"]+"    token = hashlib.sha256(source.read_bytes()).hexdigest()[:12]
+    pattern = re.compile(r'^FRONTEND_VERSION = "[^"]+"$', re.MULTILINE)
+    text, count = pattern.subn(
+        f'FRONTEND_VERSION = "{owner_version}"',
+        text,
+        count=1,
+    )
+    if count != 1:
+        raise SystemExit("const.py FRONTEND_VERSION anchor not found")
+    constants.write_text(text, encoding="utf-8")
+    return owner_version
+
+
+def _patch_frontend(frontend: Path, source: Path) -> str:
+    token = hashlib.sha256(source.read_bytes()).hexdigest()[:12]
     anchor = "installTransparentMapMarkerCompatibility();\n"
     if anchor not in frontend.read_text(encoding="utf-8"):
         raise SystemExit("frontend.js compatibility bootstrap anchor not found")
@@ -152,92 +165,6 @@ def install(target: Path) -> None:
         "Full Home Assistant restart required so Lovelace registers "
         "the owner-specific frontend resource URL."
     )
-    print("The generated Vehicle view contains the Owner-Testmodus selector.")
-    print("Fixture profiles:")
-    for profile in ("phev", "phev-fresh", "phev-idle", "phev-driving", "phev-charging", "phev-stale"):
-        print(f"  ?sv_owner_fixture={profile}")
-
-
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--target",
-        default="/config/custom_components/sv_dashboard/static",
-        help="Installed SV Dashboard static directory",
-    )
-    args = parser.parse_args()
-    install(Path(args.target))
-
-
-if __name__ == "__main__":
-    main()
-, re.MULTILINE)
-    text, count = pattern.subn(
-        f'FRONTEND_VERSION = "{owner_version}"',
-        text,
-        count=1,
-    )
-    if count != 1:
-        raise SystemExit("const.py FRONTEND_VERSION anchor not found")
-    constants.write_text(text, encoding="utf-8")
-    return owner_version
-
-
-def _patch_frontend(frontend: Path, source: Path) -> str:
-    token = hashlib.sha256(source.read_bytes()).hexdigest()[:12]
-    anchor = "installTransparentMapMarkerCompatibility();\n"
-    if anchor not in frontend.read_text(encoding="utf-8"):
-        raise SystemExit("frontend.js compatibility bootstrap anchor not found")
-    import_block = f'''/* OWNER-HARNESS-IMPORT-BEGIN */
-window.__svDashboardOwnerHarnessReady = import("./owner-test-harness-card.js?v=owner-{token}")
-  .then(() => true)
-  .catch((error) => {{
-    console.error("[SV Dashboard owner harness] local module failed to load", error);
-    return false;
-  }});
-/* OWNER-HARNESS-IMPORT-END */
-'''
-    text = frontend.read_text(encoding="utf-8").replace(anchor, anchor + "\n" + import_block, 1)
-
-    # The owner harness also patches sv_dashboard.js locally. The production
-    # Strategy import may keep an older content/version key when the product
-    # Strategy itself did not change, so reusing that URL can make the browser
-    # execute a cached unpatched Strategy and silently hide the selector.
-    # Give the locally patched Strategy its own content-addressed module URL.
-    strategy_import_pattern = re.compile(
-        r'await import\("\./sv_dashboard\.js\?v=[^"]+"\);'
-    )
-    replacement = f'await import("./sv_dashboard.js?v=owner-{token}");'
-    text, count = strategy_import_pattern.subn(replacement, text, count=1)
-    if count != 1:
-        raise SystemExit("frontend.js Strategy import anchor not found")
-
-    frontend.write_text(text, encoding="utf-8")
-    return token
-
-
-def install(target: Path) -> None:
-    source = Path(__file__).with_name("owner-test-harness-card.js")
-    frontend = target / "frontend.js"
-    strategy = target / "sv_dashboard.js"
-    if not frontend.exists() or not strategy.exists():
-        raise SystemExit(f"SV Dashboard static directory not found/complete: {target}")
-
-    _reset_product_static(target)
-    shutil.copy2(source, target / source.name)
-    token = _patch_frontend(frontend, source)
-
-    text = strategy.read_text(encoding="utf-8")
-    if OWNER_READY_ANCHOR not in text:
-        raise SystemExit("sv_dashboard.js generateDashboard readiness anchor not found")
-    text = text.replace(OWNER_READY_ANCHOR, OWNER_READY_PATCH, 1)
-    if OWNER_CONTEXT_ANCHOR not in text:
-        raise SystemExit("sv_dashboard.js Strategy generation anchor not found")
-    text = text.replace(OWNER_CONTEXT_ANCHOR, OWNER_CONTEXT_PATCH, 1)
-    strategy.write_text(text, encoding="utf-8")
-
-    print(f"Owner whole-dashboard PHEV harness installed (module owner-{token}).")
-    print("Full Home Assistant restart required if this local static route was not already active.")
     print("The generated Vehicle view contains the Owner-Testmodus selector.")
     print("Fixture profiles:")
     for profile in ("phev", "phev-fresh", "phev-idle", "phev-driving", "phev-charging", "phev-stale"):
