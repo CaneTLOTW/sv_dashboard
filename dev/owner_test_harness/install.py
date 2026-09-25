@@ -55,6 +55,19 @@ OWNER_READY_PATCH = '''    if (readiness && typeof readiness.then === "function"
 '''
 
 
+SELECTOR_DECL_ANCHOR = "    const overviewSections = [\n"
+SELECTOR_DECL_PATCH = '''    const ownerTestSelector = {
+      type: "custom:sv-dashboard-owner-test-selector-card",
+      entry_id: attributes.entry_id,
+      grid_options: { columns: "full", rows: 1 },
+    };
+
+    const overviewSections = [
+'''
+SELECTOR_CARD_ANCHOR = '        separator(strings.live, "mdi:car-connected"),\n        hero,\n'
+SELECTOR_CARD_PATCH = '        separator(strings.live, "mdi:car-connected"),\n        ownerTestSelector,\n        hero,\n'
+
+
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
@@ -105,8 +118,14 @@ def _patch_frontend_resource_version(integration_root: Path, token: str) -> str:
     return owner_version
 
 
-def _patch_frontend(frontend: Path, source: Path) -> str:
-    token = hashlib.sha256(source.read_bytes()).hexdigest()[:12]
+def _owner_token(source: Path) -> str:
+    digest = hashlib.sha256()
+    digest.update(source.read_bytes())
+    digest.update(Path(__file__).read_bytes())
+    return digest.hexdigest()[:12]
+
+
+def _patch_frontend(frontend: Path, token: str) -> None:
     anchor = "installTransparentMapMarkerCompatibility();\n"
     if anchor not in frontend.read_text(encoding="utf-8"):
         raise SystemExit("frontend.js compatibility bootstrap anchor not found")
@@ -135,7 +154,6 @@ window.__svDashboardOwnerHarnessReady = import("./owner-test-harness-card.js?v=o
         raise SystemExit("frontend.js Strategy import anchor not found")
 
     frontend.write_text(text, encoding="utf-8")
-    return token
 
 
 def install(target: Path) -> None:
@@ -147,7 +165,8 @@ def install(target: Path) -> None:
 
     _reset_product_static(target)
     shutil.copy2(source, target / source.name)
-    token = _patch_frontend(frontend, source)
+    token = _owner_token(source)
+    _patch_frontend(frontend, token)
     owner_frontend_version = _patch_frontend_resource_version(target.parent, token)
 
     text = strategy.read_text(encoding="utf-8")
@@ -157,6 +176,18 @@ def install(target: Path) -> None:
     if OWNER_CONTEXT_ANCHOR not in text:
         raise SystemExit("sv_dashboard.js Strategy generation anchor not found")
     text = text.replace(OWNER_CONTEXT_ANCHOR, OWNER_CONTEXT_PATCH, 1)
+
+    # Keep the selector injection on the proven beta.30/beta.31 path: patch it
+    # directly into the generated Vehicle/LIVE layout before the Hero. The
+    # whole-dashboard decorator remains responsible only for fixture context.
+    if "const ownerTestSelector = {" not in text:
+        if SELECTOR_DECL_ANCHOR not in text:
+            raise SystemExit("sv_dashboard.js overviewSections anchor not found")
+        if SELECTOR_CARD_ANCHOR not in text:
+            raise SystemExit("sv_dashboard.js LIVE card anchor not found")
+        text = text.replace(SELECTOR_DECL_ANCHOR, SELECTOR_DECL_PATCH, 1)
+        text = text.replace(SELECTOR_CARD_ANCHOR, SELECTOR_CARD_PATCH, 1)
+
     strategy.write_text(text, encoding="utf-8")
 
     print(f"Owner whole-dashboard PHEV harness installed (module owner-{token}).")
