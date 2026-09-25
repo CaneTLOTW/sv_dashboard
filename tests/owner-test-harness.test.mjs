@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import { spawnSync } from "node:child_process";
 
 const overview = fs.readFileSync("custom_components/sv_dashboard/static/vehicle-overview-card.js", "utf8");
 const frontend = fs.readFileSync("custom_components/sv_dashboard/static/frontend.js", "utf8");
@@ -105,5 +106,15 @@ test("owner installer cache-busts the top-level Lovelace frontend resource", () 
   assert.match(installer, /owner_version = f"\{product_version\}-owner-\{token\}"/);
   assert.match(installer, /FRONTEND_VERSION = "\{owner_version\}"/);
   assert.match(installer, /Owner frontend resource version:/);
-  assert.match(installer, /Full Home Assistant restart required so Lovelace registers the owner-specific frontend resource URL/);
+  assert.match(installer, /Full Home Assistant restart required so Lovelace registers/);
+  assert.match(installer, /the owner-specific frontend resource URL/);
+});
+
+test("owner harness installer is valid Python", () => {
+  const result = spawnSync(
+    "python3",
+    ["-m", "py_compile", "dev/owner_test_harness/install.py"],
+    { encoding: "utf8" },
+  );
+  assert.equal(result.status, 0, result.stderr || result.stdout);
 });
