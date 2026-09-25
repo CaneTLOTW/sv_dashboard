@@ -90,3 +90,10 @@ test("owner harness import is fail-open and outside the critical packageModules 
   assert.match(installer, /return false/);
   assert.match(installer, /local module failed to load/);
 });
+
+test("owner installer cache-busts the locally patched Strategy module", () => {
+  assert.match(installer, /strategy_import_pattern = re\.compile/);
+  assert.match(installer, /sv_dashboard\\\.js\\\?v=/);
+  assert.match(installer, /replacement = f'await import\("\.\/sv_dashboard\.js\?v=owner-\{token\}"\);'/);
+  assert.match(installer, /if count != 1/);
+});
