@@ -159,6 +159,16 @@ test("dual-energy hero exposes native HA interactions without nested custom card
   assert.doesNotMatch(dualHero, /custom:button-card/);
 });
 
+test("charge curve prefers stored derived power and keeps SOC reconstruction as fallback", () => {
+  assert.match(chargeHistory, /function storedPowerCurve\(samples, fallbackCapacity = null\)/);
+  assert.match(chargeHistory, /sample\?\.derived_power_kw/);
+  assert.match(chargeHistory, /sample\?\.residual_kwh/);
+  assert.match(chargeHistory, /residual \/ capacity \* 100/);
+  assert.match(chargeHistory, /source: "stored_derived_power"/);
+  assert.match(chargeHistory, /directPowerPoints\.length >= 2/);
+  assert.match(chargeHistory, /buildChargeCurve\(/);
+});
+
 test("charge history details expose canonical mileage and avoid duplicate unavailable placeholders", () => {
   assert.match(chargeHistory, /session\.start_mileage_km \?\? session\.parking_mileage_km/);
   assert.match(chargeHistory, /dashboardText\.mileage/);
