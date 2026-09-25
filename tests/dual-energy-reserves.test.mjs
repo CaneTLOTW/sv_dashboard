@@ -77,8 +77,9 @@ test("all new generated-dashboard labels come from the shared i18n contract", ()
 test("German and English reserve labels stay compact enough for half-width cards", () => {
   assert.match(i18n, /remainingBatteryEnergy: "Batteriereserve"/);
   assert.match(i18n, /trailingElectricConsumption: "Ø Strom \(500 km\)"/);
-  assert.match(i18n, /remainingFuel: "Tankinhalt geschätzt"/);
+  assert.match(i18n, /remainingFuel: "Tankinhalt"/);
   assert.match(i18n, /trailingFuelConsumption: "Ø Kraftstoff \(500 km\)"/);
+  assert.match(i18n, /consumptionReserves: "Reserven & Verbrauch"/);
   assert.match(i18n, /remainingBatteryEnergy: "Battery reserve"/);
   assert.match(i18n, /trailingFuelConsumption: "Avg\. fuel \(500 km\)"/);
 });

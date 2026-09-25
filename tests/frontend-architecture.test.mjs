@@ -22,17 +22,17 @@ const times = read("time.py");
 
 test("Home Assistant registers one SV frontend resource", () => {
   assert.match(constants, /FRONTEND_URL = "\/sv_dashboard\/frontend\.js"/);
-  assert.match(constants, /FRONTEND_VERSION = "0\.6\.0-beta\.35"/);
-  assert.equal(manifest.version, "0.6.0-beta.35");
+  assert.match(constants, /FRONTEND_VERSION = "0\.6\.0-beta\.36"/);
+  assert.equal(manifest.version, "0.6.0-beta.36");
   assert.match(constants, /FRONTEND_RESOURCE_URLS = \(FRONTEND_URL,\)/);
-  // beta.35 removes the unreliable powertrain popup row and refreshes the Strategy; unchanged Hero/Charge/Fuel/i18n/GPS modules retain prior content keys.
+  // beta.36 polishes owner-reviewed dual-energy labels and Fuel History; unchanged Hero/Charge/GPS modules retain prior content keys.
   assert.match(frontend, /import\("\.\/vehicle-overview-card\.js\?v=0\.6\.0-beta\.31"\)/);
   assert.match(frontend, /import\("\.\/gps-history-card\.js\?v=0\.6\.0-beta\.28"\)/);
   assert.match(frontend, /import\("\.\/charge-history-card\.js\?v=0\.6\.0-beta\.33"\)/);
   assert.match(frontend, /import\("\.\/dual-energy-overview-card\.js\?v=0\.6\.0-beta\.31"\)/);
-  assert.match(frontend, /import\("\.\/fuel-history-card\.js\?v=0\.6\.0-beta\.34"\)/);
-  assert.match(frontend, /import\("\.\/sv_dashboard\.js\?v=0\.6\.0-beta\.35"\)/);
-  assert.match(strategy, /from "\.\/i18n\.js\?v=0\.6\.0-beta\.34"/);
+  assert.match(frontend, /import\("\.\/fuel-history-card\.js\?v=0\.6\.0-beta\.36"\)/);
+  assert.match(frontend, /import\("\.\/sv_dashboard\.js\?v=0\.6\.0-beta\.36"\)/);
+  assert.match(strategy, /from "\.\/i18n\.js\?v=0\.6\.0-beta\.36"/);
   assert.doesNotMatch(frontend, /gps-history-fix\.js/);
   assert.doesNotMatch(frontend, /map-marker-fix\.js/);
   assert.match(frontend, /import\("\.\/vehicle-audit-card\.js\?v=0\.6\.0-beta\.28"\)/);
@@ -43,8 +43,8 @@ test("dependency preflight never delays Strategy registration", () => {
   assert.match(frontend, /DEPENDENCY_GRACE_MS = 10000/);
   assert.match(frontend, /window\.__svDashboardDependencyReadiness = Promise\.all/);
   assert.doesNotMatch(frontend, /await dependencyReadiness/);
-  assert.match(frontend, /await import\("\.\/sv_dashboard\.js\?v=0\.6\.0-beta\.35"\)/);
-  const strategyImport = frontend.indexOf('await import("./sv_dashboard.js?v=0.6.0-beta.35")');
+  assert.match(frontend, /await import\("\.\/sv_dashboard\.js\?v=0\.6\.0-beta\.36"\)/);
+  const strategyImport = frontend.indexOf('await import("./sv_dashboard.js?v=0.6.0-beta.36")');
   assert.ok(strategyImport >= 0);
   assert.match(strategy, /window\.__svDashboardDependencyReadiness/);
   assert.match(strategy, /await readiness/);

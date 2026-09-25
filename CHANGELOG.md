@@ -4,6 +4,16 @@
 
 No changes yet.
 
+## 0.6.0-beta.36 owner Hybrid UI polish candidate
+
+- Keeps the owner-reviewed Hybrid vehicle view split into two semantic sections and renames the German headings to **Fahrdaten & Nutzung** and **Reserven & Verbrauch**, avoiding the previous duplicate-looking Verbrauch labels.
+- Shortens the normal Dual-Energy reserve tile from **Tankinhalt geschätzt** to **Tankinhalt** while preserving the underlying estimated-value provenance in the package metric/entity layer.
+- Aligns Fuel History visually with Trip/Charge History: refuel litres now use the normal table color and no per-cell ≈ prefix; provenance remains in a subdued footer instead of warning-like cell styling.
+- Verifies the Fuel History summary semantics against the backend and labels accumulated post-refuel driving duration as **Fahrzeit** in all 18 frontend languages.
+- Retains kilometre reading and before/after fuel level in Refuel History for plausibility checks; no product logic or fuel-history detection semantics are changed.
+- Builds on beta.35, where the unreliable vehicle-info powertrain row and the owner-only PHEV charging fixture were already corrected.
+- Bumps package/frontend generation to beta.36 and cache-busts the changed Strategy, Fuel History and i18n modules.
+
 ## 0.6.0-beta.35 owner charging fixture + vehicle-info cleanup candidate
 
 - Removes the unreliable **Antrieb / powertrain** row from the vehicle-information popup. The underlying compatibility attribute remains available, but the popup no longer shows a misleading dash when Stellantis maintenance metadata omits motorization.

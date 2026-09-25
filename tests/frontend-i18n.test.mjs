@@ -65,7 +65,7 @@ test("runtime wires all advanced catalogs with the release cache key", () => {
   for (const region of ["west", "north", "east"]) {
     assert.match(runtimeSource, new RegExp(`i18n-advanced-${region}\\.js\\?v=0\\.6\\.0-beta\\.17`));
   }
-  assert.match(runtimeSource, /i18n-core\.js\?v=0\.6\.0-beta\.34/);
+  assert.match(runtimeSource, /i18n-core\.js\?v=0\.6\.0-beta\.36/);
 });
 
 test("locale resolver accepts regional variants and safe fallbacks", () => {
@@ -170,7 +170,8 @@ test("dual-energy reserves and Fuel History semantics are localized", () => {
   );
   assert.match(french.title, /ravitaillement/i);
   assert.match(FRONTEND_TEXT.fuelHistory.en.hint, /estimated/i);
-  assert.match(FRONTEND_TEXT.fuelHistory.de.hint, /geschätzt/i);
+  assert.match(FRONTEND_TEXT.fuelHistory.de.hint, /abgeleitet/i);
+  assert.doesNotMatch(FRONTEND_TEXT.fuelHistory.de.hint, /≈|markiert/i);
 });
 
 test("long-label smoke coverage remains present for DE, FR and PL", () => {
