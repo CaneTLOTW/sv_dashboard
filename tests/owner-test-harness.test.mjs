@@ -65,6 +65,19 @@ test("owner harness exposes deterministic fresh, stale, idle, driving and chargi
   assert.match(installer, /\?sv_owner_fixture=\{profile\}/);
 });
 
+test("fully synthetic PHEV demo profiles use deterministic electric and fuel-side values", () => {
+  assert.match(harness, /\["phev-demo", "PHEV · Demo vollständig"\]/);
+  assert.match(harness, /const fullySynthetic = new Set\(\["phev-demo", "phev-idle", "phev-driving", "phev-charging"\]\)\.has\(profile\)/);
+  assert.match(harness, /battery: SYNTH_PREFIX \+ "battery"/);
+  assert.match(harness, /autonomy: SYNTH_PREFIX \+ "autonomy"/);
+  assert.match(harness, /temperature: SYNTH_PREFIX \+ "temperature"/);
+  assert.match(harness, /remaining_battery_energy_kwh: fullySynthetic \? ids\.remainingBattery/);
+  assert.match(harness, /trailing_consumption_500km: fullySynthetic \? ids\.trailingElectric/);
+  assert.match(harness, /27\.5,[\s\S]*"L"/);
+  assert.match(harness, /10\.8,[\s\S]*"kWh"/);
+  assert.match(harness, /17\.6,[\s\S]*"kWh\/100 km"/);
+});
+
 test("PHEV charging profile owns its charging power, type and end-time fixtures", () => {
   assert.match(harness, /currentChargePower: SYNTH_PREFIX \+ "current_charge_power"/);
   assert.match(harness, /chargingType: SYNTH_PREFIX \+ "charging_type"/);
@@ -87,11 +100,14 @@ test("whole-dashboard context is injected in the active Strategy generate path a
   assert.match(harness, /inner\.hass = fixtureHass/);
 });
 
-test("standard selector removes fixture parameter and keeps real dashboard context", () => {
-  assert.match(harness, /Standard · echtes Fahrzeug/);
+test("standard selector removes fixture parameter and keeps an explicit identity path", () => {
+  assert.match(harness, /Standard · Testmodus aus/);
   assert.match(harness, /url\.searchParams\.set\(PROFILE_PARAM, profile\)/);
   assert.match(harness, /url\.searchParams\.delete\(PROFILE_PARAM\)/);
+  assert.match(harness, /function fixtureHass\(hass, entryId, profile = activeProfile\(\)\)/);
+  assert.match(harness, /if \(!profile \|\| !VALID_PROFILES\.has\(profile\)\) return hass/);
   assert.match(harness, /if \(!profile\) return dashboard/);
+  assert.match(harness, /const badgeText = active \? "AKTIV" : "AUS"/);
 });
 
 test("owner installer resets canonical product files and refuses mixed versions", () => {
@@ -303,10 +319,18 @@ test("patched Strategy.generate applies phev-driving fixture before dashboard ge
     harnessUrl.searchParams.set("test", String(Date.now()));
     await import(harnessUrl.href);
 
+    assert.equal(window.__svDashboardOwnerHarness.fixtureHass(hass, "entry-1", ""), hass);
+    assert.equal(window.__svDashboardOwnerHarness.fixtureHass(hass, "entry-1", "invalid-profile"), hass);
+
     const fixtureHass = window.__svDashboardOwnerHarness.fixtureHass(hass, "entry-1", "phev-driving");
     const fuelHistory = await fixtureHass.callWS({ type: "sv_dashboard/fuel_history", entry_id: "entry-1" });
+    assert.equal(fuelHistory.summary.distance_km, 154.7);
+    assert.equal(fuelHistory.summary.driving_time_seconds, 9000);
+    assert.equal(fuelHistory.summary.trip_count, 5);
+    assert.equal(fuelHistory.events.length, 3);
     assert.equal(fuelHistory.events[0].odometer_km, 2016.3);
     assert.equal(fuelHistory.events[1].odometer_km, 1684.8);
+    assert.equal(fuelHistory.events[2].odometer_km, 1146.4);
 
     const chargingHass = window.__svDashboardOwnerHarness.fixtureHass(hass, "entry-1", "phev-charging");
     const chargingStatus = chargingHass.states["sensor.sv_status"].attributes;
@@ -329,6 +353,14 @@ test("patched Strategy.generate applies phev-driving fixture before dashboard ge
     assert.match(serialized, /sv-dashboard-owner-test-context-card/);
     assert.match(serialized, /sv-dashboard-dual-energy-overview-card/);
     assert.doesNotMatch(serialized, /sv-dashboard-vehicle-overview-card/);
+
+    window.location = new URL("http://localhost/citroen-dashboard/vehicle");
+    const standardDashboard = await Strategy.generate({ entry_id: "entry-1" }, hass);
+    const standardSerialized = JSON.stringify(standardDashboard);
+    assert.match(standardSerialized, /sv-dashboard-owner-test-selector-card/);
+    assert.doesNotMatch(standardSerialized, /sv-dashboard-owner-test-context-card/);
+    assert.match(standardSerialized, /sv-dashboard-vehicle-overview-card/);
+    assert.doesNotMatch(standardSerialized, /sv-dashboard-dual-energy-overview-card/);
   } finally {
     if (previous.HTMLElement === undefined) delete globalThis.HTMLElement;
     else globalThis.HTMLElement = previous.HTMLElement;
