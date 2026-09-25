@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 
 const overview = fs.readFileSync("custom_components/sv_dashboard/static/vehicle-overview-card.js", "utf8");
@@ -60,9 +61,10 @@ test("owner harness exposes deterministic fresh, stale, idle, driving and chargi
   assert.match(installer, /\?sv_owner_fixture=\{profile\}/);
 });
 
-test("whole-dashboard context is injected at Strategy generation and card runtime", () => {
-  assert.match(installer, /ownerHarness\.fixtureHass\(hass, strategyConfig\.entry_id, ownerProfile\)/);
-  assert.match(installer, /ownerHarness\.decorateDashboard\(dashboard, strategyConfig\.entry_id, ownerProfile\)/);
+test("whole-dashboard context is injected in the active Strategy generate path and card runtime", () => {
+  assert.match(installer, /static async generate\(config, hass\)/);
+  assert.match(installer, /ownerHarness\.fixtureHass\(hass, config\?\.entry_id, ownerProfile\)/);
+  assert.match(installer, /ownerHarness\.decorateDashboard\(dashboard, config\?\.entry_id, ownerProfile\)/);
   assert.match(harness, /new Set\(\["vehicle", "charging", "statistics", "trips"\]\)/);
   assert.match(harness, /if \(!hybridVisualViews\.has\(view\?\.path\)\) continue/);
   assert.match(harness, /view\.cards = view\.cards\.map/);
@@ -169,9 +171,144 @@ test("owner installer runs end-to-end against a temporary beta.33 runtime", () =
     assert.match(installedConst, new RegExp(`FRONTEND_VERSION = "0\\.6\\.0-beta\\.33-owner-${token}"`));
     assert.match(installedStrategy, /const ownerTestSelector = \{/);
     assert.match(installedStrategy, /ownerTestSelector,\n        hero,/);
+    assert.match(installedStrategy, /static async generate\(config, hass\)/);
+    assert.match(installedStrategy, /hass = ownerHarness\.fixtureHass\(hass, config\?\.entry_id, ownerProfile\)/);
     assert.match(installedStrategy, /ownerHarness\.decorateDashboard\(/);
     assert.ok(fs.existsSync(path.join(staticRoot, "owner-test-harness-card.js")));
   } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+
+test("patched Strategy.generate applies phev-driving fixture before dashboard generation", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "sv-owner-runtime-"));
+  const integrationRoot = path.join(tempRoot, "sv_dashboard");
+  const staticRoot = path.join(integrationRoot, "static");
+  fs.mkdirSync(integrationRoot, { recursive: true });
+  fs.cpSync("custom_components/sv_dashboard/static", staticRoot, { recursive: true });
+  for (const file of ["manifest.json", "const.py"]) {
+    fs.copyFileSync(path.join("custom_components", "sv_dashboard", file), path.join(integrationRoot, file));
+  }
+
+  const installResult = spawnSync(
+    "python3",
+    ["dev/owner_test_harness/install.py", "--target", staticRoot],
+    { encoding: "utf8" },
+  );
+  assert.equal(installResult.status, 0, installResult.stderr || installResult.stdout);
+
+  const previous = {
+    HTMLElement: globalThis.HTMLElement,
+    customElements: globalThis.customElements,
+    window: globalThis.window,
+    document: globalThis.document,
+  };
+  const registry = new Map();
+  class TestHTMLElement {}
+  const dependency = class {};
+  for (const tag of ["bubble-card", "button-card", "map-card", "layout-card"]) registry.set(tag, dependency);
+
+  globalThis.HTMLElement = TestHTMLElement;
+  globalThis.customElements = {
+    get(name) { return registry.get(name); },
+    define(name, ctor) {
+      if (registry.has(name)) throw new Error(`duplicate custom element: ${name}`);
+      registry.set(name, ctor);
+    },
+    whenDefined(name) {
+      return registry.has(name) ? Promise.resolve() : new Promise(() => {});
+    },
+  };
+  const location = new URL("http://localhost/citroen-dashboard/vehicle?sv_owner_fixture=phev-driving");
+  globalThis.window = {
+    location,
+    history: { replaceState() {} },
+    customStrategies: [],
+    __svDashboardDependencyReadiness: Promise.resolve([]),
+  };
+  globalThis.document = { createElement() { return {}; } };
+
+  const makeState = (entityId, value, attributes = {}) => ({
+    entity_id: entityId,
+    state: String(value),
+    attributes,
+    last_changed: "2026-09-25T12:00:00Z",
+    last_updated: "2026-09-25T12:00:00Z",
+    context: {},
+  });
+
+  const hass = {
+    locale: { language: "de" },
+    states: {
+      "sensor.sv_status": makeState("sensor.sv_status", "ready", {
+        integration_domain: "sv_dashboard",
+        entry_id: "entry-1",
+        upstream_compatibility: { version_supported: true, version: "test" },
+        entity_mapping: {
+          battery: "sensor.vehicle_battery",
+          autonomy: "sensor.vehicle_range",
+          temperature: "sensor.vehicle_temperature",
+        },
+        metric_entities: {},
+        control_entities: {},
+        server_history_entities: {},
+        capabilities: {
+          electric_energy: true,
+          fuel: false,
+          charging: false,
+          charge_history: false,
+        },
+        modules: {
+          trips: false,
+          charging: false,
+          gps: false,
+          wakeup: false,
+          notifications: false,
+        },
+        vehicle_tracker: "device_tracker.vehicle",
+        powertrain: "electric",
+        auto_powertrain: "electric",
+      }),
+      "sensor.vehicle_battery": makeState("sensor.vehicle_battery", 63, { unit_of_measurement: "%" }),
+      "sensor.vehicle_range": makeState("sensor.vehicle_range", 172, { unit_of_measurement: "km" }),
+      "sensor.vehicle_temperature": makeState("sensor.vehicle_temperature", 20.5, { unit_of_measurement: "°C" }),
+      "device_tracker.vehicle": makeState("device_tracker.vehicle", "home", {
+        latitude: 51,
+        longitude: 8,
+        entity_picture: "/local/car.png",
+      }),
+    },
+  };
+
+  try {
+    const harnessUrl = pathToFileURL(path.join(staticRoot, "owner-test-harness-card.js"));
+    harnessUrl.searchParams.set("test", String(Date.now()));
+    await import(harnessUrl.href);
+
+    const strategyUrl = pathToFileURL(path.join(staticRoot, "sv_dashboard.js"));
+    strategyUrl.searchParams.set("test", String(Date.now()));
+    await import(strategyUrl.href);
+
+    const Strategy = registry.get("ll-strategy-dashboard-sv-dashboard");
+    assert.equal(typeof Strategy, "function");
+
+    const dashboard = await Strategy.generate({ entry_id: "entry-1" }, hass);
+    const serialized = JSON.stringify(dashboard);
+
+    assert.match(serialized, /sv-dashboard-owner-test-selector-card/);
+    assert.match(serialized, /sv-dashboard-owner-test-context-card/);
+    assert.match(serialized, /sv-dashboard-dual-energy-overview-card/);
+    assert.doesNotMatch(serialized, /sv-dashboard-vehicle-overview-card/);
+  } finally {
+    if (previous.HTMLElement === undefined) delete globalThis.HTMLElement;
+    else globalThis.HTMLElement = previous.HTMLElement;
+    if (previous.customElements === undefined) delete globalThis.customElements;
+    else globalThis.customElements = previous.customElements;
+    if (previous.window === undefined) delete globalThis.window;
+    else globalThis.window = previous.window;
+    if (previous.document === undefined) delete globalThis.document;
+    else globalThis.document = previous.document;
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
 });
