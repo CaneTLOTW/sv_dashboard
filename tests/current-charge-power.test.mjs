@@ -8,8 +8,13 @@ const strategy = fs.readFileSync("custom_components/sv_dashboard/static/sv_dashb
 test("live charge power samples react to residual-energy updates as well as SOC", () => {
   assert.match(metrics, /entity_id in \{\s*self\.mapping\.get\("battery"\),\s*self\.mapping\.get\("battery_residual"\),\s*\} and self\._is_on\("battery_charging"\)/);
   assert.match(metrics, /residual_state =/);
-  assert.match(metrics, /source_candidates/);
-  assert.match(metrics, /max\(\s*source_candidates, key=lambda item: item\[0\]\s*\)/);
+  assert.match(metrics, /upstream_candidates: list\[datetime\] = \[\]/);
+  assert.match(metrics, /ha_candidates: list\[datetime\] = \[\]/);
+  assert.match(metrics, /if upstream_candidates:/);
+  assert.match(metrics, /source_time = max\(upstream_candidates\)/);
+  assert.match(metrics, /elif ha_candidates:/);
+  assert.match(metrics, /source_time = max\(ha_candidates\)/);
+  assert.match(metrics, /timestamp_source = "stellantis"/);
   assert.match(metrics, /"residual_kwh": self\._as_float\(/);
   assert.match(metrics, /same_source_update = bool\(/);
   assert.match(metrics, /reference = \(\s*samples\[-2\]/);
