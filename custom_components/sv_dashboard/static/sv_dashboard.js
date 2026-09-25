@@ -412,7 +412,6 @@ class SvDashboardStrategy extends HTMLElement {
           show_header_toggle: false,
           entities: [
             { type: "attribute", entity: vehicleInfoEntity, attribute: "brand", name: strings.brand },
-            { type: "attribute", entity: vehicleInfoEntity, attribute: "powertrain", name: strings.powertrain },
             { type: "attribute", entity: vehicleInfoEntity, attribute: "vin", name: "VIN" },
           ],
         },
