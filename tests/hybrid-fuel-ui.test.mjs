@@ -177,9 +177,10 @@ test("charge history details expose canonical mileage and avoid duplicate unavai
   assert.doesNotMatch(chargeHistory, /<strong>\$\{text\.type\}:<\/strong> —/);
 });
 
-test("fuel history renders canonical restart-safe backend events with explicit estimate provenance", () => {
+test("fuel history renders canonical restart-safe backend events with neutral values and footer provenance", () => {
   assert.match(fuelHistory, /callWS\(\{ type: `\$\{STATUS_DOMAIN\}\/fuel_history`/);
-  assert.match(fuelHistory, /event\.liters_estimated \? "≈ " : ""/);
+  assert.doesNotMatch(fuelHistory, /event\.liters_estimated \? "≈ " : ""/);
+  assert.doesNotMatch(fuelHistory, /class="liters"/);
   assert.match(fuelHistory, /event\.odometer_km/);
   assert.doesNotMatch(fuelHistory, /history\/history_during_period/);
   assert.match(fuelHistoryBackend, /class FuelHistoryManager/);
@@ -188,7 +189,8 @@ test("fuel history renders canonical restart-safe backend events with explicit e
   assert.match(fuelHistoryBackend, /_same_refuel/);
   assert.match(fuelHistoryBackend, /"driving_time_seconds": round\(duration\)/);
   assert.match(fuelHistory, /summary\.driving_time_seconds/);
-  assert.match(fuelHistory, /tripText\.duration/);
+  assert.match(fuelHistory, /\$\{text\.drivingTime\}/);
+  assert.doesNotMatch(fuelHistory, /tripText\.duration/);
 });
 
 
@@ -204,7 +206,8 @@ test("fuel history matches the compact Trip/Charge history visual grammar", () =
   assert.doesNotMatch(fuelHistory, /\.summary-item \{ border:/);
   assert.equal(CORE_FRONTEND_TEXT.fuelHistory.de.liters, "Getankt");
   assert.equal(CORE_FRONTEND_TEXT.fuelHistory.de.level, "Füllstand");
-  assert.match(CORE_FRONTEND_TEXT.fuelHistory.de.hint, /geschätzte Literwerte/);
+  assert.match(CORE_FRONTEND_TEXT.fuelHistory.de.hint, /Tankkapazität/);
+  assert.doesNotMatch(CORE_FRONTEND_TEXT.fuelHistory.de.hint, /≈|markiert/);
 });
 
 test("new card strings cover 18 languages", () => {
@@ -216,6 +219,8 @@ test("new card strings cover 18 languages", () => {
       assert.ok(text[key].length > 0, `${language}.${key}`);
     }
     assert.ok(CORE_FRONTEND_TEXT.fuelHistory[language]);
+    assert.equal(typeof CORE_FRONTEND_TEXT.fuelHistory[language].drivingTime, "string", `${language}.fuelHistory.drivingTime`);
+    assert.ok(CORE_FRONTEND_TEXT.fuelHistory[language].drivingTime.length > 0);
     assert.ok(CORE_FRONTEND_TEXT.vehicleAudit[language]);
   }
 });
@@ -224,12 +229,12 @@ test("frontend cache-busts changed modules", () => {
   for (const module of ["trip-history-card", "gps-history-card"]) {
     assert.match(frontend, new RegExp(`${module}\\.js\\?v=0\\.6\\.0-beta\\.28`));
   }
-  assert.match(frontend, /fuel-history-card\.js\?v=0\.6\.0-beta\.34/);
+  assert.match(frontend, /fuel-history-card\.js\?v=0\.6\.0-beta\.36/);
   assert.match(frontend, /charge-history-card\.js\?v=0\.6\.0-beta\.33/);
   assert.match(frontend, /vehicle-overview-card\.js\?v=0\.6\.0-beta\.31/);
   assert.match(frontend, /dual-energy-overview-card\.js\?v=0\.6\.0-beta\.31/);
   assert.match(frontend, /vehicle-audit-card\.js\?v=0\.6\.0-beta\.28/);
-  assert.match(frontend, /sv_dashboard\.js\?v=0\.6\.0-beta\.35/);
-  assert.match(strategy, /i18n\.js\?v=0\.6\.0-beta\.34/);
+  assert.match(frontend, /sv_dashboard\.js\?v=0\.6\.0-beta\.36/);
+  assert.match(strategy, /i18n\.js\?v=0\.6\.0-beta\.36/);
   assert.match(strategy, /modules\.trips && supportsFuel \? \{ type: "custom:sv-dashboard-fuel-history-card"/);
 });
