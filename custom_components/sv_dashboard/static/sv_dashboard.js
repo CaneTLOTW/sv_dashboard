@@ -4,7 +4,7 @@
  * status entity created by the backend config entry. It never derives IDs from
  * VINs or friendly names.
  */
-import { languageFor, localeFor, textFor } from "./i18n.js?v=0.6.0-beta.29";
+import { languageFor, localeFor, textFor } from "./i18n.js?v=0.6.0-beta.34";
 
 const STRATEGY_TYPE = "sv-dashboard";
 const STATUS_DOMAIN = "sv_dashboard";
@@ -459,10 +459,10 @@ class SvDashboardStrategy extends HTMLElement {
       ]) },
       supportsDualEnergy && (remainingBatteryEnergy || remainingFuelLiters || trailingElectricConsumption || trailingFuelConsumption) ? { type: "grid", cards: present([
         separator(strings.consumptionReserves, "mdi:gauge"),
-        remainingBatteryEnergy ? bubble("remaining_battery_energy_kwh", strings.remainingBatteryEnergy, "mdi:battery-medium", [], "full", remainingBatteryEnergy) : null,
-        trailingElectricConsumption ? bubble("trailing_consumption_500km", strings.trailingElectricConsumption, "mdi:lightning-bolt-circle", [], "full", trailingElectricConsumption) : null,
-        remainingFuelLiters ? bubble("remaining_fuel_liters", strings.remainingFuel, "mdi:gas-station", [], "full", remainingFuelLiters) : null,
-        trailingFuelConsumption ? bubble("trailing_fuel_consumption_500km", strings.trailingFuelConsumption, "mdi:chart-line", [], "full", trailingFuelConsumption) : null,
+        remainingBatteryEnergy ? bubble("remaining_battery_energy_kwh", strings.remainingBatteryEnergy, "mdi:battery-medium", [], 6, remainingBatteryEnergy) : null,
+        trailingElectricConsumption ? bubble("trailing_consumption_500km", strings.trailingElectricConsumption, "mdi:lightning-bolt-circle", [], 6, trailingElectricConsumption) : null,
+        remainingFuelLiters ? bubble("remaining_fuel_liters", strings.remainingFuel, "mdi:gas-station", [], 6, remainingFuelLiters) : null,
+        trailingFuelConsumption ? bubble("trailing_fuel_consumption_500km", strings.trailingFuelConsumption, "mdi:chart-line", [], 6, trailingFuelConsumption) : null,
       ]) } : { type: "grid", cards: [] },
       { type: "grid", cards: present([
         separator(strings.quickActions, "mdi:lightning-bolt"),
