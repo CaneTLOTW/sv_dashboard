@@ -65,6 +65,16 @@ test("owner harness exposes deterministic fresh, stale, idle, driving and chargi
   assert.match(installer, /\?sv_owner_fixture=\{profile\}/);
 });
 
+test("PHEV charging profile owns its charging power, type and end-time fixtures", () => {
+  assert.match(harness, /currentChargePower: SYNTH_PREFIX \+ "current_charge_power"/);
+  assert.match(harness, /chargingType: SYNTH_PREFIX \+ "charging_type"/);
+  assert.match(harness, /chargingEnd: SYNTH_PREFIX \+ "charging_end"/);
+  assert.match(harness, /metricState\([\s\S]*"current_charge_power",[\s\S]*7\.4,[\s\S]*"kW"/);
+  assert.match(harness, /synthetic\[ids\.chargingType\] = state\(ids\.chargingType, "AC"/);
+  assert.match(harness, /synthetic\[ids\.chargingEnd\] = state\(ids\.chargingEnd, futureIso\(95\)/);
+  assert.match(harness, /profile === "phev-charging" \? \{ current_charge_power: ids\.currentChargePower \} : \{\}/);
+});
+
 test("whole-dashboard context is injected in the active Strategy generate path and card runtime", () => {
   assert.match(installer, /static async generate\(config, hass\)/);
   assert.match(installer, /ownerHarness\.fixtureHass\(hass, config\?\.entry_id, ownerProfile\)/);
@@ -142,7 +152,7 @@ test("owner cache token changes when installer behavior changes", () => {
   assert.match(installer, /digest\.update\(Path\(__file__\)\.read_bytes\(\)\)/);
 });
 
-test("owner installer runs end-to-end against a temporary beta.34 runtime", () => {
+test("owner installer runs end-to-end against a temporary beta.35 runtime", () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "sv-owner-install-"));
   const integrationRoot = path.join(tempRoot, "sv_dashboard");
   const staticRoot = path.join(integrationRoot, "static");
@@ -172,7 +182,7 @@ test("owner installer runs end-to-end against a temporary beta.34 runtime", () =
 
     assert.match(installedFrontend, new RegExp(`owner-test-harness-card\\.js\\?v=owner-${token}`));
     assert.match(installedFrontend, new RegExp(`sv_dashboard\\.js\\?v=owner-${token}`));
-    assert.match(installedConst, new RegExp(`FRONTEND_VERSION = "0\\.6\\.0-beta\\.34-owner-${token}"`));
+    assert.match(installedConst, new RegExp(`FRONTEND_VERSION = "0\\.6\\.0-beta\\.35-owner-${token}"`));
     assert.match(installedStrategy, /const ownerTestSelector = \{/);
     assert.match(installedStrategy, /ownerTestSelector,\n        hero,/);
     assert.match(installedStrategy, /static async generate\(config, hass\)/);
@@ -297,6 +307,13 @@ test("patched Strategy.generate applies phev-driving fixture before dashboard ge
     const fuelHistory = await fixtureHass.callWS({ type: "sv_dashboard/fuel_history", entry_id: "entry-1" });
     assert.equal(fuelHistory.events[0].odometer_km, 2016.3);
     assert.equal(fuelHistory.events[1].odometer_km, 1684.8);
+
+    const chargingHass = window.__svDashboardOwnerHarness.fixtureHass(hass, "entry-1", "phev-charging");
+    const chargingStatus = chargingHass.states["sensor.sv_status"].attributes;
+    const chargePowerEntity = chargingStatus.metric_entities.current_charge_power;
+    assert.equal(chargingHass.states[chargePowerEntity].state, "7.4");
+    assert.equal(chargingHass.states[chargingStatus.entity_mapping.battery_charging_type].state, "AC");
+    assert.ok(Date.parse(chargingHass.states[chargingStatus.entity_mapping.battery_charging_end].state) > Date.now());
 
     const strategyUrl = pathToFileURL(path.join(staticRoot, "sv_dashboard.js"));
     strategyUrl.searchParams.set("test", String(Date.now()));
