@@ -3,6 +3,7 @@ import fs from "node:fs";
 import test from "node:test";
 
 const metrics = fs.readFileSync("custom_components/sv_dashboard/metrics.py", "utf8");
+const sensor = fs.readFileSync("custom_components/sv_dashboard/sensor.py", "utf8");
 const strategy = fs.readFileSync("custom_components/sv_dashboard/static/sv_dashboard.js", "utf8");
 
 test("live charge power samples react to residual-energy updates as well as SOC", () => {
@@ -19,6 +20,13 @@ test("live charge power samples react to residual-energy updates as well as SOC"
   assert.match(metrics, /same_source_update = bool\(/);
   assert.match(metrics, /reference = \(\s*samples\[-2\]/);
   assert.match(metrics, /samples\[-1\] = merged/);
+});
+
+test("compact charge samples retain provenance needed by Charge Curve V2", () => {
+  assert.match(sensor, /def _compact_curve_samples\(samples: Any, limit: int = 24\)/);
+  for (const key of ["source_time", "soc", "residual_kwh", "capacity_kwh", "derived_power_kw", "power_source", "timestamp_source"]) {
+    assert.match(sensor, new RegExp(`"${key}"`));
+  }
 });
 
 test("charging UI never labels upstream chargingRate km per hour as kW", () => {
