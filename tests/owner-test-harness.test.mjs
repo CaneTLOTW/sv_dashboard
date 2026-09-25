@@ -80,6 +80,7 @@ test("owner installer resets canonical product files and refuses mixed versions"
   assert.match(installer, /repo_version != installed_version/);
   assert.match(installer, /Install the exact product candidate before applying the owner harness/);
   assert.match(installer, /shutil\.copy2\(source_static \/ name, target \/ name\)/);
+  assert.match(installer, /shutil\.copy2\(root \/ "custom_components" \/ "sv_dashboard" \/ "const\.py", target\.parent \/ "const\.py"\)/);
 });
 
 test("owner harness import is fail-open and outside the critical packageModules gate", () => {
@@ -96,4 +97,13 @@ test("owner installer cache-busts the locally patched Strategy module", () => {
   assert.match(installer, /sv_dashboard\\\.js\\\?v=/);
   assert.match(installer, /replacement = f'await import\("\.\/sv_dashboard\.js\?v=owner-\{token\}"\);'/);
   assert.match(installer, /if count != 1/);
+});
+
+
+test("owner installer cache-busts the top-level Lovelace frontend resource", () => {
+  assert.match(installer, /def _patch_frontend_resource_version/);
+  assert.match(installer, /owner_version = f"\{product_version\}-owner-\{token\}"/);
+  assert.match(installer, /FRONTEND_VERSION = "\{owner_version\}"/);
+  assert.match(installer, /Owner frontend resource version:/);
+  assert.match(installer, /Full Home Assistant restart required so Lovelace registers the owner-specific frontend resource URL/);
 });
