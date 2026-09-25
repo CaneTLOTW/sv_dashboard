@@ -1,5 +1,5 @@
 import { LitElement, html, css, nothing } from "./vendor-lit.js?v=0.6.0-beta.7";
-import { localeFor, textFor } from "./i18n.js?v=0.6.0-beta.34";
+import { localeFor, textFor } from "./i18n.js?v=0.6.0-beta.36";
 
 const STATUS_DOMAIN = "sv_dashboard";
 const CARD_TAG = "sv-dashboard-fuel-history-card";
@@ -80,7 +80,6 @@ class SvDashboardFuelHistoryCard extends LitElement {
     .fuel-table td { border-top:1px solid var(--divider-color); padding:9px 10px 9px 0; white-space:nowrap; }
     .fuel-table th:last-child, .fuel-table td:last-child { padding-right:0; }
     .fuel-table td:first-child { white-space:normal; }
-    .liters { color:var(--warning-color,#ef6c00); font-weight:600; }
     .hint { display:block; margin-top:10px; color:var(--secondary-text-color); font-size:var(--ha-font-size-xs); line-height:1.4; }
     .muted { color:var(--secondary-text-color); }
     .error { color:var(--error-color); }
@@ -141,7 +140,7 @@ class SvDashboardFuelHistoryCard extends LitElement {
   _date(value) { const parsed = new Date(value); if (Number.isNaN(parsed.getTime())) return "—"; return new Intl.DateTimeFormat(localeFor(this._hass), { dateStyle:"medium", timeStyle:"short" }).format(parsed); }
   _num(value, digits = 0) { const parsed = numeric(value); return parsed === null ? "—" : new Intl.NumberFormat(localeFor(this._hass), { minimumFractionDigits:digits, maximumFractionDigits:digits }).format(parsed); }
   _duration(seconds) { const parsed = numeric(seconds); if (parsed === null || parsed < 0) return "—"; const hours = Math.floor(parsed / 3600); const minutes = Math.floor((parsed % 3600) / 60); return `${hours}:${String(minutes).padStart(2, "0")} h`; }
-  _liters(event) { if (event?.liters === null || event?.liters === undefined) return "—"; const prefix = event.liters_estimated ? "≈ " : ""; return `${prefix}${this._num(event.liters, 1)} l`; }
+  _liters(event) { if (event?.liters === null || event?.liters === undefined) return "—"; return `${this._num(event.liters, 1)} l`; }
 
   render() {
     const text = this._text();
@@ -158,7 +157,7 @@ class SvDashboardFuelHistoryCard extends LitElement {
     return html`<ha-card .header=${this._config.title || text.title}><div class="card-content">
       ${summary ? html`<div class="summary">
         <div class="summary-item"><div class="summary-label">${tripText.distance}</div><div class="summary-value">${summary.distance_km === null || summary.distance_km === undefined ? "—" : `${this._num(summary.distance_km,1)} km`}</div></div>
-        <div class="summary-item"><div class="summary-label">${tripText.duration}</div><div class="summary-value">${this._duration(summary.driving_time_seconds)}</div></div>
+        <div class="summary-item"><div class="summary-label">${text.drivingTime}</div><div class="summary-value">${this._duration(summary.driving_time_seconds)}</div></div>
         <div class="summary-item"><div class="summary-label">${tripText.average}</div><div class="summary-value">${summary.average_speed_kmh === null || summary.average_speed_kmh === undefined ? "—" : `${this._num(summary.average_speed_kmh,1)} km/h`}</div></div>
         <div class="summary-item"><div class="summary-label">${dashboardText.fuelConsumption}</div><div class="summary-value">${summary.fuel_consumption_l_100km === null || summary.fuel_consumption_l_100km === undefined ? "—" : `${this._num(summary.fuel_consumption_l_100km,1)} l/100 km`}</div></div>
       </div>` : nothing}
@@ -168,7 +167,7 @@ class SvDashboardFuelHistoryCard extends LitElement {
       ${this._events.length ? html`<div class="table-wrap"><table class="fuel-table"><thead><tr><th>${text.date}</th><th>${text.liters}</th><th>${dashboardText.mileage}</th><th>${text.level}</th></tr></thead><tbody>
         ${this._events.map((event) => html`<tr>
           <td>${this._date(event.source_time)}</td>
-          <td class="liters">${this._liters(event)}</td>
+          <td>${this._liters(event)}</td>
           <td>${event.odometer_km === null || event.odometer_km === undefined ? "—" : `${this._num(event.odometer_km,1)} km`}</td>
           <td>${this._num(event.fuel_before_percent,0)} % → ${this._num(event.fuel_after_percent,0)} %</td>
         </tr>`)}
