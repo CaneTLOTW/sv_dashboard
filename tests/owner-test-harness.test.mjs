@@ -182,7 +182,7 @@ test("owner installer runs end-to-end against a temporary beta.36 runtime", () =
 
     assert.match(installedFrontend, new RegExp(`owner-test-harness-card\\.js\\?v=owner-${token}`));
     assert.match(installedFrontend, new RegExp(`sv_dashboard\\.js\\?v=owner-${token}`));
-    assert.match(installedConst, new RegExp(`FRONTEND_VERSION = "0\\.6\\.0-beta\\.35-owner-${token}"`));
+    assert.match(installedConst, new RegExp(`FRONTEND_VERSION = "0\\.6\\.0-beta\\.36-owner-${token}"`));
     assert.match(installedStrategy, /const ownerTestSelector = \{/);
     assert.match(installedStrategy, /ownerTestSelector,\n        hero,/);
     assert.match(installedStrategy, /static async generate\(config, hass\)/);
