@@ -87,7 +87,7 @@ installTransparentMapMarkerCompatibility();
  */
 const packageModules = Promise.all([
   import("./trip-history-card.js?v=0.6.0-beta.28"),
-  import("./charge-history-card.js?v=0.6.0-beta.28"),
+  import("./charge-history-card.js?v=0.6.0-beta.33"),
   import("./gps-history-card.js?v=0.6.0-beta.28"),
   import("./vehicle-overview-card.js?v=0.6.0-beta.31"),
   import("./dual-energy-overview-card.js?v=0.6.0-beta.31"),
