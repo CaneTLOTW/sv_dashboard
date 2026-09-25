@@ -4,6 +4,39 @@ import { localeFor, textFor } from "./i18n.js?v=0.6.0-beta.28";
 
 const SELECTION_QUERY_PARAM = "sv_charge";
 
+function storedPowerCurve(samples, fallbackCapacity = null) {
+    const fallback = Number(fallbackCapacity);
+    const points = [];
+    for (const sample of Array.isArray(samples) ? samples : []) {
+        const power = Number(sample?.derived_power_kw);
+        if (!Number.isFinite(power) || power <= 0 || power > 250) continue;
+
+        const sampleCapacity = Number(sample?.capacity_kwh);
+        const capacity = Number.isFinite(sampleCapacity) && sampleCapacity > 0
+            ? sampleCapacity
+            : Number.isFinite(fallback) && fallback > 0
+                ? fallback
+                : null;
+        const residual = Number(sample?.residual_kwh);
+        const rawSoc = Number(sample?.soc);
+        let soc = Number.isFinite(rawSoc) ? rawSoc : null;
+        if (capacity !== null && Number.isFinite(residual) && residual >= 0) {
+            const residualSoc = residual / capacity * 100;
+            if (Number.isFinite(residualSoc) && residualSoc >= 0 && residualSoc <= 100) {
+                soc = residualSoc;
+            }
+        }
+        if (!Number.isFinite(soc)) continue;
+        const timestamp = Date.parse(sample?.source_time || sample?.time || sample?.received_at || "");
+        points.push({
+            timestamp: Number.isFinite(timestamp) ? timestamp : null,
+            soc,
+            power_kw: power,
+        });
+    }
+    return points.length >= 2 ? points : [];
+}
+
 function deriveServerChargeDisplay(charge, fallbackCapacity = null) {
     const observed = charge.quality === "observed";
     const configuredFallback = Number(fallbackCapacity);
@@ -840,13 +873,27 @@ class CodexStellantisChargeCurveBrowserCardV1 extends LitElement {
                 last_updated: sample.source_time || sample.time || sample.received_at,
             })).filter((sample) => sample.state !== null && sample.state !== undefined && sample.last_updated)
             : [];
-        const curve = selected && this._history ? buildChargeCurve({
-            socStates: storedSoc.length >= 2 ? storedSoc : this._history.soc,
-            modeStates: this._history.modes,
-            start: selected.start,
-            end: selected.end,
-            capacityKwh: selected.capacity_kwh,
-        }) : null;
+        const directPowerPoints = storedPowerCurve(
+            selected?.samples,
+            selected?.capacity_kwh,
+        );
+        const curve = selected
+            ? directPowerPoints.length >= 2
+                ? {
+                    points: directPowerPoints,
+                    charge_type: selected.charge_type || "—",
+                    source: "stored_derived_power",
+                }
+                : this._history
+                    ? buildChargeCurve({
+                        socStates: storedSoc.length >= 2 ? storedSoc : this._history.soc,
+                        modeStates: this._history.modes,
+                        start: selected.start,
+                        end: selected.end,
+                        capacityKwh: selected.capacity_kwh,
+                    })
+                    : null
+            : null;
         const type = curve?.charge_type !== "—" ? curve?.charge_type : selected?.charge_type;
         const text = textFor(this._config, "chargeHistory");
         return html`<ha-card>
