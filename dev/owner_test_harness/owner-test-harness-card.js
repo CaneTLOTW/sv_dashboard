@@ -190,6 +190,8 @@ function fixtureHass(hass, entryId, profile = activeProfile() || "phev") {
     fuelConsumption: SYNTH_PREFIX + "fuel_consumption",
     remainingFuel: SYNTH_PREFIX + "remaining_fuel_liters",
     trailingFuel: SYNTH_PREFIX + "trailing_fuel_consumption_500km",
+    remainingBattery: SYNTH_PREFIX + "remaining_battery_energy_kwh",
+    trailingElectric: SYNTH_PREFIX + "trailing_consumption_500km",
   };
 
   const synthetic = {
@@ -228,6 +230,22 @@ function fixtureHass(hass, entryId, profile = activeProfile() || "phev") {
       4.8,
       "L/100 km",
       { distance_km: 486.2, trip_count: 18, complete: true },
+    ),
+    [ids.remainingBattery]: metricState(
+      ids.remainingBattery,
+      effectiveEntryId,
+      "remaining_battery_energy_kwh",
+      31.2,
+      "kWh",
+      { estimated: true },
+    ),
+    [ids.trailingElectric]: metricState(
+      ids.trailingElectric,
+      effectiveEntryId,
+      "trailing_consumption_500km",
+      16.4,
+      "kWh/100 km",
+      { distance_km: 472.8, trip_count: 21, complete: true },
     ),
   };
 
@@ -304,6 +322,14 @@ function fixtureHass(hass, entryId, profile = activeProfile() || "phev") {
     };
   }
 
+  const usableMetric = (key, fallback) => {
+    const entityId = originalMetrics[key];
+    const current = entityId ? hass.states?.[entityId] : undefined;
+    return current && !["unknown", "unavailable", "none", ""].includes(String(current.state ?? "").toLowerCase())
+      ? entityId
+      : fallback;
+  };
+
   const status = {
     ...originalStatus,
     attributes: {
@@ -313,6 +339,8 @@ function fixtureHass(hass, entryId, profile = activeProfile() || "phev") {
       entity_mapping: mapped,
       metric_entities: {
         ...originalMetrics,
+        remaining_battery_energy_kwh: usableMetric("remaining_battery_energy_kwh", ids.remainingBattery),
+        trailing_consumption_500km: usableMetric("trailing_consumption_500km", ids.trailingElectric),
         remaining_fuel_liters: ids.remainingFuel,
         trailing_fuel_consumption_500km: ids.trailingFuel,
       },
