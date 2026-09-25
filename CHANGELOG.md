@@ -4,6 +4,15 @@
 
 No changes yet.
 
+## 0.6.0-beta.34 compact Hybrid history + reserve polish candidate
+
+- Returns the Dual-Energy **Consumption & reserves** metrics to a compact 2×2 half-width layout after owner visual review, while preserving one dedicated metric card per battery/fuel value.
+- Shortens the German/English reserve labels so the half-width cards remain readable without losing the 500-km or estimated-fuel semantics.
+- Aligns Fuel History with Trip/Charge History: standard card content spacing, compact unboxed summary metrics, sticky table header, bounded vertical scrolling, thin scrollbars and the provenance hint moved to the subdued footer position.
+- Tightens the German Fuel History table labels and explanatory hint for the narrower layout.
+- Makes owner-only PHEV Trip/Fuel History fixtures derive their odometer values from the live vehicle mileage instead of unrelated hard-coded 12,000-km demo values; the summary distance and refuel deltas remain deterministic and internally plausible.
+- Bumps package/frontend generation to beta.34 and cache-busts the changed Strategy, Fuel History and i18n paths; unchanged Hero/Charge/GPS modules keep their prior validated content keys.
+
 ## 0.6.0-beta.33 whole-dashboard PHEV harness + Charge Curve V2 candidate
 
 - Extends the owner-only local PHEV harness from a Dual-Energy Hero fixture to a **whole generated-dashboard** fixture context. Under an owner fixture profile the Strategy now resolves Dual-Energy capabilities and the rendered cards receive the same synthetic context, while Standard mode remains the untouched real BEV dashboard.
