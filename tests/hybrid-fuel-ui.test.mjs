@@ -191,6 +191,22 @@ test("fuel history renders canonical restart-safe backend events with explicit e
   assert.match(fuelHistory, /tripText\.duration/);
 });
 
+
+test("fuel history matches the compact Trip/Charge history visual grammar", () => {
+  assert.match(fuelHistory, /class="card-content"/);
+  assert.match(fuelHistory, /class="table-wrap"/);
+  assert.match(fuelHistory, /class="fuel-table"/);
+  assert.match(fuelHistory, /max-height:min\(360px,48vh\)/);
+  assert.match(fuelHistory, /position:sticky/);
+  assert.match(fuelHistory, /font-size:var\(--ha-font-size-s\)/);
+  assert.match(fuelHistory, /<span class="hint">\$\{text\.hint\}<\/span>/);
+  assert.doesNotMatch(fuelHistory, /<p class="hint">/);
+  assert.doesNotMatch(fuelHistory, /\.summary-item \{ border:/);
+  assert.equal(CORE_FRONTEND_TEXT.fuelHistory.de.liters, "Getankt");
+  assert.equal(CORE_FRONTEND_TEXT.fuelHistory.de.level, "Füllstand");
+  assert.match(CORE_FRONTEND_TEXT.fuelHistory.de.hint, /geschätzte Literwerte/);
+});
+
 test("new card strings cover 18 languages", () => {
   for (const language of languages) {
     const text = CORE_FRONTEND_TEXT.dualEnergyOverview[language];
@@ -205,14 +221,15 @@ test("new card strings cover 18 languages", () => {
 });
 
 test("frontend cache-busts changed modules", () => {
-  for (const module of ["trip-history-card", "gps-history-card", "fuel-history-card"]) {
+  for (const module of ["trip-history-card", "gps-history-card"]) {
     assert.match(frontend, new RegExp(`${module}\\.js\\?v=0\\.6\\.0-beta\\.28`));
   }
+  assert.match(frontend, /fuel-history-card\.js\?v=0\.6\.0-beta\.34/);
   assert.match(frontend, /charge-history-card\.js\?v=0\.6\.0-beta\.33/);
   assert.match(frontend, /vehicle-overview-card\.js\?v=0\.6\.0-beta\.31/);
   assert.match(frontend, /dual-energy-overview-card\.js\?v=0\.6\.0-beta\.31/);
   assert.match(frontend, /vehicle-audit-card\.js\?v=0\.6\.0-beta\.28/);
-  assert.match(frontend, /sv_dashboard\.js\?v=0\.6\.0-beta\.32/);
-  assert.match(strategy, /i18n\.js\?v=0\.6\.0-beta\.29/);
+  assert.match(frontend, /sv_dashboard\.js\?v=0\.6\.0-beta\.34/);
+  assert.match(strategy, /i18n\.js\?v=0\.6\.0-beta\.34/);
   assert.match(strategy, /modules\.trips && supportsFuel \? \{ type: "custom:sv-dashboard-fuel-history-card"/);
 });
