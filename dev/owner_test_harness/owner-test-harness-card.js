@@ -401,7 +401,9 @@ function decorateDashboard(dashboard, entryId, profile = activeProfile()) {
 
   if (!profile) return dashboard;
 
+  const hybridVisualViews = new Set(["vehicle", "charging", "statistics", "trips"]);
   for (const view of dashboard.views) {
+    if (!hybridVisualViews.has(view?.path)) continue;
     if (Array.isArray(view?.cards)) {
       view.cards = view.cards.map((card) =>
         card?.type === `custom:${CONTEXT_TAG}` ? card : contextConfig(card, entryId, profile)
