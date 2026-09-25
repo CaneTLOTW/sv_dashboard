@@ -6,11 +6,11 @@ does not import or reference this harness.
 
 ## Purpose
 
-The harness lets the owner test the real Dual-Energy/PHEV Hero using the live
-EV data of the installed vehicle plus synthetic fuel-side states. This keeps
-vehicle picture, battery/SOC, electric range, temperature, charging and climate
-controls live in the default profile while adding deterministic fuel-side data.
-Scenario profiles override only the state needed for that scenario.
+The harness lets the owner test the generated dashboard in a browser-local
+Dual-Energy/PHEV context using the live EV data of the installed vehicle plus
+synthetic fuel-side states. The fixture context is applied to the Hybrid-relevant
+Vehicle, Charging, Statistics and Trips views while GPS, Wake-up, Notifications,
+Help and System continue to use the real Home Assistant context.
 
 Synthetic defaults:
 
@@ -27,6 +27,7 @@ Selector choices:
 
 - **Standard · echter Fahrzeug-Hero** — removes the fixture parameter completely
 - **PHEV · Live EV + Fuel-Dummy** — `?sv_owner_fixture=phev`
+- **PHEV · Freshness aktuell** — `?sv_owner_fixture=phev-fresh`
 - **PHEV · Idle** — `?sv_owner_fixture=phev-idle`
 - **PHEV · Fahrt** — `?sv_owner_fixture=phev-driving`
 - **PHEV · Laden** — `?sv_owner_fixture=phev-charging`
@@ -34,7 +35,8 @@ Selector choices:
 
 Profiles:
 
-- `?sv_owner_fixture=phev` — live EV values + synthetic fuel side
+- `?sv_owner_fixture=phev` — live EV values + synthetic fuel side across the Hybrid visual views
+- `?sv_owner_fixture=phev-fresh` — deterministic fresh temperature source timestamp
 - `?sv_owner_fixture=phev-idle` — deterministic engine/charging/plugged OFF
 - `?sv_owner_fixture=phev-driving` — engine ON, charging OFF + 5.4 l/100 km
 - `?sv_owner_fixture=phev-charging` — engine OFF, plugged/charging ON
@@ -43,10 +45,11 @@ Profiles:
 Append the parameter to the normal generated vehicle view, for example:
 `/citroen-dashboard/vehicle?sv_owner_fixture=phev-driving`.
 
-The local patch deliberately replaces only the generated **Hero** with a wrapper
-around the production Dual-Energy card. It does not claim to turn every other
-EV-only dashboard section into a synthetic PHEV backend. This keeps the harness
-focused on the real component currently under cross-powertrain visual QA.
+The local patch does **not** mutate real Home Assistant states. It supplies a
+browser-local fixture context to Strategy generation and wraps rendered cards in
+the Hybrid visual views so the same synthetic context reaches the real
+production cards. Real Owner charging/history data is retained where the
+fixture intentionally does not replace it.
 
 ## Local install contract
 
@@ -63,9 +66,11 @@ The installer:
 
 1. copies `owner-test-harness-card.js` into the local installed static folder;
 2. locally imports it from `frontend.js`;
-3. locally patches the generated dashboard Strategy so the query parameter uses
-   the harness card and adds the local Owner-Testmodus selector to the LIVE view;
-4. leaves the repository's production `custom_components/` package untouched.
+3. gives the locally patched `sv_dashboard.js` a content-addressed owner-only
+   import URL so an older cached Strategy cannot hide the selector;
+4. locally patches Strategy generation and rendered Hybrid visual cards with the
+   browser-local PHEV context and adds the Owner-Testmodus selector;
+5. leaves the repository's production `custom_components/` package untouched.
 
 Re-run the installer after every normal SV Dashboard install/update because the
 normal package intentionally overwrites the local overlay.
