@@ -42,7 +42,7 @@ Profiles:
 - `?sv_owner_fixture=phev-fresh` — deterministic fresh temperature source timestamp
 - `?sv_owner_fixture=phev-idle` — deterministic engine/charging/plugged OFF
 - `?sv_owner_fixture=phev-driving` — engine ON, charging OFF + 5.4 l/100 km
-- `?sv_owner_fixture=phev-charging` — engine OFF, plugged/charging ON
+- `?sv_owner_fixture=phev-charging` — engine OFF, plugged/charging ON, AC, 7.4 kW + deterministic future charge end
 - `?sv_owner_fixture=phev-stale` — deterministic idle plus EV/fuel source timestamps one hour old
 
 Append the parameter to the normal generated vehicle view, for example:
