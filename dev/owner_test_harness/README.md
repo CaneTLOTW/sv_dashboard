@@ -17,6 +17,9 @@ Synthetic defaults:
 - fuel: 63 %
 - fuel range: 410 km
 - driving fuel consumption: 5.4 l/100 km
+- synthetic Trip/Fuel History odometer values are anchored to the live vehicle
+  mileage, so the fixture stays plausible on the Owner vehicle instead of
+  showing unrelated absolute demo mileage.
 
 After installation the generated LIVE view also shows a local-only **Owner-Testmodus**
 selector. It changes the same URL parameter and reloads the view, so the URL
