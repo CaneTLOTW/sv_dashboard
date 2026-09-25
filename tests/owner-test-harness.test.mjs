@@ -38,7 +38,7 @@ test("owner fixture provides whole-dashboard Dual-Energy capability and syntheti
   assert.match(harness, /owner_test_fixture: profile/);
 });
 
-test("owner fixture provides Hybrid Trip History and Fuel History dummy data", () => {
+test("owner fixture provides mileage-anchored Hybrid Trip and Fuel History dummy data", () => {
   assert.match(harness, /owner-fixture-mixed/);
   assert.match(harness, /owner-fixture-electric/);
   assert.match(harness, /fuel_consumption_l_100km: 5\.0/);
@@ -46,8 +46,12 @@ test("owner fixture provides Hybrid Trip History and Fuel History dummy data", (
   assert.match(harness, /trip_columns: tripColumns/);
   assert.match(harness, /trip_rows: trips\.map/);
   assert.match(harness, /fuel_history/);
-  assert.match(harness, /fuelHistoryFixture\(\)/);
+  assert.match(harness, /fuelHistoryFixture\(currentMileageKm\)/);
   assert.match(harness, /fuel_before_percent/);
+  assert.match(harness, /const currentMileageKm = numericState\(hass, mileageEntity\) \?\? 2171/);
+  assert.match(harness, /odometer_km: Math\.max\(0, round1\(latestMileage - 154\.7\)\)/);
+  assert.match(harness, /odometer_km: Math\.max\(0, round1\(latestMileage - 486\.2\)\)/);
+  assert.doesNotMatch(harness, /12374\.2|11932\.6|12480\.4|12489\.1/);
 });
 
 test("owner harness exposes deterministic fresh, stale, idle, driving and charging profiles", () => {
@@ -138,7 +142,7 @@ test("owner cache token changes when installer behavior changes", () => {
   assert.match(installer, /digest\.update\(Path\(__file__\)\.read_bytes\(\)\)/);
 });
 
-test("owner installer runs end-to-end against a temporary beta.33 runtime", () => {
+test("owner installer runs end-to-end against a temporary beta.34 runtime", () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "sv-owner-install-"));
   const integrationRoot = path.join(tempRoot, "sv_dashboard");
   const staticRoot = path.join(integrationRoot, "static");
@@ -168,7 +172,7 @@ test("owner installer runs end-to-end against a temporary beta.33 runtime", () =
 
     assert.match(installedFrontend, new RegExp(`owner-test-harness-card\\.js\\?v=owner-${token}`));
     assert.match(installedFrontend, new RegExp(`sv_dashboard\\.js\\?v=owner-${token}`));
-    assert.match(installedConst, new RegExp(`FRONTEND_VERSION = "0\\.6\\.0-beta\\.33-owner-${token}"`));
+    assert.match(installedConst, new RegExp(`FRONTEND_VERSION = "0\\.6\\.0-beta\\.34-owner-${token}"`));
     assert.match(installedStrategy, /const ownerTestSelector = \{/);
     assert.match(installedStrategy, /ownerTestSelector,\n        hero,/);
     assert.match(installedStrategy, /static async generate\(config, hass\)/);
@@ -249,6 +253,7 @@ test("patched Strategy.generate applies phev-driving fixture before dashboard ge
           battery: "sensor.vehicle_battery",
           autonomy: "sensor.vehicle_range",
           temperature: "sensor.vehicle_temperature",
+          mileage: "sensor.vehicle_mileage",
         },
         metric_entities: {},
         control_entities: {},
@@ -273,18 +278,25 @@ test("patched Strategy.generate applies phev-driving fixture before dashboard ge
       "sensor.vehicle_battery": makeState("sensor.vehicle_battery", 63, { unit_of_measurement: "%" }),
       "sensor.vehicle_range": makeState("sensor.vehicle_range", 172, { unit_of_measurement: "km" }),
       "sensor.vehicle_temperature": makeState("sensor.vehicle_temperature", 20.5, { unit_of_measurement: "°C" }),
+      "sensor.vehicle_mileage": makeState("sensor.vehicle_mileage", 2171, { unit_of_measurement: "km" }),
       "device_tracker.vehicle": makeState("device_tracker.vehicle", "home", {
         latitude: 51,
         longitude: 8,
         entity_picture: "/local/car.png",
       }),
     },
+    callWS: async () => ({}),
   };
 
   try {
     const harnessUrl = pathToFileURL(path.join(staticRoot, "owner-test-harness-card.js"));
     harnessUrl.searchParams.set("test", String(Date.now()));
     await import(harnessUrl.href);
+
+    const fixtureHass = window.__svDashboardOwnerHarness.fixtureHass(hass, "entry-1", "phev-driving");
+    const fuelHistory = await fixtureHass.callWS({ type: "sv_dashboard/fuel_history", entry_id: "entry-1" });
+    assert.equal(fuelHistory.events[0].odometer_km, 2016.3);
+    assert.equal(fuelHistory.events[1].odometer_km, 1684.8);
 
     const strategyUrl = pathToFileURL(path.join(staticRoot, "sv_dashboard.js"));
     strategyUrl.searchParams.set("test", String(Date.now()));
