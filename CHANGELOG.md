@@ -4,6 +4,13 @@
 
 No changes yet.
 
+## 0.6.0-beta.35 owner charging fixture + vehicle-info cleanup candidate
+
+- Removes the unreliable **Antrieb / powertrain** row from the vehicle-information popup. The underlying compatibility attribute remains available, but the popup no longer shows a misleading dash when Stellantis maintenance metadata omits motorization.
+- Completes the owner-only `phev-charging` profile with deterministic charging telemetry instead of leaking the real idle EV values into the Hybrid demo: AC charging type, 7.4 kW current charge power and a future charging end timestamp.
+- Keeps production charge-power semantics unchanged: only the package-owned `current_charge_power` metric is ever rendered as kW; upstream charging-rate km/h remains excluded.
+- Bumps package/top-level Strategy cache generation to beta.35; unchanged Fuel History/i18n/Hero/Charge modules retain their prior validated content keys.
+
 ## 0.6.0-beta.34 compact Hybrid history + reserve polish candidate
 
 - Returns the Dual-Energy **Consumption & reserves** metrics to a compact 2×2 half-width layout after owner visual review, while preserving one dedicated metric card per battery/fuel value.
