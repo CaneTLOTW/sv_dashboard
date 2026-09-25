@@ -60,6 +60,8 @@ test("owner harness exposes deterministic fresh, stale, idle, driving and chargi
 test("whole-dashboard context is injected at Strategy generation and card runtime", () => {
   assert.match(installer, /ownerHarness\.fixtureHass\(hass, strategyConfig\.entry_id, ownerProfile\)/);
   assert.match(installer, /ownerHarness\.decorateDashboard\(dashboard, strategyConfig\.entry_id, ownerProfile\)/);
+  assert.match(harness, /new Set\(\["vehicle", "charging", "statistics", "trips"\]\)/);
+  assert.match(harness, /if \(!hybridVisualViews\.has\(view\?\.path\)\) continue/);
   assert.match(harness, /view\.cards = view\.cards\.map/);
   assert.match(harness, /section\.cards = section\.cards\.map/);
   assert.match(harness, /helpers\.createCardElement\(this\._config\.card\)/);
