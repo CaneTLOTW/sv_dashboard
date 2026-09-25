@@ -64,8 +64,21 @@ test("owner harness exposes a local selector including the real standard view", 
 
 test("owner harness import is fail-open and outside the critical packageModules gate", () => {
   assert.match(installer, /OWNER-HARNESS-IMPORT-BEGIN/);
-  assert.match(installer, /void import\("\.\/owner-test-harness-card\.js\?v=owner-/);
+  assert.match(installer, /window\.__svDashboardOwnerHarnessReady = import\("\.\/owner-test-harness-card\.js\?v=owner-/);
+  assert.match(installer, /\.then\(\(\) => true\)/);
   assert.match(installer, /\.catch\(\(error\) =>/);
+  assert.match(installer, /return false/);
   assert.match(installer, /local module failed to load/);
   assert.doesNotMatch(installer, /anchor = "const packageModules = Promise\.all\(\[\\n"/);
+});
+
+test("owner Strategy waits for local harness registration and degrades cleanly if unavailable", () => {
+  assert.match(installer, /__svDashboardOwnerHarnessReady/);
+  assert.match(installer, /await ownerHarnessReady/);
+  assert.match(installer, /ownerHarnessAvailable/);
+  assert.match(installer, /customElements\.get\("sv-dashboard-owner-test-harness-card"\)/);
+  assert.match(installer, /customElements\.get\("sv-dashboard-owner-test-selector-card"\)/);
+  assert.match(installer, /ownerFixtureActive = ownerHarnessAvailable && Boolean\(ownerFixture\)/);
+  assert.match(installer, /ownerTestSelector = ownerHarnessAvailable \? \{/);
+  assert.match(installer, /\} : null;/);
 });
