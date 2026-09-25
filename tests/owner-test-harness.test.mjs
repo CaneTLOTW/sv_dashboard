@@ -53,7 +53,8 @@ test("owner harness exposes deterministic fresh, stale, idle, driving and chargi
   assert.match(harness, /forceFresh = profile === "phev-fresh"/);
   assert.match(harness, /stale \? agoIso\(60\) : nowIso\(\)/);
   assert.match(harness, /withSourceTimestamp\(hass\.states\[entityId\], stamp\)/);
-  assert.match(installer, /sv_owner_fixture=phev-fresh/);
+  assert.match(installer, /"phev-fresh"/);
+  assert.match(installer, /\?sv_owner_fixture=\{profile\}/);
 });
 
 test("whole-dashboard context is injected at Strategy generation and card runtime", () => {
