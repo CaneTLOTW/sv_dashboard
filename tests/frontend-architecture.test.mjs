@@ -22,12 +22,13 @@ const times = read("time.py");
 
 test("Home Assistant registers one SV frontend resource", () => {
   assert.match(constants, /FRONTEND_URL = "\/sv_dashboard\/frontend\.js"/);
-  assert.match(constants, /FRONTEND_VERSION = "0\.6\.0-beta\.32"/);
-  assert.equal(manifest.version, "0.6.0-beta.32");
+  assert.match(constants, /FRONTEND_VERSION = "0\.6\.0-beta\.33"/);
+  assert.equal(manifest.version, "0.6.0-beta.33");
   assert.match(constants, /FRONTEND_RESOURCE_URLS = \(FRONTEND_URL,\)/);
-  // beta.32 changes frontend bootstrap/Strategy loading; unchanged Hero/i18n/history modules retain prior content keys.
+  // beta.33 changes charge-history frontend behavior; unchanged Hero/i18n/Strategy modules retain prior content keys.
   assert.match(frontend, /import\("\.\/vehicle-overview-card\.js\?v=0\.6\.0-beta\.31"\)/);
   assert.match(frontend, /import\("\.\/gps-history-card\.js\?v=0\.6\.0-beta\.28"\)/);
+  assert.match(frontend, /import\("\.\/charge-history-card\.js\?v=0\.6\.0-beta\.33"\)/);
   assert.match(frontend, /import\("\.\/dual-energy-overview-card\.js\?v=0\.6\.0-beta\.31"\)/);
   assert.match(frontend, /import\("\.\/sv_dashboard\.js\?v=0\.6\.0-beta\.32"\)/);
   assert.match(strategy, /from "\.\/i18n\.js\?v=0\.6\.0-beta\.29"/);
