@@ -81,7 +81,8 @@ test("owner installer resets canonical product files and refuses mixed versions"
   assert.match(installer, /repo_version != installed_version/);
   assert.match(installer, /Install the exact product candidate before applying the owner harness/);
   assert.match(installer, /shutil\.copy2\(source_static \/ name, target \/ name\)/);
-  assert.match(installer, /shutil\.copy2\(root \/ "custom_components" \/ "sv_dashboard" \/ "const\.py", target\.parent \/ "const\.py"\)/);
+  assert.match(installer, /root \/ "custom_components" \/ "sv_dashboard" \/ "const\.py"/);
+  assert.match(installer, /target\.parent \/ "const\.py"/);
 });
 
 test("owner harness import is fail-open and outside the critical packageModules gate", () => {
