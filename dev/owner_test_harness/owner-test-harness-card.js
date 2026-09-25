@@ -15,7 +15,8 @@ const PROFILE_PARAM = "sv_owner_fixture";
 const SYNTH_PREFIX = "sensor.sv_owner_fixture_";
 
 const PROFILE_OPTIONS = [
-  ["", "Standard · echtes Fahrzeug"],
+  ["", "Standard · Testmodus aus"],
+  ["phev-demo", "PHEV · Demo vollständig"],
   ["phev", "PHEV · Live EV + Fuel-Dummy"],
   ["phev-fresh", "PHEV · Freshness aktuell"],
   ["phev-idle", "PHEV · Idle"],
@@ -91,29 +92,113 @@ const tripColumns = [
 ];
 
 const syntheticTrips = (currentMileageKm) => {
-  const mixedEnd = agoIso(75);
-  const mixedStart = agoIso(93);
-  const electricEnd = agoIso(24 * 60 + 40);
-  const electricStart = agoIso(24 * 60 + 54);
   const latestMileage = Number.isFinite(currentMileageKm) ? currentMileageKm : 2171;
-  const mixedStartMileage = Math.max(0, round1(latestMileage - 12.4));
-  const electricStartMileage = Math.max(0, round1(mixedStartMileage - 8.7));
+  const distances = [94.6, 4.2, 34.8, 8.7, 12.4];
+  let cursor = Math.max(0, round1(latestMileage - distances.reduce((sum, value) => sum + value, 0)));
+  const mileageStart = () => cursor;
+  const advance = (distance) => { cursor = round1(cursor + distance); };
+
+  const motorwayStart = mileageStart();
+  advance(94.6);
+  const shortEvStart = mileageStart();
+  advance(4.2);
+  const mixedRoadStart = mileageStart();
+  advance(34.8);
+  const commuteStart = mileageStart();
+  advance(8.7);
+  const latestMixedStart = mileageStart();
+
   return [
     {
-      server_id: "owner-fixture-electric",
-      start_time: electricStart,
-      end_time: electricEnd,
+      server_id: "owner-fixture-motorway",
+      start_time: agoIso(4153),
+      end_time: agoIso(4080),
+      duration_seconds: 73 * 60,
+      distance_km: 94.6,
+      start_mileage: motorwayStart,
+      soc_start: 78,
+      soc_end: 54,
+      electric_range_start_km: 53,
+      electric_range_end_km: 18,
+      fuel_level_start: 67,
+      fuel_level_end: 58,
+      fuel_range_start_km: 520,
+      fuel_range_end_km: 458,
+      fuel_consumption_l: 4.38,
+      fuel_consumption_l_100km: 4.6,
+      trip_type: "Hybrid",
+      energy_kwh: 2.9,
+      energy_per_100_km: 3.1,
+      average_speed: 77.8,
+      valid_for_statistics: true,
+      quality_flags: [],
+      speed_source: "server_trip",
+    },
+    {
+      server_id: "owner-fixture-electric-short",
+      start_time: agoIso(3369),
+      end_time: agoIso(3360),
+      duration_seconds: 9 * 60,
+      distance_km: 4.2,
+      start_mileage: shortEvStart,
+      soc_start: 68,
+      soc_end: 66,
+      electric_range_start_km: 47,
+      electric_range_end_km: 43,
+      fuel_level_start: 58,
+      fuel_level_end: 58,
+      fuel_range_start_km: 458,
+      fuel_range_end_km: 458,
+      fuel_consumption_l: 0,
+      fuel_consumption_l_100km: 0,
+      trip_type: "Electric",
+      energy_kwh: 0.8,
+      energy_per_100_km: 19.0,
+      average_speed: 28.0,
+      valid_for_statistics: true,
+      quality_flags: [],
+      speed_source: "server_trip",
+    },
+    {
+      server_id: "owner-fixture-mixed-road",
+      start_time: agoIso(2076),
+      end_time: agoIso(2040),
+      duration_seconds: 36 * 60,
+      distance_km: 34.8,
+      start_mileage: mixedRoadStart,
+      soc_start: 81,
+      soc_end: 70,
+      electric_range_start_km: 55,
+      electric_range_end_km: 42,
+      fuel_level_start: 58,
+      fuel_level_end: 56,
+      fuel_range_start_km: 458,
+      fuel_range_end_km: 442,
+      fuel_consumption_l: 1.57,
+      fuel_consumption_l_100km: 4.5,
+      trip_type: "Hybrid",
+      energy_kwh: 2.8,
+      energy_per_100_km: 8.0,
+      average_speed: 58.0,
+      valid_for_statistics: true,
+      quality_flags: [],
+      speed_source: "server_trip",
+    },
+    {
+      server_id: "owner-fixture-electric-commute",
+      start_time: agoIso(1494),
+      end_time: agoIso(1480),
       duration_seconds: 14 * 60,
       distance_km: 8.7,
-      start_mileage: electricStartMileage,
+      start_mileage: commuteStart,
       soc_start: 82,
       soc_end: 79,
       electric_range_start_km: 52,
       electric_range_end_km: 47,
-      fuel_level_start: 64,
-      fuel_level_end: 64,
-      fuel_range_start_km: 418,
-      fuel_range_end_km: 418,
+      fuel_level_start: 56,
+      fuel_level_end: 56,
+      fuel_range_start_km: 442,
+      fuel_range_end_km: 442,
       fuel_consumption_l: 0,
       fuel_consumption_l_100km: 0,
       trip_type: "Electric",
@@ -125,20 +210,20 @@ const syntheticTrips = (currentMileageKm) => {
       speed_source: "server_trip",
     },
     {
-      server_id: "owner-fixture-mixed",
-      start_time: mixedStart,
-      end_time: mixedEnd,
+      server_id: "owner-fixture-mixed-latest",
+      start_time: agoIso(93),
+      end_time: agoIso(75),
       duration_seconds: 18 * 60,
       distance_km: 12.4,
-      start_mileage: mixedStartMileage,
+      start_mileage: latestMixedStart,
       soc_start: 78,
       soc_end: 74,
       electric_range_start_km: 46,
       electric_range_end_km: 39,
-      fuel_level_start: 63,
-      fuel_level_end: 61,
-      fuel_range_start_km: 410,
-      fuel_range_end_km: 397,
+      fuel_level_start: 56,
+      fuel_level_end: 55,
+      fuel_range_start_km: 442,
+      fuel_range_end_km: 435,
       fuel_consumption_l: 0.62,
       fuel_consumption_l_100km: 5.0,
       trip_type: "Hybrid",
@@ -156,33 +241,46 @@ const fuelHistoryFixture = (currentMileageKm) => {
   const latestMileage = Number.isFinite(currentMileageKm) ? currentMileageKm : 2171;
   return {
     summary: {
-      distance_km: 486.2,
-      driving_time_seconds: 52740,
-      average_speed_kmh: 33.2,
-      fuel_consumption_l_100km: 4.8,
+      source_time: agoIso(3 * 24 * 60),
+      odometer_km: Math.max(0, round1(latestMileage - 154.7)),
+      distance_km: 154.7,
+      driving_time_seconds: 9000,
+      average_speed_kmh: 61.9,
+      fuel_consumption_l_100km: 4.2,
+      trip_count: 5,
+      fuel_coverage_complete: true,
     },
     events: [
       {
         source_time: agoIso(3 * 24 * 60),
-        liters: 31.4,
-        liters_estimated: true,
+        liters: 25.0,
+        liters_estimated: false,
         odometer_km: Math.max(0, round1(latestMileage - 154.7)),
-        fuel_before_percent: 19,
-        fuel_after_percent: 82,
+        fuel_before_percent: 18,
+        fuel_after_percent: 68,
       },
       {
         source_time: agoIso(19 * 24 * 60),
-        liters: 24.8,
+        liters: 26.0,
         liters_estimated: true,
         odometer_km: Math.max(0, round1(latestMileage - 486.2)),
-        fuel_before_percent: 28,
-        fuel_after_percent: 78,
+        fuel_before_percent: 24,
+        fuel_after_percent: 76,
+      },
+      {
+        source_time: agoIso(45 * 24 * 60),
+        liters: 36.0,
+        liters_estimated: false,
+        odometer_km: Math.max(0, round1(latestMileage - 1024.6)),
+        fuel_before_percent: 14,
+        fuel_after_percent: 86,
       },
     ],
   };
 };
 
-function fixtureHass(hass, entryId, profile = activeProfile() || "phev") {
+function fixtureHass(hass, entryId, profile = activeProfile()) {
+  if (!profile || !VALID_PROFILES.has(profile)) return hass;
   const selected = candidates(hass, entryId);
   if (selected.length !== 1) return hass;
 
@@ -195,10 +293,14 @@ function fixtureHass(hass, entryId, profile = activeProfile() || "phev") {
   const currentMileageKm = numericState(hass, mileageEntity) ?? 2171;
   const stale = profile === "phev-stale";
   const forceFresh = profile === "phev-fresh";
+  const fullySynthetic = new Set(["phev-demo", "phev-idle", "phev-driving", "phev-charging"]).has(profile);
   const stamp = stale ? agoIso(60) : nowIso();
   const effectiveEntryId = originalAttributes.entry_id || entryId || "owner";
 
   const ids = {
+    battery: SYNTH_PREFIX + "battery",
+    autonomy: SYNTH_PREFIX + "autonomy",
+    temperature: SYNTH_PREFIX + "temperature",
     fuel: SYNTH_PREFIX + "fuel",
     fuelAutonomy: SYNTH_PREFIX + "fuel_autonomy",
     fuelConsumption: SYNTH_PREFIX + "fuel_consumption",
@@ -212,12 +314,12 @@ function fixtureHass(hass, entryId, profile = activeProfile() || "phev") {
   };
 
   const synthetic = {
-    [ids.fuel]: state(ids.fuel, 63, {
+    [ids.fuel]: state(ids.fuel, 55, {
       unit_of_measurement: "%",
       friendly_name: "Owner fixture fuel",
       "Last updated": stamp,
     }, stamp),
-    [ids.fuelAutonomy]: state(ids.fuelAutonomy, 410, {
+    [ids.fuelAutonomy]: state(ids.fuelAutonomy, 435, {
       unit_of_measurement: "km",
       friendly_name: "Owner fixture fuel range",
       "Last updated": stamp,
@@ -236,7 +338,7 @@ function fixtureHass(hass, entryId, profile = activeProfile() || "phev") {
       ids.remainingFuel,
       effectiveEntryId,
       "remaining_fuel_liters",
-      31.5,
+      27.5,
       "L",
       { estimated: true },
     ),
@@ -244,15 +346,15 @@ function fixtureHass(hass, entryId, profile = activeProfile() || "phev") {
       ids.trailingFuel,
       effectiveEntryId,
       "trailing_fuel_consumption_500km",
-      4.8,
+      4.5,
       "L/100 km",
-      { distance_km: 486.2, trip_count: 18, complete: true },
+      { distance_km: 500, trip_count: 23, complete: true },
     ),
     [ids.remainingBattery]: metricState(
       ids.remainingBattery,
       effectiveEntryId,
       "remaining_battery_energy_kwh",
-      31.2,
+      10.8,
       "kWh",
       { estimated: true },
     ),
@@ -260,9 +362,9 @@ function fixtureHass(hass, entryId, profile = activeProfile() || "phev") {
       ids.trailingElectric,
       effectiveEntryId,
       "trailing_consumption_500km",
-      16.4,
+      17.6,
       "kWh/100 km",
-      { distance_km: 472.8, trip_count: 21, complete: true },
+      { distance_km: 500, trip_count: 24, complete: true },
     ),
   };
 
@@ -273,7 +375,31 @@ function fixtureHass(hass, entryId, profile = activeProfile() || "phev") {
     fuel_consumption_instant: ids.fuelConsumption,
   };
 
-  if (profile === "phev-idle" || stale || forceFresh) {
+  if (fullySynthetic) {
+    const batteryPercent = profile === "phev-charging" ? 56 : profile === "phev-driving" ? 64 : 72;
+    const electricRangeKm = profile === "phev-charging" ? 36 : profile === "phev-driving" ? 42 : 51;
+    const temperatureC = profile === "phev-driving" ? 22.0 : profile === "phev-charging" ? 20.0 : 21.0;
+    synthetic[ids.battery] = state(ids.battery, batteryPercent, {
+      unit_of_measurement: "%",
+      friendly_name: "Owner fixture battery",
+      "Last updated": stamp,
+    }, stamp);
+    synthetic[ids.autonomy] = state(ids.autonomy, electricRangeKm, {
+      unit_of_measurement: "km",
+      friendly_name: "Owner fixture electric range",
+      "Last updated": stamp,
+    }, stamp);
+    synthetic[ids.temperature] = state(ids.temperature, temperatureC, {
+      unit_of_measurement: "°C",
+      friendly_name: "Owner fixture temperature",
+      "Last updated": stamp,
+    }, stamp);
+    mapped.battery = ids.battery;
+    mapped.autonomy = ids.autonomy;
+    mapped.temperature = ids.temperature;
+  }
+
+  if (profile === "phev-demo" || profile === "phev-idle" || stale || forceFresh) {
     const engine = SYNTH_PREFIX + "engine";
     const charging = SYNTH_PREFIX + "charging";
     const plugged = SYNTH_PREFIX + "plugged";
@@ -368,8 +494,8 @@ function fixtureHass(hass, entryId, profile = activeProfile() || "phev") {
       entity_mapping: mapped,
       metric_entities: {
         ...originalMetrics,
-        remaining_battery_energy_kwh: usableMetric("remaining_battery_energy_kwh", ids.remainingBattery),
-        trailing_consumption_500km: usableMetric("trailing_consumption_500km", ids.trailingElectric),
+        remaining_battery_energy_kwh: fullySynthetic ? ids.remainingBattery : usableMetric("remaining_battery_energy_kwh", ids.remainingBattery),
+        trailing_consumption_500km: fullySynthetic ? ids.trailingElectric : usableMetric("trailing_consumption_500km", ids.trailingElectric),
         remaining_fuel_liters: ids.remainingFuel,
         trailing_fuel_consumption_500km: ids.trailingFuel,
         ...(profile === "phev-charging" ? { current_charge_power: ids.currentChargePower } : {}),
@@ -478,17 +604,21 @@ class SvDashboardOwnerTestSelectorCard extends HTMLElement {
     const options = PROFILE_OPTIONS.map(([value, label]) =>
       `<option value="${value}"${value === active ? " selected" : ""}>${label}</option>`
     ).join("");
+    const badgeClass = active ? "active" : "off";
+    const badgeText = active ? "AKTIV" : "AUS";
     this.shadowRoot.innerHTML = `
       <style>
         :host { display:block; }
         ha-card { padding:10px 14px; border-radius:var(--ha-card-border-radius,12px); background:var(--ha-card-background,var(--card-background-color)); }
         .row { display:grid; grid-template-columns:auto minmax(180px,320px); align-items:center; gap:12px; }
         .label { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:600; color:var(--primary-text-color); }
-        .badge { font-size:11px; font-weight:700; padding:2px 7px; border-radius:999px; color:var(--warning-color,#ff9800); background:color-mix(in srgb,var(--warning-color,#ff9800) 14%,transparent); }
+        .badge { font-size:11px; font-weight:700; padding:2px 7px; border-radius:999px; }
+        .badge.active { color:var(--warning-color,#ff9800); background:color-mix(in srgb,var(--warning-color,#ff9800) 14%,transparent); }
+        .badge.off { color:var(--secondary-text-color); background:color-mix(in srgb,var(--secondary-text-color) 10%,transparent); }
         select { width:100%; min-height:36px; padding:6px 10px; border:1px solid var(--divider-color); border-radius:8px; color:var(--primary-text-color); background:var(--secondary-background-color); font:inherit; }
         @media (max-width:620px) { .row { grid-template-columns:1fr; } }
       </style>
-      <ha-card><div class="row"><div class="label"><span>Owner-Testmodus</span><span class="badge">LOKAL</span></div><select aria-label="Owner-Testprofil">${options}</select></div></ha-card>
+      <ha-card><div class="row"><div class="label"><span>Owner-Testmodus</span><span class="badge ${badgeClass}">${badgeText}</span></div><select aria-label="Owner-Testprofil">${options}</select></div></ha-card>
     `;
     this.shadowRoot.querySelector("select")?.addEventListener("change", (event) => this._setProfile(event.target.value), { once: true });
   }
