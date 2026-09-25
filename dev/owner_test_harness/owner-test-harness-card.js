@@ -328,8 +328,7 @@ function fixtureHass(hass, entryId, profile = activeProfile() || "phev") {
   };
   states[statusId] = status;
 
-  const fixture = Object.create(hass);
-  fixture.states = states;
+  const fixture = { ...hass, states };
   if (typeof hass.callWS === "function") {
     const realCallWS = hass.callWS.bind(hass);
     fixture.callWS = (message) => {
