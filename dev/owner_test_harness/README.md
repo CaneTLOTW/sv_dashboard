@@ -57,10 +57,11 @@ After Codex installs or updates the normal candidate into Home Assistant, run:
 
 `python dev/owner_test_harness/install.py --target /config/custom_components/sv_dashboard/static`
 
-Then perform a **full Home Assistant restart** and hard-refresh the browser. A
-restart is required because SV Dashboard registers its static JavaScript routes
-at integration setup time; merely reloading the browser is not enough after the
-new local harness file has been copied.
+Then perform a **full Home Assistant restart** and hard-refresh the browser.
+The restart is always required for the owner harness because the installer gives
+the top-level SV Dashboard Lovelace resource an owner-specific cache key. This
+forces Home Assistant and the browser to load the patched `frontend.js` and
+patched Strategy instead of reusing previously loaded product modules.
 
 The installer:
 
@@ -68,9 +69,15 @@ The installer:
 2. locally imports it from `frontend.js`;
 3. gives the locally patched `sv_dashboard.js` a content-addressed owner-only
    import URL so an older cached Strategy cannot hide the selector;
-4. locally patches Strategy generation and rendered Hybrid visual cards with the
+4. locally resets and patches `const.py` so the package resource becomes
+   `/sv_dashboard/frontend.js?v=<product>-owner-<hash>`, forcing the top-level
+   frontend module itself to reload after a Harness update;
+5. locally patches Strategy generation and rendered Hybrid visual cards with the
    browser-local PHEV context and adds the Owner-Testmodus selector;
-5. leaves the repository's production `custom_components/` package untouched.
+6. leaves the repository's committed production `custom_components/` package
+   fixture-free. The installed Owner test runtime intentionally has local
+   overlays in `frontend.js`, `sv_dashboard.js`, `const.py` and the
+   additional Harness module.
 
 Re-run the installer after every normal SV Dashboard install/update because the
 normal package intentionally overwrites the local overlay.
