@@ -37,13 +37,13 @@ from .entity_identity import (
 from .state_contract import bounded_state_identifier
 
 
-def _compact_curve_samples(samples: Any, limit: int = 12) -> list[dict[str, Any]]:
-    """Expose a small curve timeline without bloating Recorder attributes.
+def _compact_curve_samples(samples: Any, limit: int = 24) -> list[dict[str, Any]]:
+    """Expose a bounded provenance-aware curve timeline.
 
     The complete raw samples intentionally stay in the package Store. The
-    frontend only needs timestamp and SOC to draw the derived curve, so this
-    compact, evenly-spaced view survives in the state attribute without
-    exceeding Home Assistant's Recorder attribute size limit.
+    frontend receives enough information to prefer already-derived battery-side
+    power and residual-energy positioning without copying the full raw payload
+    into Recorder attributes.
     """
     usable = [
         sample
@@ -61,6 +61,11 @@ def _compact_curve_samples(samples: Any, limit: int = 12) -> list[dict[str, Any]
             or sample.get("time")
             or sample.get("received_at"),
             "soc": sample.get("soc"),
+            "residual_kwh": sample.get("residual_kwh"),
+            "capacity_kwh": sample.get("capacity_kwh"),
+            "derived_power_kw": sample.get("derived_power_kw"),
+            "power_source": sample.get("power_source"),
+            "timestamp_source": sample.get("timestamp_source"),
         }
         for sample in usable
     ]
