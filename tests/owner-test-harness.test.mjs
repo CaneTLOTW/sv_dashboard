@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { spawnSync } from "node:child_process";
 
 const overview = fs.readFileSync("custom_components/sv_dashboard/static/vehicle-overview-card.js", "utf8");
@@ -118,4 +120,58 @@ test("owner harness installer is valid Python", () => {
     { encoding: "utf8" },
   );
   assert.equal(result.status, 0, result.stderr || result.stdout);
+});
+
+
+test("owner selector uses the proven direct Strategy insertion path", () => {
+  assert.match(installer, /SELECTOR_DECL_ANCHOR/);
+  assert.match(installer, /const ownerTestSelector = \{/);
+  assert.match(installer, /SELECTOR_CARD_ANCHOR/);
+  assert.match(installer, /ownerTestSelector,\\n        hero/);
+});
+
+test("owner cache token changes when installer behavior changes", () => {
+  assert.match(installer, /def _owner_token\(source: Path\)/);
+  assert.match(installer, /digest\.update\(source\.read_bytes\(\)\)/);
+  assert.match(installer, /digest\.update\(Path\(__file__\)\.read_bytes\(\)\)/);
+});
+
+test("owner installer runs end-to-end against a temporary beta.33 runtime", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "sv-owner-install-"));
+  const integrationRoot = path.join(tempRoot, "sv_dashboard");
+  const staticRoot = path.join(integrationRoot, "static");
+  fs.mkdirSync(staticRoot, { recursive: true });
+  for (const file of ["manifest.json", "const.py"]) {
+    fs.copyFileSync(path.join("custom_components", "sv_dashboard", file), path.join(integrationRoot, file));
+  }
+  for (const file of ["frontend.js", "sv_dashboard.js"]) {
+    fs.copyFileSync(path.join("custom_components", "sv_dashboard", "static", file), path.join(staticRoot, file));
+  }
+
+  try {
+    const result = spawnSync(
+      "python3",
+      ["dev/owner_test_harness/install.py", "--target", staticRoot],
+      { encoding: "utf8" },
+    );
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+
+    const installedFrontend = fs.readFileSync(path.join(staticRoot, "frontend.js"), "utf8");
+    const installedStrategy = fs.readFileSync(path.join(staticRoot, "sv_dashboard.js"), "utf8");
+    const installedConst = fs.readFileSync(path.join(integrationRoot, "const.py"), "utf8");
+
+    const tokenMatch = result.stdout.match(/module owner-([0-9a-f]{12})/);
+    assert.ok(tokenMatch, result.stdout);
+    const token = tokenMatch[1];
+
+    assert.match(installedFrontend, new RegExp(`owner-test-harness-card\\.js\\?v=owner-${token}`));
+    assert.match(installedFrontend, new RegExp(`sv_dashboard\\.js\\?v=owner-${token}`));
+    assert.match(installedConst, new RegExp(`FRONTEND_VERSION = "0\\.6\\.0-beta\\.33-owner-${token}"`));
+    assert.match(installedStrategy, /const ownerTestSelector = \{/);
+    assert.match(installedStrategy, /ownerTestSelector,\n        hero,/);
+    assert.match(installedStrategy, /ownerHarness\.decorateDashboard\(/);
+    assert.ok(fs.existsSync(path.join(staticRoot, "owner-test-harness-card.js")));
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
 });

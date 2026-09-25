@@ -72,9 +72,11 @@ The installer:
 4. locally resets and patches `const.py` so the package resource becomes
    `/sv_dashboard/frontend.js?v=<product>-owner-<hash>`, forcing the top-level
    frontend module itself to reload after a Harness update;
-5. locally patches Strategy generation and rendered Hybrid visual cards with the
-   browser-local PHEV context and adds the Owner-Testmodus selector;
-6. leaves the repository's committed production `custom_components/` package
+5. injects the Owner-Testmodus selector directly into the generated LIVE
+   Strategy layout before the Hero, matching the proven beta.30/beta.31 path;
+6. patches Strategy generation and rendered Hybrid visual cards with the
+   browser-local PHEV context;
+7. leaves the repository's committed production `custom_components/` package
    fixture-free. The installed Owner test runtime intentionally has local
    overlays in `frontend.js`, `sv_dashboard.js`, `const.py` and the
    additional Harness module.
@@ -87,3 +89,11 @@ normal package intentionally overwrites the local overlay.
 Do not move the harness into `custom_components/sv_dashboard/`, do not add its
 import to the committed production `frontend.js`, and do not add fixture
 branches to the production dashboard Strategy. Releases must remain fixture-free.
+
+
+### Cache token contract
+
+The owner cache token covers both `owner-test-harness-card.js` **and the
+installer source**. Changing local patch behavior therefore changes the
+top-level frontend and nested Strategy module URLs even when the Harness module
+itself is unchanged.
