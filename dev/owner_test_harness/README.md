@@ -97,3 +97,13 @@ The owner cache token covers both `owner-test-harness-card.js` **and the
 installer source**. Changing local patch behavior therefore changes the
 top-level frontend and nested Strategy module URLs even when the Harness module
 itself is unchanged.
+
+
+### Strategy execution contract
+
+The fixture context is applied inside the Strategy's active `generate(config,
+hass)` path, not only in Home Assistant's `generateDashboard(...)` wrapper.
+This matters because the direct Strategy path is the one proven by the rendered
+Owner selector. The runtime regression test imports the installed patched
+Strategy and asserts that `?sv_owner_fixture=phev-driving` generates the real
+Dual-Energy Hero and owner context wrappers rather than the BEV Hero.
