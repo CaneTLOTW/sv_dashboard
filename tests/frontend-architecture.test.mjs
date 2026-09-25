@@ -29,7 +29,8 @@ test("Home Assistant registers one SV frontend resource", () => {
   assert.match(frontend, /import\("\.\/vehicle-overview-card\.js\?v=0\.6\.0-beta\.31"\)/);
   assert.match(frontend, /import\("\.\/gps-history-card\.js\?v=0\.6\.0-beta\.28"\)/);
   assert.match(frontend, /import\("\.\/charge-history-card\.js\?v=0\.6\.0-beta\.33"\)/);
-  assert.match(frontend, /import\("\.\/dual-energy-overview-card\.js\?v=0\.6\.0-beta\.31"\)/);\n  assert.match(frontend, /import\("\.\/fuel-history-card\.js\?v=0\.6\.0-beta\.34"\)/);
+  assert.match(frontend, /import\("\.\/dual-energy-overview-card\.js\?v=0\.6\.0-beta\.31"\)/);
+  assert.match(frontend, /import\("\.\/fuel-history-card\.js\?v=0\.6\.0-beta\.34"\)/);
   assert.match(frontend, /import\("\.\/sv_dashboard\.js\?v=0\.6\.0-beta\.34"\)/);
   assert.match(strategy, /from "\.\/i18n\.js\?v=0\.6\.0-beta\.34"/);
   assert.doesNotMatch(frontend, /gps-history-fix\.js/);
