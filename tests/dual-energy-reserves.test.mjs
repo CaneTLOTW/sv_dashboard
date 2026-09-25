@@ -34,13 +34,13 @@ test("remaining energy and fuel provenance is exposed by dedicated sensors", () 
   assert.match(sensors, /if fuel:/);
 });
 
-test("generated dashboard adds a dual-energy reserves block without model checks", () => {
+test("generated dashboard adds a compact two-column dual-energy reserves block without model checks", () => {
   assert.match(strategy, /supportsDualEnergy && \(remainingBatteryEnergy \|\| remainingFuelLiters \|\| trailingElectricConsumption \|\| trailingFuelConsumption\)/);
   assert.match(strategy, /separator\(strings\.consumptionReserves, "mdi:gauge"\)/);
-  assert.match(strategy, /bubble\("remaining_battery_energy_kwh", strings\.remainingBatteryEnergy[\s\S]*"full", remainingBatteryEnergy\)/);
-  assert.match(strategy, /bubble\("trailing_consumption_500km", strings\.trailingElectricConsumption[\s\S]*"full", trailingElectricConsumption\)/);
-  assert.match(strategy, /bubble\("remaining_fuel_liters", strings\.remainingFuel[\s\S]*"full", remainingFuelLiters\)/);
-  assert.match(strategy, /bubble\("trailing_fuel_consumption_500km", strings\.trailingFuelConsumption[\s\S]*"full", trailingFuelConsumption\)/);
+  assert.match(strategy, /bubble\("remaining_battery_energy_kwh", strings\.remainingBatteryEnergy[\s\S]*\[\], 6, remainingBatteryEnergy\)/);
+  assert.match(strategy, /bubble\("trailing_consumption_500km", strings\.trailingElectricConsumption[\s\S]*\[\], 6, trailingElectricConsumption\)/);
+  assert.match(strategy, /bubble\("remaining_fuel_liters", strings\.remainingFuel[\s\S]*\[\], 6, remainingFuelLiters\)/);
+  assert.match(strategy, /bubble\("trailing_fuel_consumption_500km", strings\.trailingFuelConsumption[\s\S]*\[\], 6, trailingFuelConsumption\)/);
   assert.doesNotMatch(strategy, /reserveCard|metricSubState|reserveLayoutCard|reserve_layout/);
   assert.doesNotMatch(strategy, /strings\.last500km/);
   assert.doesNotMatch(strategy, /DS N°4|DS4|Citroën|ë-C3/);
@@ -71,4 +71,14 @@ test("all new generated-dashboard labels come from the shared i18n contract", ()
     assert.match(i18n, new RegExp(key));
     assert.match(strategy, new RegExp(`strings\\.${key}`));
   }
+});
+
+
+test("German and English reserve labels stay compact enough for half-width cards", () => {
+  assert.match(i18n, /remainingBatteryEnergy: "Batteriereserve"/);
+  assert.match(i18n, /trailingElectricConsumption: "Ø Strom \(500 km\)"/);
+  assert.match(i18n, /remainingFuel: "Tankinhalt geschätzt"/);
+  assert.match(i18n, /trailingFuelConsumption: "Ø Kraftstoff \(500 km\)"/);
+  assert.match(i18n, /remainingBatteryEnergy: "Battery reserve"/);
+  assert.match(i18n, /trailingFuelConsumption: "Avg\. fuel \(500 km\)"/);
 });
