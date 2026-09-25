@@ -8,7 +8,7 @@ import {
   languageFor,
   localeFor,
   textFor,
-} from "./i18n-core.js?v=0.6.0-beta.28";
+} from "./i18n-core.js?v=0.6.0-beta.34";
 import { ADVANCED_FRONTEND_TEXT as WESTERN_ADVANCED } from "./i18n-advanced-west.js?v=0.6.0-beta.17";
 import { ADVANCED_FRONTEND_TEXT as NORTHERN_ADVANCED } from "./i18n-advanced-north.js?v=0.6.0-beta.17";
 import { ADVANCED_FRONTEND_TEXT as EASTERN_ADVANCED } from "./i18n-advanced-east.js?v=0.6.0-beta.17";
@@ -178,8 +178,8 @@ for (const [language, labels] of Object.entries(NOTIFICATION_WAKEUP_TEXT)) {
 // Keep these in the shared dashboard namespace so generated-dashboard surfaces
 // inherit the same 18-language parity contract as the rest of the UI.
 const CONSUMPTION_RESERVES_TEXT = {
-  de: { consumptionReserves: "Verbrauch & Reserven", remainingBatteryEnergy: "Verbleibende Batterieenergie", trailingElectricConsumption: "Ø Stromverbrauch (500 km)", remainingFuel: "Geschätzter Tankinhalt", trailingFuelConsumption: "Ø Kraftstoffverbrauch (500 km)" },
-  en: { consumptionReserves: "Consumption & reserves", remainingBatteryEnergy: "Remaining battery energy", trailingElectricConsumption: "Average electric consumption (500 km)", remainingFuel: "Estimated fuel remaining", trailingFuelConsumption: "Average fuel consumption (500 km)" },
+  de: { consumptionReserves: "Verbrauch & Reserven", remainingBatteryEnergy: "Batteriereserve", trailingElectricConsumption: "Ø Strom (500 km)", remainingFuel: "Tankinhalt geschätzt", trailingFuelConsumption: "Ø Kraftstoff (500 km)" },
+  en: { consumptionReserves: "Consumption & reserves", remainingBatteryEnergy: "Battery reserve", trailingElectricConsumption: "Avg. electric (500 km)", remainingFuel: "Fuel remaining (est.)", trailingFuelConsumption: "Avg. fuel (500 km)" },
   fr: { consumptionReserves: "Consommation et réserves", remainingBatteryEnergy: "Énergie électrique restante", trailingElectricConsumption: "Consommation électrique moyenne (500 km)", remainingFuel: "Carburant restant estimé", trailingFuelConsumption: "Consommation moyenne de carburant (500 km)" },
   it: { consumptionReserves: "Consumi e riserve", remainingBatteryEnergy: "Energia batteria residua", trailingElectricConsumption: "Consumo elettrico medio (500 km)", remainingFuel: "Carburante residuo stimato", trailingFuelConsumption: "Consumo medio carburante (500 km)" },
   es: { consumptionReserves: "Consumo y reservas", remainingBatteryEnergy: "Energía restante de la batería", trailingElectricConsumption: "Consumo eléctrico medio (500 km)", remainingFuel: "Combustible restante estimado", trailingFuelConsumption: "Consumo medio de combustible (500 km)" },

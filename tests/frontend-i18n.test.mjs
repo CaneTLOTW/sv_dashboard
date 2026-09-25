@@ -65,7 +65,7 @@ test("runtime wires all advanced catalogs with the release cache key", () => {
   for (const region of ["west", "north", "east"]) {
     assert.match(runtimeSource, new RegExp(`i18n-advanced-${region}\\.js\\?v=0\\.6\\.0-beta\\.17`));
   }
-  assert.match(runtimeSource, /i18n-core\.js\?v=0\.6\.0-beta\.28/);
+  assert.match(runtimeSource, /i18n-core\.js\?v=0\.6\.0-beta\.34/);
 });
 
 test("locale resolver accepts regional variants and safe fallbacks", () => {

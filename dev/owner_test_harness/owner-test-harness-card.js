@@ -27,6 +27,11 @@ const PROFILE_OPTIONS = [
 const VALID_PROFILES = new Set(PROFILE_OPTIONS.map(([value]) => value).filter(Boolean));
 const nowIso = () => new Date().toISOString();
 const agoIso = (minutes) => new Date(Date.now() - minutes * 60000).toISOString();
+const round1 = (value) => Math.round(Number(value) * 10) / 10;
+const numericState = (hass, entityId) => {
+  const value = Number.parseFloat(String(entityId ? hass?.states?.[entityId]?.state ?? "" : "").replace(",", "."));
+  return Number.isFinite(value) ? value : null;
+};
 
 const state = (entityId, value, attributes = {}, updated = nowIso()) => ({
   entity_id: entityId,
@@ -84,11 +89,14 @@ const tripColumns = [
   "quality_flags", "speed_source",
 ];
 
-const syntheticTrips = () => {
+const syntheticTrips = (currentMileageKm) => {
   const mixedEnd = agoIso(75);
   const mixedStart = agoIso(93);
   const electricEnd = agoIso(24 * 60 + 40);
   const electricStart = agoIso(24 * 60 + 54);
+  const latestMileage = Number.isFinite(currentMileageKm) ? currentMileageKm : 2171;
+  const mixedStartMileage = Math.max(0, round1(latestMileage - 12.4));
+  const electricStartMileage = Math.max(0, round1(mixedStartMileage - 8.7));
   return [
     {
       server_id: "owner-fixture-electric",
@@ -96,7 +104,7 @@ const syntheticTrips = () => {
       end_time: electricEnd,
       duration_seconds: 14 * 60,
       distance_km: 8.7,
-      start_mileage: 12480.4,
+      start_mileage: electricStartMileage,
       soc_start: 82,
       soc_end: 79,
       electric_range_start_km: 52,
@@ -121,7 +129,7 @@ const syntheticTrips = () => {
       end_time: mixedEnd,
       duration_seconds: 18 * 60,
       distance_km: 12.4,
-      start_mileage: 12489.1,
+      start_mileage: mixedStartMileage,
       soc_start: 78,
       soc_end: 74,
       electric_range_start_km: 46,
@@ -143,32 +151,35 @@ const syntheticTrips = () => {
   ];
 };
 
-const fuelHistoryFixture = () => ({
-  summary: {
-    distance_km: 486.2,
-    driving_time_seconds: 52740,
-    average_speed_kmh: 33.2,
-    fuel_consumption_l_100km: 4.8,
-  },
-  events: [
-    {
-      source_time: agoIso(3 * 24 * 60),
-      liters: 31.4,
-      liters_estimated: true,
-      odometer_km: 12374.2,
-      fuel_before_percent: 19,
-      fuel_after_percent: 82,
+const fuelHistoryFixture = (currentMileageKm) => {
+  const latestMileage = Number.isFinite(currentMileageKm) ? currentMileageKm : 2171;
+  return {
+    summary: {
+      distance_km: 486.2,
+      driving_time_seconds: 52740,
+      average_speed_kmh: 33.2,
+      fuel_consumption_l_100km: 4.8,
     },
-    {
-      source_time: agoIso(19 * 24 * 60),
-      liters: 24.8,
-      liters_estimated: true,
-      odometer_km: 11932.6,
-      fuel_before_percent: 28,
-      fuel_after_percent: 78,
-    },
-  ],
-});
+    events: [
+      {
+        source_time: agoIso(3 * 24 * 60),
+        liters: 31.4,
+        liters_estimated: true,
+        odometer_km: Math.max(0, round1(latestMileage - 154.7)),
+        fuel_before_percent: 19,
+        fuel_after_percent: 82,
+      },
+      {
+        source_time: agoIso(19 * 24 * 60),
+        liters: 24.8,
+        liters_estimated: true,
+        odometer_km: Math.max(0, round1(latestMileage - 486.2)),
+        fuel_before_percent: 28,
+        fuel_after_percent: 78,
+      },
+    ],
+  };
+};
 
 function fixtureHass(hass, entryId, profile = activeProfile() || "phev") {
   const selected = candidates(hass, entryId);
@@ -179,6 +190,8 @@ function fixtureHass(hass, entryId, profile = activeProfile() || "phev") {
   const originalMapped = originalAttributes.entity_mapping || {};
   const originalMetrics = originalAttributes.metric_entities || {};
   const originalServer = originalAttributes.server_history_entities || {};
+  const mileageEntity = originalMetrics.canonical_mileage || originalMapped.mileage;
+  const currentMileageKm = numericState(hass, mileageEntity) ?? 2171;
   const stale = profile === "phev-stale";
   const forceFresh = profile === "phev-fresh";
   const stamp = stale ? agoIso(60) : nowIso();
@@ -302,7 +315,7 @@ function fixtureHass(hass, entryId, profile = activeProfile() || "phev") {
 
   const serverTripEntity = originalServer.server_trip_history;
   if (serverTripEntity && hass.states?.[serverTripEntity]) {
-    const trips = syntheticTrips();
+    const trips = syntheticTrips(currentMileageKm);
     states[serverTripEntity] = {
       ...hass.states[serverTripEntity],
       state: String(trips.length),
@@ -361,7 +374,7 @@ function fixtureHass(hass, entryId, profile = activeProfile() || "phev") {
     const realCallWS = hass.callWS.bind(hass);
     fixture.callWS = (message) => {
       if (message?.type === `${STATUS_DOMAIN}/fuel_history`) {
-        return Promise.resolve(fuelHistoryFixture());
+        return Promise.resolve(fuelHistoryFixture(currentMileageKm));
       }
       return realCallWS(message);
     };
