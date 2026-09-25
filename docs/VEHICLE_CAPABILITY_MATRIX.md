@@ -65,6 +65,16 @@ Use a strategy, not a vehicle special case:
 4. The historical DS4 currently classifies as `present_untrusted` because its field remained 0.0 while the vehicle was demonstrably moving.
 5. Do not synthesize a user-facing live l/100 km value from coarse fuel-level percentages.
 
+### Example: live charge sample time and charge-curve provenance
+
+1. Prefer a vehicle/upstream payload timestamp when the mapped charging sample exposes one.
+2. Home Assistant `last_updated` is a receipt/runtime fallback only; it must not outrank a valid upstream timestamp merely because HA observed the entity later.
+3. Battery-side power already derived from trustworthy residual-energy deltas plus source timestamps is preferred for the displayed charge curve.
+4. Whole-percent SOC/time reconstruction remains a fallback when no derived-power sample is available.
+5. Keep `received_at` alongside `source_time` for diagnostics; the two timestamps answer different questions and must not be conflated.
+
+This is a provenance rule, not a vehicle-model rule. It applies wherever the upstream integration exposes usable source timestamps and energy data.
+
 ### Example: alarm/security state
 
 - Presence of `alarm.status.activation` does not establish user-facing semantics.
@@ -96,6 +106,7 @@ These are **behavior/profile properties**, not hard-coded model capabilities.
 7. **Alarm values require semantic validation.** Presence or an `Active` value alone is not enough to call it a triggered alarm.
 8. **Raw mileage is source evidence, not the driven-distance LTS contract.** Package-owned Canonical mileage remains the monotonic Home Assistant statistics counter.
 9. **The frontend should stay simple.** Complexity belongs in canonical metric/source selection, not duplicated card layouts or per-model JavaScript branches.
+10. **Vehicle source time outranks HA receipt time for telemetry deltas.** Keep receipt time for diagnostics/fallback, but do not let it silently replace an available upstream timestamp in charge-power or curve calculations.
 
 ## Open evidence requests
 
