@@ -51,7 +51,8 @@ test("server sensors expose only ready server rows and truth metadata", () => {
   assert.match(sensor, /\*\*status/);
   assert.match(sensor, /server_trips = history\.data\.get\("trips", \[\]\) if status\["server_history_ready"\] else \[\]/);
   assert.match(sensor, /server_charges = history\.data\.get\("charges", \[\]\) if status\["server_history_ready"\] else \[\]/);
-  assert.match(sensor, /if status\["server_history_ready"\]\n            else None/);
+  assert.match(sensor, /active = getattr\(self\.metrics, "data", \{\}\)\.get\("active_charge"\)/);
+  assert.match(sensor, /package-owned live evidence/);
 });
 
 test("local energy and charge history remain the fallback contract", () => {
