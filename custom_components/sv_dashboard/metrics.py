@@ -1041,21 +1041,28 @@ class VehicleMetricsManager:
         # SOC can remain unchanged while residual kWh advances, and using only
         # the battery entity timestamp can otherwise make two real samples look
         # identical.
-        source_candidates: list[tuple[datetime, str]] = []
+        upstream_candidates: list[datetime] = []
+        ha_candidates: list[datetime] = []
         for candidate in (state, residual_state):
             attributes = getattr(candidate, "attributes", {}) or {}
             source = self._parse_sample_timestamp(attributes.get("Last updated"))
             if source is not None:
-                source_candidates.append((source, "stellantis"))
+                upstream_candidates.append(source)
             elif candidate is not None:
                 fallback = getattr(candidate, "last_updated", None)
                 if fallback is not None:
-                    source_candidates.append((fallback, "home_assistant"))
+                    ha_candidates.append(fallback)
 
-        if source_candidates:
-            source_time, timestamp_source = max(
-                source_candidates, key=lambda item: item[0]
-            )
+        # Provenance outranks wall-clock recency: once any Stellantis source
+        # timestamp exists, a later Home Assistant receipt/update timestamp
+        # must never replace it. HA time is only a fallback when the upstream
+        # payload exposes no usable source timestamp at all.
+        if upstream_candidates:
+            source_time = max(upstream_candidates)
+            timestamp_source = "stellantis"
+        elif ha_candidates:
+            source_time = max(ha_candidates)
+            timestamp_source = "home_assistant"
         else:
             source_time = received_at
             timestamp_source = "received_at"
