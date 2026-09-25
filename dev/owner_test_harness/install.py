@@ -79,16 +79,14 @@ def _reset_product_static(target: Path) -> None:
         )
     for name in ("frontend.js", "sv_dashboard.js"):
         shutil.copy2(source_static / name, target / name)
-    shutil.copy2(root / "custom_components" / "sv_dashboard" / "const.py", target.parent / "const.py")
+    shutil.copy2(
+        root / "custom_components" / "sv_dashboard" / "const.py",
+        target.parent / "const.py",
+    )
 
 
 def _patch_frontend_resource_version(integration_root: Path, token: str) -> str:
-    """Give the locally patched frontend entry point its own resource URL.
-
-    The browser must re-evaluate frontend.js after a Harness update. Patching
-    only nested module URLs is insufficient when Home Assistant keeps the
-    package resource itself at the unchanged product query key.
-    """
+    """Give the locally patched frontend entry point its own resource URL."""
     manifest = integration_root / "manifest.json"
     constants = integration_root / "const.py"
     product_version = _version(manifest)
@@ -150,7 +148,10 @@ def install(target: Path) -> None:
 
     print(f"Owner whole-dashboard PHEV harness installed (module owner-{token}).")
     print(f"Owner frontend resource version: {owner_frontend_version}")
-    print("Full Home Assistant restart required so Lovelace registers the owner-specific frontend resource URL.")
+    print(
+        "Full Home Assistant restart required so Lovelace registers "
+        "the owner-specific frontend resource URL."
+    )
     print("The generated Vehicle view contains the Owner-Testmodus selector.")
     print("Fixture profiles:")
     for profile in ("phev", "phev-fresh", "phev-idle", "phev-driving", "phev-charging", "phev-stale"):
@@ -171,7 +172,11 @@ def main() -> None:
 if __name__ == "__main__":
     main()
 , re.MULTILINE)
-    text, count = pattern.subn(f'FRONTEND_VERSION = "{owner_version}"', text, count=1)
+    text, count = pattern.subn(
+        f'FRONTEND_VERSION = "{owner_version}"',
+        text,
+        count=1,
+    )
     if count != 1:
         raise SystemExit("const.py FRONTEND_VERSION anchor not found")
     constants.write_text(text, encoding="utf-8")
