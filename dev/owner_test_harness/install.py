@@ -14,10 +14,15 @@ import re
 from pathlib import Path
 import shutil
 
-OWNER_CONTEXT_ANCHOR = '''    const strategyConfig = config?.strategy?.options ?? config?.strategy ?? config ?? {};
-    return SvDashboardStrategy.generate(strategyConfig, hass);
+OWNER_GENERATE_ANCHOR = '''  static async generate(config, hass) {
 '''
-OWNER_CONTEXT_PATCH = '''    const strategyConfig = config?.strategy?.options ?? config?.strategy ?? config ?? {};
+OWNER_GENERATE_PATCH = '''  static async generate(config, hass) {
+    const ownerHarnessReady = typeof window !== "undefined"
+      ? window.__svDashboardOwnerHarnessReady
+      : null;
+    if (ownerHarnessReady && typeof ownerHarnessReady.then === "function") {
+      await ownerHarnessReady;
+    }
     const ownerHarness = typeof window !== "undefined"
       ? window.__svDashboardOwnerHarness
       : null;
@@ -30,12 +35,16 @@ OWNER_CONTEXT_PATCH = '''    const strategyConfig = config?.strategy?.options ??
       && customElements.get(ownerHarness.selectorTag)
       && customElements.get(ownerHarness.contextTag)
     );
-    const generationHass = ownerHarnessAvailable && ownerProfile
-      ? ownerHarness.fixtureHass(hass, strategyConfig.entry_id, ownerProfile)
-      : hass;
-    const dashboard = await SvDashboardStrategy.generate(strategyConfig, generationHass);
+    if (ownerHarnessAvailable && ownerProfile) {
+      hass = ownerHarness.fixtureHass(hass, config?.entry_id, ownerProfile);
+    }
+'''
+
+OWNER_RETURN_ANCHOR = '''    return { title: strings.name, icon: vehicleIcon, views };
+'''
+OWNER_RETURN_PATCH = '''    const dashboard = { title: strings.name, icon: vehicleIcon, views };
     return ownerHarnessAvailable
-      ? ownerHarness.decorateDashboard(dashboard, strategyConfig.entry_id, ownerProfile)
+      ? ownerHarness.decorateDashboard(dashboard, config?.entry_id, ownerProfile)
       : dashboard;
 '''
 
@@ -173,9 +182,12 @@ def install(target: Path) -> None:
     if OWNER_READY_ANCHOR not in text:
         raise SystemExit("sv_dashboard.js generateDashboard readiness anchor not found")
     text = text.replace(OWNER_READY_ANCHOR, OWNER_READY_PATCH, 1)
-    if OWNER_CONTEXT_ANCHOR not in text:
-        raise SystemExit("sv_dashboard.js Strategy generation anchor not found")
-    text = text.replace(OWNER_CONTEXT_ANCHOR, OWNER_CONTEXT_PATCH, 1)
+    if OWNER_GENERATE_ANCHOR not in text:
+        raise SystemExit("sv_dashboard.js generate() anchor not found")
+    text = text.replace(OWNER_GENERATE_ANCHOR, OWNER_GENERATE_PATCH, 1)
+    if OWNER_RETURN_ANCHOR not in text:
+        raise SystemExit("sv_dashboard.js generated dashboard return anchor not found")
+    text = text.replace(OWNER_RETURN_ANCHOR, OWNER_RETURN_PATCH, 1)
 
     # Keep the selector injection on the proven beta.30/beta.31 path: patch it
     # directly into the generated Vehicle/LIVE layout before the Hero. The
