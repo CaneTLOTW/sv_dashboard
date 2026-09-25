@@ -29,6 +29,11 @@ test("compact charge samples retain provenance needed by Charge Curve V2", () =>
   }
 });
 
+test("active charge curve samples do not depend on server-history readiness", () => {
+  assert.match(sensor, /active = getattr\(self\.metrics, "data", \{\}\)\.get\("active_charge"\)/);
+  assert.doesNotMatch(sensor, /get\("active_charge"\)\s*\n\s*if status\["server_history_ready"\]/);
+});
+
 test("charging UI never labels upstream chargingRate km per hour as kW", () => {
   assert.match(strategy, /const currentChargePower = metric\("current_charge_power"\);/);
   assert.doesNotMatch(strategy, /current_charge_power"\) \|\| entity\("battery_charging_rate"\)/);
