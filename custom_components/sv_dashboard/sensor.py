@@ -563,11 +563,11 @@ class SvServerChargeHistorySensor(SvMetricSensor):
             if charge.get("quality") == "observed":
                 row["samples"] = _compact_curve_samples(charge.get("samples", []))
             rows.append(row)
-        active = (
-            getattr(self.metrics, "data", {}).get("active_charge")
-            if status["server_history_ready"]
-            else None
-        )
+        # The active charging timeline is package-owned live evidence and
+        # does not depend on canonical server-history readiness. Expose it even
+        # while historical sync is unavailable so the live curve can keep
+        # using source timestamps and residual-energy-derived power.
+        active = getattr(self.metrics, "data", {}).get("active_charge")
         active_payload = None
         if isinstance(active, dict) and active.get("start_time"):
             samples = [
