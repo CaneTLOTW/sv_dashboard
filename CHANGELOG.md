@@ -4,6 +4,17 @@
 
 No changes yet.
 
+## 0.6.0-beta.33 whole-dashboard PHEV harness + Charge Curve V2 candidate
+
+- Extends the owner-only local PHEV harness from a Dual-Energy Hero fixture to a **whole generated-dashboard** fixture context. Under an owner fixture profile the Strategy now resolves Dual-Energy capabilities and the rendered cards receive the same synthetic context, while Standard mode remains the untouched real BEV dashboard.
+- Adds deterministic, privacy-safe owner fixture data for Hybrid Trip History, Fuel History, remaining fuel, rolling 500-km fuel consumption and fallback electric reserve/500-km values when the real owner metric is unavailable. Real BEV charge/history data remains usable inside the fixture.
+- Adds a dedicated `phev-fresh` profile alongside the stale profile so the existing 15-minute temperature freshness cue can be accepted visually without weakening its source-timestamp semantics.
+- Makes live charge-sample timestamp selection provenance-first: any valid Stellantis payload timestamp outranks Home Assistant receipt/update time; HA timestamps are used only when no upstream source timestamp exists.
+- Extends bounded charge-curve samples with residual energy, capacity, derived power and provenance metadata. The curve browser now prefers already-derived battery-side power and uses residual-energy/capacity positioning where available, with the existing SOC/time reconstruction retained as fallback.
+- Increases the compact curve timeline from 12 to 24 points to retain more useful shape while keeping the complete raw sample stream in the package Store.
+- Bumps package/frontend generation to beta.33 and cache-busts only the changed Charge History module; unchanged Hero/i18n/Strategy modules retain their prior validated content keys.
+- This candidate improves local visual acceptance but does not replace real PHEV runtime validation for vehicle/API behavior.
+
 ## 0.6.0-beta.32 Strategy bootstrap hardening candidate
 
 - Fixes a Home Assistant dashboard bootstrap race where the package entry point could wait up to 10 seconds for external custom-card dependencies **before** importing/registering `ll-strategy-dashboard-sv-dashboard`. Home Assistant can time out waiting for the Strategy element during the same window.
