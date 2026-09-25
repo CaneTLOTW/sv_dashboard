@@ -152,7 +152,7 @@ test("owner cache token changes when installer behavior changes", () => {
   assert.match(installer, /digest\.update\(Path\(__file__\)\.read_bytes\(\)\)/);
 });
 
-test("owner installer runs end-to-end against a temporary beta.35 runtime", () => {
+test("owner installer runs end-to-end against a temporary beta.36 runtime", () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "sv-owner-install-"));
   const integrationRoot = path.join(tempRoot, "sv_dashboard");
   const staticRoot = path.join(integrationRoot, "static");
