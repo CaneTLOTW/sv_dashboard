@@ -231,5 +231,5 @@ test("vehicle information popup uses neutral attributes and HA-native relative t
   assert.match(strategy, /attribute: "maintenance_mileage_remaining_km", name: strings\.mileageRemaining/);
   assert.match(strategy, /attribute: "maintenance_updated_at", name: strings\.updated, time_format: "relative"/);
   assert.match(strategy, /attribute: "brand", name: strings\.brand/);
-  assert.match(strategy, /attribute: "powertrain", name: strings\.powertrain/);
+  assert.doesNotMatch(strategy, /attribute: "powertrain", name: strings\.powertrain/);
 });
