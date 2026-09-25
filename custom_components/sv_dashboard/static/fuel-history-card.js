@@ -1,5 +1,5 @@
 import { LitElement, html, css, nothing } from "./vendor-lit.js?v=0.6.0-beta.7";
-import { localeFor, textFor } from "./i18n.js?v=0.6.0-beta.28";
+import { localeFor, textFor } from "./i18n.js?v=0.6.0-beta.34";
 
 const STATUS_DOMAIN = "sv_dashboard";
 const CARD_TAG = "sv-dashboard-fuel-history-card";
@@ -25,23 +25,66 @@ class SvDashboardFuelHistoryCard extends LitElement {
   };
 
   static styles = css`
-    :host { display:block; }
+    :host { display:block; container-type:inline-size; }
     ha-card { overflow:hidden; }
-    .content { padding:14px 16px 16px; }
-    .hint { color:var(--secondary-text-color); font-size:12px; line-height:1.4; margin:0 0 12px; }
-    .summary { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin:0 0 14px; }
-    .summary-item { border:1px solid var(--divider-color); border-radius:12px; padding:9px 10px; background:color-mix(in srgb,var(--primary-color) 4%,var(--card-background-color)); min-width:0; }
-    .summary-label { color:var(--secondary-text-color); font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .summary-value { color:var(--primary-text-color); font-size:18px; font-weight:650; margin-top:2px; white-space:nowrap; }
-    table { width:100%; border-collapse:collapse; }
-    th { text-align:left; color:var(--secondary-text-color); font-size:12px; font-weight:500; padding:0 10px 8px 0; white-space:nowrap; }
-    td { border-top:1px solid var(--divider-color); padding:10px 10px 10px 0; white-space:nowrap; }
-    td:first-child { white-space:normal; }
+    .summary {
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:10px 14px;
+      margin:0 0 10px;
+      padding:0 0 10px;
+      border-bottom:1px solid var(--divider-color);
+    }
+    .summary-item { min-width:0; }
+    .summary-label {
+      color:var(--secondary-text-color);
+      font-size:var(--ha-font-size-xs);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .summary-value {
+      margin-top:2px;
+      color:var(--primary-text-color);
+      font-size:var(--ha-font-size-m);
+      font-weight:600;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .table-wrap {
+      max-height:min(360px,48vh);
+      overflow-y:auto;
+      overflow-x:auto;
+      -webkit-overflow-scrolling:touch;
+      overscroll-behavior-y:contain;
+      touch-action:pan-y;
+      scrollbar-width:thin;
+      scrollbar-color:var(--divider-color) transparent;
+    }
+    .table-wrap::-webkit-scrollbar { width:8px; height:8px; }
+    .table-wrap::-webkit-scrollbar-thumb { background:var(--divider-color); border-radius:999px; }
+    .table-wrap::-webkit-scrollbar-track { background:transparent; }
+    .fuel-table { width:100%; border-collapse:collapse; font-size:var(--ha-font-size-s); }
+    .fuel-table th {
+      position:sticky;
+      top:0;
+      z-index:1;
+      color:var(--secondary-text-color);
+      background:var(--card-background-color);
+      font-weight:500;
+      text-align:left;
+      padding:0 10px 8px 0;
+      white-space:nowrap;
+    }
+    .fuel-table td { border-top:1px solid var(--divider-color); padding:9px 10px 9px 0; white-space:nowrap; }
+    .fuel-table th:last-child, .fuel-table td:last-child { padding-right:0; }
+    .fuel-table td:first-child { white-space:normal; }
     .liters { color:var(--warning-color,#ef6c00); font-weight:600; }
+    .hint { display:block; margin-top:10px; color:var(--secondary-text-color); font-size:var(--ha-font-size-xs); line-height:1.4; }
     .muted { color:var(--secondary-text-color); }
     .error { color:var(--error-color); }
-    .scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
-    @container (max-width:520px) { .summary { grid-template-columns:1fr; } }
+    @container (max-width:520px) { .summary { grid-template-columns:repeat(2,minmax(0,1fr)); } }
   `;
 
   constructor() {
@@ -112,8 +155,7 @@ class SvDashboardFuelHistoryCard extends LitElement {
       return html`<ha-card><div class="content muted">${message}</div></ha-card>`;
     }
     const summary = this._summary;
-    return html`<ha-card .header=${this._config.title || text.title}><div class="content">
-      <p class="hint">${text.hint}</p>
+    return html`<ha-card .header=${this._config.title || text.title}><div class="card-content">
       ${summary ? html`<div class="summary">
         <div class="summary-item"><div class="summary-label">${tripText.distance}</div><div class="summary-value">${summary.distance_km === null || summary.distance_km === undefined ? "—" : `${this._num(summary.distance_km,1)} km`}</div></div>
         <div class="summary-item"><div class="summary-label">${tripText.duration}</div><div class="summary-value">${this._duration(summary.driving_time_seconds)}</div></div>
@@ -123,7 +165,7 @@ class SvDashboardFuelHistoryCard extends LitElement {
       ${this._loading && !this._events.length ? html`<span class="muted">${text.loading}</span>` : nothing}
       ${this._error ? html`<span class="error">${text.error} ${this._error}</span>` : nothing}
       ${!this._loading && !this._error && !this._events.length ? html`<span class="muted">${text.empty}</span>` : nothing}
-      ${this._events.length ? html`<div class="scroll"><table><thead><tr><th>${text.date}</th><th>${text.liters}</th><th>${dashboardText.mileage}</th><th>${text.level}</th></tr></thead><tbody>
+      ${this._events.length ? html`<div class="table-wrap"><table class="fuel-table"><thead><tr><th>${text.date}</th><th>${text.liters}</th><th>${dashboardText.mileage}</th><th>${text.level}</th></tr></thead><tbody>
         ${this._events.map((event) => html`<tr>
           <td>${this._date(event.source_time)}</td>
           <td class="liters">${this._liters(event)}</td>
@@ -131,6 +173,7 @@ class SvDashboardFuelHistoryCard extends LitElement {
           <td>${this._num(event.fuel_before_percent,0)} % → ${this._num(event.fuel_after_percent,0)} %</td>
         </tr>`)}
       </tbody></table></div>` : nothing}
+      <span class="hint">${text.hint}</span>
     </div></ha-card>`;
   }
 }
