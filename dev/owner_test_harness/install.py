@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 from pathlib import Path
 import shutil
 
@@ -95,6 +96,20 @@ window.__svDashboardOwnerHarnessReady = import("./owner-test-harness-card.js?v=o
 /* OWNER-HARNESS-IMPORT-END */
 '''
     text = frontend.read_text(encoding="utf-8").replace(anchor, anchor + "\n" + import_block, 1)
+
+    # The owner harness also patches sv_dashboard.js locally. The production
+    # Strategy import may keep an older content/version key when the product
+    # Strategy itself did not change, so reusing that URL can make the browser
+    # execute a cached unpatched Strategy and silently hide the selector.
+    # Give the locally patched Strategy its own content-addressed module URL.
+    strategy_import_pattern = re.compile(
+        r'await import\("\./sv_dashboard\.js\?v=[^"]+"\);'
+    )
+    replacement = f'await import("./sv_dashboard.js?v=owner-{token}");'
+    text, count = strategy_import_pattern.subn(replacement, text, count=1)
+    if count != 1:
+        raise SystemExit("frontend.js Strategy import anchor not found")
+
     frontend.write_text(text, encoding="utf-8")
     return token
 
