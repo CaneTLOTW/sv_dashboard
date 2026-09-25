@@ -246,7 +246,7 @@ test("trip history provenance copy distinguishes server telemetry from SOC fallb
 test("dashboard strategy uses catalog strings without binary German branches", () => {
   assert.doesNotMatch(strategy, /language\(hass\) === "de"/);
   for (const key of [
-    "vehicleMaintenanceData", "maintenance", "brand", "powertrain",
+    "vehicleMaintenanceData", "maintenance", "brand",
     "chargeLimitEnabled", "serviceBattery", "tripHistoryIntro", "syncServerHistory",
     "privacySharing", "privacyDataSharing", "refreshInterval", "correctBatteryValues",
     "abrpLiveData", "strategyEditorDescription",

@@ -113,4 +113,4 @@ await packageModules;
 window.customCards = (window.customCards || []).filter(
   (card) => !INTERNAL_CARD_TYPES.has(card?.type),
 );
-await import("./sv_dashboard.js?v=0.6.0-beta.34");
+await import("./sv_dashboard.js?v=0.6.0-beta.35");

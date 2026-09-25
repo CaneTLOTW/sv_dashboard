@@ -27,6 +27,7 @@ const PROFILE_OPTIONS = [
 const VALID_PROFILES = new Set(PROFILE_OPTIONS.map(([value]) => value).filter(Boolean));
 const nowIso = () => new Date().toISOString();
 const agoIso = (minutes) => new Date(Date.now() - minutes * 60000).toISOString();
+const futureIso = (minutes) => new Date(Date.now() + minutes * 60000).toISOString();
 const round1 = (value) => Math.round(Number(value) * 10) / 10;
 const numericState = (hass, entityId) => {
   const value = Number.parseFloat(String(entityId ? hass?.states?.[entityId]?.state ?? "" : "").replace(",", "."));
@@ -205,6 +206,9 @@ function fixtureHass(hass, entryId, profile = activeProfile() || "phev") {
     trailingFuel: SYNTH_PREFIX + "trailing_fuel_consumption_500km",
     remainingBattery: SYNTH_PREFIX + "remaining_battery_energy_kwh",
     trailingElectric: SYNTH_PREFIX + "trailing_consumption_500km",
+    currentChargePower: SYNTH_PREFIX + "current_charge_power",
+    chargingType: SYNTH_PREFIX + "charging_type",
+    chargingEnd: SYNTH_PREFIX + "charging_end",
   };
 
   const synthetic = {
@@ -296,9 +300,21 @@ function fixtureHass(hass, entryId, profile = activeProfile() || "phev") {
     synthetic[engine] = state(engine, "off", { friendly_name: "Owner fixture engine", "Last updated": stamp }, stamp);
     synthetic[charging] = state(charging, "on", { friendly_name: "Owner fixture charging", "Last updated": stamp }, stamp);
     synthetic[plugged] = state(plugged, "on", { friendly_name: "Owner fixture plugged", "Last updated": stamp }, stamp);
+    synthetic[ids.chargingType] = state(ids.chargingType, "AC", { friendly_name: "Owner fixture charging type", "Last updated": stamp }, stamp);
+    synthetic[ids.chargingEnd] = state(ids.chargingEnd, futureIso(95), { friendly_name: "Owner fixture charging end", "Last updated": stamp }, stamp);
+    synthetic[ids.currentChargePower] = metricState(
+      ids.currentChargePower,
+      effectiveEntryId,
+      "current_charge_power",
+      7.4,
+      "kW",
+      { estimated: false, owner_test_fixture: true },
+    );
     mapped.engine = engine;
     mapped.battery_charging = charging;
     mapped.battery_plugged = plugged;
+    mapped.battery_charging_type = ids.chargingType;
+    mapped.battery_charging_end = ids.chargingEnd;
   }
 
   const states = { ...hass.states, ...synthetic };
@@ -356,6 +372,7 @@ function fixtureHass(hass, entryId, profile = activeProfile() || "phev") {
         trailing_consumption_500km: usableMetric("trailing_consumption_500km", ids.trailingElectric),
         remaining_fuel_liters: ids.remainingFuel,
         trailing_fuel_consumption_500km: ids.trailingFuel,
+        ...(profile === "phev-charging" ? { current_charge_power: ids.currentChargePower } : {}),
       },
       capabilities: {
         ...(originalAttributes.capabilities || {}),
