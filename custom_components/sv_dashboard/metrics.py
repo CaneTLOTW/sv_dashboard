@@ -234,6 +234,8 @@ class VehicleMetricsManager:
         elif self._is_on("battery_charging"):
             if self.data.get("active_charge"):
                 await self._async_clear_charge_end_candidate()
+                if self.current_charge_power() is not None:
+                    self._schedule_charge_power_expiry()
             else:
                 await self.async_start_charge()
 
