@@ -205,6 +205,7 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
   _selected() { if (!this._hass) return undefined; const candidates = statusCandidates(this._hass, this._config.entry_id); return candidates.length === 1 ? candidates[0] : undefined; }
   _showMore(entityId) { if (!entityId) return; this.dispatchEvent(new CustomEvent("hass-more-info", { bubbles: true, composed: true, detail: { entityId } })); }
   _formatValue(entityId, digits = 0) { const value = numeric(this._hass?.states?.[entityId]); if (value === null) return "—"; return new Intl.NumberFormat(localeFor(this._i18nContext()), { maximumFractionDigits: digits, minimumFractionDigits: digits }).format(value); }
+  _formatPositiveValue(entityId, digits = 0) { const value = numeric(this._hass?.states?.[entityId]); if (value === null || value <= 0) return "—"; return new Intl.NumberFormat(localeFor(this._i18nContext()), { maximumFractionDigits: digits, minimumFractionDigits: digits }).format(value); }
   _formatTime(entityId) {
     const state = this._hass?.states?.[entityId];
     if (!usable(state)) return "—";
@@ -326,7 +327,7 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
     const fuelRange = this._formatValue(mapped.fuel_autonomy, 0);
     const batteryPercent = this._percent(mapped.battery);
     const fuelPercent = this._percent(mapped.fuel);
-    const chargePower = mode.charging ? this._formatValue(mode.chargePower, 1) : "—";
+    const chargePower = mode.charging ? this._formatPositiveValue(mode.chargePower, 1) : "—";
     const chargeEnd = mode.charging ? this._formatTime(mapped.battery_charging_end) : "—";
     const fuelConsumptionEntity = this._fuelConsumptionEntity(mapped, mode);
     const fuelConsumption = fuelConsumptionEntity ? this._formatValue(fuelConsumptionEntity, 1) : "—";
