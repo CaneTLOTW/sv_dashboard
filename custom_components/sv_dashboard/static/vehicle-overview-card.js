@@ -422,7 +422,7 @@ function buildConfig(hass, config, statusState) {
             const isDriving = ['on','true','inprogress','running'].includes(String(states[${literal(engine)}]?.state ?? '').toLowerCase());
             if (isCharging) {
               const power = states[${literal(chargePower)}];
-              if (power && !['unknown','unavailable','none',''].includes(power.state) && Number.isFinite(Number(power.state))) {
+              if (power && !['unknown','unavailable','none',''].includes(power.state) && Number.isFinite(Number(power.state)) && Number(power.state) > 0) {
                 return ${literal(strings.charging)} + ' · ' + Number(power.state).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' kW';
               }
               return ${literal(strings.charging)};
