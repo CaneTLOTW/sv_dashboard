@@ -329,7 +329,7 @@ class SvDashboardStrategy extends HTMLElement {
         const charging = chargingEntity?.state === 'on';
         const value = stateEntity?.state;
         const numericValue = Number(value);
-        const formatter = new Intl.NumberFormat(${literalText(localeFor(hass))}, { minimumFractionDigits: 1, maximumFractionDigits: 1 });\n        const text = !charging ? '-' : invalid(value) || !Number.isFinite(numericValue) ? '0 kW' : formatter.format(numericValue) + ' ' + (stateEntity.attributes?.unit_of_measurement || 'kW');`
+        const formatter = new Intl.NumberFormat(${literalText(localeFor(hass))}, { minimumFractionDigits: 1, maximumFractionDigits: 1 });\n        const text = !charging || invalid(value) || !Number.isFinite(numericValue) || numericValue <= 0 ? '-' : formatter.format(numericValue) + ' ' + (stateEntity.attributes?.unit_of_measurement || 'kW');`
         : kind === "time"
           ? `const value = stateEntity?.state;
         const raw = String(value ?? '').trim();
