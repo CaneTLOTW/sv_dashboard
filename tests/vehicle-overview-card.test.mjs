@@ -153,6 +153,7 @@ test("vehicle overview localizes runtime and editor text through the shared cata
 test("EV Hero current charge power never treats upstream km/h chargingRate as kW", () => {
   assert.match(source, /const chargePower = metricEntity\(hass, attributes, "current_charge_power"\);/);
   assert.doesNotMatch(source, /current_charge_power"\) \|\| mapped\.battery_charging_rate/);
+  assert.match(source, /Number\(power\.state\) > 0/);
 });
 
 test("EV Hero freshness badge remains a recent-source cue", () => {
