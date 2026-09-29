@@ -5,21 +5,46 @@ import test from "node:test";
 const metrics = fs.readFileSync("custom_components/sv_dashboard/metrics.py", "utf8");
 const sensor = fs.readFileSync("custom_components/sv_dashboard/sensor.py", "utf8");
 const strategy = fs.readFileSync("custom_components/sv_dashboard/static/sv_dashboard.js", "utf8");
+const compactHero = fs.readFileSync("custom_components/sv_dashboard/static/vehicle-overview-card.js", "utf8");
+const dualHero = fs.readFileSync("custom_components/sv_dashboard/static/dual-energy-overview-card.js", "utf8");
 
-test("live charge power samples react to residual-energy updates as well as SOC", () => {
-  assert.match(metrics, /entity_id in \{\s*self\.mapping\.get\("battery"\),\s*self\.mapping\.get\("battery_residual"\),\s*\} and self\._is_on\("battery_charging"\)/);
-  assert.match(metrics, /residual_state =/);
-  assert.match(metrics, /upstream_candidates: list\[datetime\] = \[\]/);
-  assert.match(metrics, /ha_candidates: list\[datetime\] = \[\]/);
-  assert.match(metrics, /if upstream_candidates:/);
-  assert.match(metrics, /source_time = max\(upstream_candidates\)/);
-  assert.match(metrics, /elif ha_candidates:/);
-  assert.match(metrics, /source_time = max\(ha_candidates\)/);
-  assert.match(metrics, /timestamp_source = "stellantis"/);
-  assert.match(metrics, /"residual_kwh": self\._as_float\(/);
-  assert.match(metrics, /same_source_update = bool\(/);
-  assert.match(metrics, /reference = \(\s*samples\[-2\]/);
-  assert.match(metrics, /samples\[-1\] = merged/);
+test("live charge power keeps per-metric timestamp provenance", () => {
+  assert.match(metrics, /soc_time, soc_timestamp_source = self\._entity_sample_time/);
+  assert.match(metrics, /residual_time, residual_timestamp_source = self\._entity_sample_time/);
+  assert.match(metrics, /"soc_source_time": soc_time\.isoformat\(\)/);
+  assert.match(metrics, /"residual_source_time": residual_time\.isoformat\(\)/);
+  assert.match(metrics, /def _sample_metric_time/);
+  assert.match(metrics, /previous_residual_time = self\._sample_metric_time\(reference, "residual"\)/);
+  assert.match(metrics, /previous_soc_time = self\._sample_metric_time\(reference, "soc"\)/);
+});
+
+test("unchanged residual energy cannot suppress the SOC fallback", () => {
+  assert.match(metrics, /residual > previous_residual/);
+  assert.match(metrics, /if power is None and previous_soc is not None and soc > previous_soc:/);
+  const residualBlock = metrics.indexOf('power_source = "residual_energy_delta"');
+  const socFallback = metrics.indexOf('if power is None and previous_soc is not None and soc > previous_soc:');
+  assert.ok(residualBlock >= 0 && socFallback > residualBlock);
+});
+
+test("tiny or implausible derived power is never published as zero", () => {
+  assert.match(metrics, /_MIN_CHARGE_POWER_KW = 0\.1/);
+  assert.match(metrics, /_MAX_CHARGE_POWER_KW = 250\.0/);
+  assert.match(metrics, /_MIN_CHARGE_POWER_KW <= candidate <= _MAX_CHARGE_POWER_KW/);
+  assert.match(metrics, /rounded_power >= _MIN_CHARGE_POWER_KW/);
+  assert.match(metrics, /No estimate is more honest than fake zero/);
+});
+
+test("live charge power expires and exposes provenance diagnostics", () => {
+  assert.match(metrics, /_CHARGE_POWER_STALE_AFTER = timedelta\(minutes=30\)/);
+  assert.match(metrics, /current_charge_power_source_time/);
+  assert.match(metrics, /current_charge_power_timestamp_source/);
+  assert.match(metrics, /def _schedule_charge_power_expiry/);
+  assert.match(metrics, /age > _CHARGE_POWER_STALE_AFTER\.total_seconds\(\)/);
+  assert.match(metrics, /def current_charge_power_provenance/);
+  assert.match(sensor, /current_charge_power_provenance\(\)/);
+  for (const key of ["estimated", "power_source", "source_time", "timestamp_source", "sample_age_seconds", "fresh"]) {
+    assert.match(metrics, new RegExp(`"${key}"`));
+  }
 });
 
 test("compact charge samples retain provenance needed by Charge Curve V2", () => {
@@ -38,4 +63,16 @@ test("charging UI never labels upstream chargingRate km per hour as kW", () => {
   assert.match(strategy, /const currentChargePower = metric\("current_charge_power"\);/);
   assert.doesNotMatch(strategy, /current_charge_power"\) \|\| entity\("battery_charging_rate"\)/);
   assert.match(metrics, /Upstream battery_charging_rate is km\/h, not kW/);
+});
+
+test("charging status bubble shows unavailable rather than fake 0 kW", () => {
+  assert.doesNotMatch(strategy, /\? '0 kW'/);
+  assert.match(strategy, /numericValue <= 0 \? '-' : formatter\.format\(numericValue\)/);
+});
+
+test("both Hero variants reject non-positive package charge power", () => {
+  assert.match(compactHero, /Number\(power\.state\) > 0/);
+  assert.match(dualHero, /_formatPositiveValue\(entityId, digits = 0\)/);
+  assert.match(dualHero, /value === null \|\| value <= 0/);
+  assert.match(dualHero, /this\._formatPositiveValue\(mode\.chargePower, 1\)/);
 });
