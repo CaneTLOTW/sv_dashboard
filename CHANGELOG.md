@@ -4,6 +4,17 @@
 
 No changes yet.
 
+## 0.6.0-beta.37 live charge-power hardening candidate
+
+- Fixes the generated Charging status card so an unavailable or non-positive package estimate is shown as **—** instead of the misleading **0 kW** fallback while the vehicle is charging.
+- Keeps `battery_charging_rate` excluded from kW presentation because the upstream field is a range-rate value in km/h, not electrical power.
+- Makes live charge-power derivation metric-time-aware: Battery SOC and residual-energy values keep their own source timestamps, so a timestamp from one metric is never used to time the other metric's delta.
+- Residual-energy deltas remain preferred when they actually advance, but an unchanged/coarsely quantized residual value no longer blocks the SOC × trustworthy-capacity fallback.
+- Adds a 0.1 kW minimum defensible estimate threshold so tiny positive calculations cannot be rounded and published as 0.0 kW.
+- Expires a previously derived live-power estimate after 30 minutes and exposes source/time/age/freshness provenance on the package-owned Current charge power sensor.
+- Applies the same non-positive-value guard to the compact EV Hero and native Dual-Energy Hero.
+- Bumps package/frontend generation to beta.37 and cache-busts the changed Strategy and both Hero modules.
+
 ## 0.6.0-beta.36 owner Hybrid UI polish candidate
 
 - Keeps the owner-reviewed Hybrid vehicle view split into two semantic sections and renames the German headings to **Fahrdaten & Nutzung** and **Reserven & Verbrauch**, avoiding the previous duplicate-looking Verbrauch labels.
