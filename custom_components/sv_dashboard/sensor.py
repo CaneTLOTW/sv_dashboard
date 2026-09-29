@@ -903,7 +903,7 @@ class SvCurrentTripConsumptionSensor(SvMetricSensor):
 
 
 class SvCurrentChargePowerSensor(SvMetricSensor):
-    """Battery-side instantaneous estimate from successive SOC reports."""
+    """Battery-side live estimate from residual-energy or SOC deltas."""
 
     _attr_name = "Current charge power"
     _attr_translation_key = "current_charge_power"
@@ -922,6 +922,12 @@ class SvCurrentChargePowerSensor(SvMetricSensor):
     @property
     def native_value(self) -> float | None:
         return self.metrics.current_charge_power()
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        data = super().extra_state_attributes
+        data.update(self.metrics.current_charge_power_provenance())
+        return data
 
 
 class SvLastTripResultSensor(SvMetricSensor):
