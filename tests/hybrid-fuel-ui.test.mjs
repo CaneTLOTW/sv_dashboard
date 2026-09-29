@@ -210,6 +210,12 @@ test("fuel history matches the compact Trip/Charge history visual grammar", () =
   assert.doesNotMatch(CORE_FRONTEND_TEXT.fuelHistory.de.hint, /≈|markiert/);
 });
 
+test("Dual-Energy Hero does not render zero as valid charge power", () => {
+  assert.match(dualHero, /_formatPositiveValue\(entityId, digits = 0\)/);
+  assert.match(dualHero, /value === null \|\| value <= 0/);
+  assert.match(dualHero, /_formatPositiveValue\(mode\.chargePower, 1\)/);
+});
+
 test("new card strings cover 18 languages", () => {
   for (const language of languages) {
     const text = CORE_FRONTEND_TEXT.dualEnergyOverview[language];
@@ -231,10 +237,10 @@ test("frontend cache-busts changed modules", () => {
   }
   assert.match(frontend, /fuel-history-card\.js\?v=0\.6\.0-beta\.36/);
   assert.match(frontend, /charge-history-card\.js\?v=0\.6\.0-beta\.33/);
-  assert.match(frontend, /vehicle-overview-card\.js\?v=0\.6\.0-beta\.31/);
-  assert.match(frontend, /dual-energy-overview-card\.js\?v=0\.6\.0-beta\.31/);
+  assert.match(frontend, /vehicle-overview-card\.js\?v=0\.6\.0-beta\.37/);
+  assert.match(frontend, /dual-energy-overview-card\.js\?v=0\.6\.0-beta\.37/);
   assert.match(frontend, /vehicle-audit-card\.js\?v=0\.6\.0-beta\.28/);
-  assert.match(frontend, /sv_dashboard\.js\?v=0\.6\.0-beta\.36/);
+  assert.match(frontend, /sv_dashboard\.js\?v=0\.6\.0-beta\.37/);
   assert.match(strategy, /i18n\.js\?v=0\.6\.0-beta\.36/);
   assert.match(strategy, /modules\.trips && supportsFuel \? \{ type: "custom:sv-dashboard-fuel-history-card"/);
 });
