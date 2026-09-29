@@ -48,6 +48,9 @@ _RETRY_DELAY = timedelta(minutes=2)
 _WINDOW_KM = 500.0
 _STORE_VERSION = 1
 _MAX_CHARGE_SAMPLES = 720
+_MIN_CHARGE_POWER_KW = 0.1
+_MAX_CHARGE_POWER_KW = 250.0
+_CHARGE_POWER_STALE_AFTER = timedelta(minutes=30)
 
 
 class VehicleMetricsManager:
@@ -78,6 +81,9 @@ class VehicleMetricsManager:
             "last_trip": None,
             "last_charge": None,
             "current_charge_power_kw": None,
+            "current_charge_power_source": None,
+            "current_charge_power_source_time": None,
+            "current_charge_power_timestamp_source": None,
             "last_valid_battery_capacity_kwh": None,
             "canonical_mileage_km": None,
             "canonical_mileage_source": None,
@@ -88,6 +94,7 @@ class VehicleMetricsManager:
         self._unsub: list[callable] = []
         self._cancel_trip_finalize: callable | None = None
         self._cancel_charge_finalize: callable | None = None
+        self._cancel_charge_power_expiry: callable | None = None
         self.server_history = None
 
     def canonical_trips(self) -> list[dict[str, Any]]:
@@ -244,6 +251,9 @@ class VehicleMetricsManager:
         if self._cancel_charge_finalize:
             self._cancel_charge_finalize()
             self._cancel_charge_finalize = None
+        if self._cancel_charge_power_expiry:
+            self._cancel_charge_power_expiry()
+            self._cancel_charge_power_expiry = None
         for unsubscribe in self._unsub:
             unsubscribe()
         self._unsub.clear()
@@ -554,7 +564,7 @@ class VehicleMetricsManager:
             "location_source": "live_tracker" if location else None,
             "samples": ([first_sample] if soc is not None else []),
         }
-        self.data["current_charge_power_kw"] = None
+        self._clear_current_charge_power()
         await self._save_and_refresh()
 
     async def async_track_charge_sample(self) -> None:
@@ -581,25 +591,81 @@ class VehicleMetricsManager:
             else previous
         )
         previous_soc = self._as_float(reference.get("soc")) if reference else None
-        previous_time = self._sample_time(reference) if reference else None
-        current_time = self._sample_time(sample)
-        previous_residual = self._as_float(reference.get("residual_kwh")) if reference else None
+        previous_residual = (
+            self._as_float(reference.get("residual_kwh")) if reference else None
+        )
         residual = self._as_float(sample.get("residual_kwh"))
-        seconds = (current_time - previous_time).total_seconds() if previous_time and current_time else None
         power = None
         power_source = None
-        if seconds is not None and seconds > 0 and previous_residual is not None and residual is not None:
-            power = (residual - previous_residual) * 3600 / seconds
-            power_source = "residual_energy_delta"
-        elif seconds is not None and seconds > 30 and previous_soc is not None and soc > previous_soc:
-            capacity = self._as_float(sample.get("capacity_kwh")) or self._as_float(active.get("capacity_kwh"))
-            if capacity is not None:
-                power = (soc - previous_soc) * capacity / 100 * 3600 / seconds
-                power_source = "soc_delta"
-        if power is not None and 0 < power <= 250:
-            sample["derived_power_kw"] = round(power, 2)
-            sample["power_source"] = power_source
-            self.data["current_charge_power_kw"] = sample["derived_power_kw"]
+        power_time = None
+        power_timestamp_source = None
+
+        # Prefer direct residual-energy movement, but only when the residual
+        # value itself advanced. A present-but-unchanged/coarsely quantized
+        # residual value must not suppress the SOC fallback.
+        previous_residual_time = self._sample_metric_time(reference, "residual")
+        residual_time = self._sample_metric_time(sample, "residual")
+        residual_seconds = (
+            (residual_time - previous_residual_time).total_seconds()
+            if previous_residual_time and residual_time
+            else None
+        )
+        if (
+            residual_seconds is not None
+            and residual_seconds > 0
+            and previous_residual is not None
+            and residual is not None
+            and residual > previous_residual
+        ):
+            candidate = (residual - previous_residual) * 3600 / residual_seconds
+            if _MIN_CHARGE_POWER_KW <= candidate <= _MAX_CHARGE_POWER_KW:
+                power = candidate
+                power_source = "residual_energy_delta"
+                power_time = residual_time
+                power_timestamp_source = sample.get("residual_timestamp_source")
+
+        # Fall back to whole-percent SOC only when residual energy did not
+        # produce a defensible positive estimate. Time this delta exclusively
+        # with the SOC entity's own timestamp.
+        if power is None and previous_soc is not None and soc > previous_soc:
+            previous_soc_time = self._sample_metric_time(reference, "soc")
+            soc_time = self._sample_metric_time(sample, "soc")
+            soc_seconds = (
+                (soc_time - previous_soc_time).total_seconds()
+                if previous_soc_time and soc_time
+                else None
+            )
+            if soc_seconds is not None and soc_seconds > 30:
+                capacity = (
+                    self._as_float(sample.get("capacity_kwh"))
+                    or self._as_float(active.get("capacity_kwh"))
+                )
+                if capacity is not None:
+                    candidate = (
+                        (soc - previous_soc) * capacity / 100 * 3600 / soc_seconds
+                    )
+                    if _MIN_CHARGE_POWER_KW <= candidate <= _MAX_CHARGE_POWER_KW:
+                        power = candidate
+                        power_source = "soc_delta"
+                        power_time = soc_time
+                        power_timestamp_source = sample.get("soc_timestamp_source")
+
+        if power is not None and power_time is not None:
+            rounded_power = round(power, 2)
+            # Never persist/display an estimate that rounded down to an
+            # apparent 0.0 kW. No estimate is more honest than fake zero.
+            if rounded_power >= _MIN_CHARGE_POWER_KW:
+                sample["derived_power_kw"] = rounded_power
+                sample["power_source"] = power_source
+                sample["power_source_time"] = power_time.isoformat()
+                sample["power_timestamp_source"] = power_timestamp_source
+                self.data["current_charge_power_kw"] = rounded_power
+                self.data["current_charge_power_source"] = power_source
+                self.data["current_charge_power_source_time"] = power_time.isoformat()
+                self.data["current_charge_power_timestamp_source"] = (
+                    power_timestamp_source
+                )
+                self._schedule_charge_power_expiry()
 
         if same_source_update:
             merged = dict(previous)
@@ -609,6 +675,8 @@ class VehicleMetricsManager:
             if sample.get("derived_power_kw") is None and previous.get("derived_power_kw") is not None:
                 merged["derived_power_kw"] = previous.get("derived_power_kw")
                 merged["power_source"] = previous.get("power_source")
+                merged["power_source_time"] = previous.get("power_source_time")
+                merged["power_timestamp_source"] = previous.get("power_timestamp_source")
             samples[-1] = merged
         else:
             # Preserve repeated whole-percent SOC reports as raw timeline
@@ -671,7 +739,7 @@ class VehicleMetricsManager:
         if duration_seconds > 48 * 3600:
             _LOGGER.warning("Discarding implausible local SV charge candidate")
             self.data["active_charge"] = None
-            self.data["current_charge_power_kw"] = None
+            self._clear_current_charge_power()
             await self._save_and_refresh()
             return
         capacity = self._as_float(active.get("capacity_kwh"))
@@ -740,7 +808,7 @@ class VehicleMetricsManager:
         ] + [charge]
         self.data["last_charge"] = charge
         self.data["active_charge"] = None
-        self.data["current_charge_power_kw"] = None
+        self._clear_current_charge_power()
         mileage = self._number("mileage")
         if mileage is not None:
             self.data["charge_odometer_km"] = round(mileage, 3)
@@ -778,8 +846,78 @@ class VehicleMetricsManager:
             return None
         return round(energy / distance * 100, 2)
 
+    def _clear_current_charge_power(self) -> None:
+        self.data["current_charge_power_kw"] = None
+        self.data["current_charge_power_source"] = None
+        self.data["current_charge_power_source_time"] = None
+        self.data["current_charge_power_timestamp_source"] = None
+        if self._cancel_charge_power_expiry:
+            self._cancel_charge_power_expiry()
+            self._cancel_charge_power_expiry = None
+
+    def _charge_power_age_seconds(self) -> float | None:
+        source_time = self._parse_sample_timestamp(
+            self.data.get("current_charge_power_source_time")
+        )
+        if source_time is None:
+            return None
+        try:
+            return max(0.0, dt_util.utcnow().timestamp() - source_time.timestamp())
+        except (OSError, OverflowError, ValueError):
+            return None
+
+    def _schedule_charge_power_expiry(self) -> None:
+        if self._cancel_charge_power_expiry:
+            self._cancel_charge_power_expiry()
+            self._cancel_charge_power_expiry = None
+        age = self._charge_power_age_seconds()
+        if age is None:
+            return
+        remaining = _CHARGE_POWER_STALE_AFTER.total_seconds() - age
+        if remaining <= 0:
+            for entity in self._entities:
+                entity.async_write_ha_state()
+            return
+        self._cancel_charge_power_expiry = async_call_later(
+            self.hass,
+            timedelta(seconds=max(1.0, remaining)),
+            self._expire_charge_power,
+        )
+
+    @callback
+    def _expire_charge_power(self, _now) -> None:
+        self._cancel_charge_power_expiry = None
+        for entity in self._entities:
+            entity.async_write_ha_state()
+
     def current_charge_power(self) -> float | None:
-        return self._as_float(self.data.get("current_charge_power_kw"))
+        value = self._as_float(self.data.get("current_charge_power_kw"))
+        age = self._charge_power_age_seconds()
+        if (
+            value is None
+            or value < _MIN_CHARGE_POWER_KW
+            or value > _MAX_CHARGE_POWER_KW
+            or age is None
+            or age > _CHARGE_POWER_STALE_AFTER.total_seconds()
+        ):
+            return None
+        return value
+
+    def current_charge_power_provenance(self) -> dict[str, Any]:
+        age = self._charge_power_age_seconds()
+        value = self.current_charge_power()
+        return {
+            "estimated": True,
+            "power_source": self.data.get("current_charge_power_source"),
+            "source_time": self.data.get("current_charge_power_source_time"),
+            "timestamp_source": self.data.get(
+                "current_charge_power_timestamp_source"
+            ),
+            "sample_age_seconds": round(age, 1) if age is not None else None,
+            "fresh": value is not None,
+            "minimum_display_power_kw": _MIN_CHARGE_POWER_KW,
+            "stale_after_seconds": int(_CHARGE_POWER_STALE_AFTER.total_seconds()),
+        }
 
     def trailing_consumption(self) -> dict[str, Any]:
         if not self.capabilities.get("electric_trip_metrics", bool(self.mapping.get("battery"))):
@@ -1028,7 +1166,7 @@ class VehicleMetricsManager:
         return self._as_float(state.state if state else None)
 
     def _charge_sample(self) -> dict[str, Any]:
-        """Capture the best available timestamp and unmodified upstream values."""
+        """Capture metric-specific timestamps and unmodified upstream values."""
         received_at = dt_util.utcnow()
         battery_entity = self.mapping.get("battery")
         residual_entity = self.mapping.get("battery_residual")
@@ -1037,32 +1175,34 @@ class VehicleMetricsManager:
             self.hass.states.get(residual_entity) if residual_entity else None
         )
 
-        # Use the freshest upstream energy timestamp available. Whole-percent
-        # SOC can remain unchanged while residual kWh advances, and using only
-        # the battery entity timestamp can otherwise make two real samples look
-        # identical.
-        upstream_candidates: list[datetime] = []
-        ha_candidates: list[datetime] = []
-        for candidate in (state, residual_state):
-            attributes = getattr(candidate, "attributes", {}) or {}
-            source = self._parse_sample_timestamp(attributes.get("Last updated"))
-            if source is not None:
-                upstream_candidates.append(source)
-            elif candidate is not None:
-                fallback = getattr(candidate, "last_updated", None)
-                if fallback is not None:
-                    ha_candidates.append(fallback)
+        soc_time, soc_timestamp_source = self._entity_sample_time(
+            state, received_at
+        )
+        residual_time, residual_timestamp_source = self._entity_sample_time(
+            residual_state, received_at
+        )
 
-        # Provenance outranks wall-clock recency: once any Stellantis source
-        # timestamp exists, a later Home Assistant receipt/update timestamp
-        # must never replace it. HA time is only a fallback when the upstream
-        # payload exposes no usable source timestamp at all.
+        # Keep one aggregate timestamp for timeline/backward compatibility, but
+        # never use it to time a delta from a different metric. Provenance still
+        # outranks HA receipt time for the aggregate sample timestamp.
+        timed_candidates = [
+            (soc_time, soc_timestamp_source),
+            (residual_time, residual_timestamp_source),
+        ]
+        upstream_candidates = [
+            item for item in timed_candidates if item[1] == "stellantis"
+        ]
+        ha_candidates = [
+            item for item in timed_candidates if item[1] == "home_assistant"
+        ]
         if upstream_candidates:
-            source_time = max(upstream_candidates)
-            timestamp_source = "stellantis"
+            source_time, timestamp_source = max(
+                upstream_candidates, key=lambda item: item[0]
+            )
         elif ha_candidates:
-            source_time = max(ha_candidates)
-            timestamp_source = "home_assistant"
+            source_time, timestamp_source = max(
+                ha_candidates, key=lambda item: item[0]
+            )
         else:
             source_time = received_at
             timestamp_source = "received_at"
@@ -1075,18 +1215,38 @@ class VehicleMetricsManager:
             # Compatibility bridge for older stores/tools that used `time`.
             "time": source_time.isoformat(),
             "soc": self._as_float(state.state if state else None),
+            "soc_source_time": soc_time.isoformat(),
+            "soc_timestamp_source": soc_timestamp_source,
             "capacity_kwh": capacity,
             "capacity_source": capacity_source,
             "residual_kwh": self._as_float(
                 residual_state.state if residual_state else None
             ),
+            "residual_source_time": residual_time.isoformat(),
+            "residual_timestamp_source": residual_timestamp_source,
             # Upstream battery_charging_rate is km/h, not kW. Keep the raw
             # value in the session timeline but never expose it as charge power.
             "charging_rate_kmh": self._number("battery_charging_rate"),
             "charge_type": self._state("battery_charging_type") or "Unknown",
             "derived_power_kw": None,
             "power_source": None,
+            "power_source_time": None,
+            "power_timestamp_source": None,
         }
+
+    def _entity_sample_time(
+        self, state: Any, received_at: datetime
+    ) -> tuple[datetime, str]:
+        """Return one entity's own source timestamp with HA as fallback."""
+        attributes = getattr(state, "attributes", {}) or {}
+        for key in ("Last updated", "last_updated", "updatedAt", "updated_at"):
+            source = self._parse_sample_timestamp(attributes.get(key))
+            if source is not None:
+                return source, "stellantis"
+        fallback = getattr(state, "last_updated", None) if state is not None else None
+        if isinstance(fallback, datetime):
+            return fallback, "home_assistant"
+        return received_at, "received_at"
 
     @staticmethod
     def _parse_sample_timestamp(value: Any) -> datetime | None:
@@ -1098,6 +1258,17 @@ class VehicleMetricsManager:
 
     def _sample_time(self, sample: dict[str, Any]) -> datetime | None:
         return self._parse_sample_timestamp(sample.get("source_time") or sample.get("time"))
+
+    def _sample_metric_time(
+        self, sample: dict[str, Any] | None, metric: str
+    ) -> datetime | None:
+        if not isinstance(sample, dict):
+            return None
+        return self._parse_sample_timestamp(
+            sample.get(f"{metric}_source_time")
+            or sample.get("source_time")
+            or sample.get("time")
+        )
 
     def _capacity(self) -> float | None:
         """Compatibility helper for existing callers; never invent a default."""
