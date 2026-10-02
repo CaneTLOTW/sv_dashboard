@@ -95,6 +95,13 @@ test("EV Hero preconditioning uses one-tap start/stop with a 90 second pending g
   assert.match(source, /triggers_update: \[preconditioning, preconditioningStart, preconditioningStop, temperature\]/);
 });
 
+test("active EV climate uses neutral primary styling rather than temperature-as-error red", () => {
+  assert.match(source, /return 'mdi:air-conditioner'/);
+  assert.match(source, /return 'var\(--primary-color\)'/);
+  assert.doesNotMatch(source, /return Number\(temp\.state\) > 20 \? 'rgb\(33,150,243\)' : 'rgb\(244,67,54\)'/);
+  assert.doesNotMatch(source, /return Number\(temp\.state\) > 20 \? 'mdi:air-conditioner' : 'mdi:radiator'/);
+});
+
 test("vehicle overview contains no legacy household route, VIN or fixed vehicle entity", () => {
   assert.doesNotMatch(source, /dashboard-kfz\/ec3/);
   assert.doesNotMatch(source, /VR7CBZYA7TZ814720/i);
