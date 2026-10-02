@@ -332,9 +332,7 @@ function buildConfig(hass, config, statusState) {
           show_label: false,
           show_icon: true,
           icon: climateRuntimeTemplate(`
-            const temp = states[${literal(temperature)}];
-            if (!active || !temp || ['unknown','unavailable'].includes(String(temp.state).toLowerCase()) || !Number.isFinite(Number(temp.state))) return 'mdi:air-conditioner';
-            return Number(temp.state) > 20 ? 'mdi:air-conditioner' : 'mdi:radiator';
+            return 'mdi:air-conditioner';
           `),
           tap_action: {
             action: "perform-action",
@@ -358,9 +356,7 @@ function buildConfig(hass, config, statusState) {
                 if (pendingAction === 'stop') return 'color-mix(in srgb, var(--error-color) 12%, rgba(20,20,20,0.72))';
                 if (pendingAction === 'start') return 'color-mix(in srgb, var(--primary-color) 12%, rgba(20,20,20,0.72))';
                 if (!active) return 'rgba(20,20,20,0.62)';
-                const temp = states[${literal(temperature)}];
-                if (!temp || ['unknown','unavailable'].includes(String(temp.state).toLowerCase()) || !Number.isFinite(Number(temp.state))) return 'rgba(90,90,90,0.40)';
-                return Number(temp.state) > 20 ? 'rgba(33,150,243,0.22)' : 'rgba(244,67,54,0.22)';
+                return 'color-mix(in srgb, var(--primary-color) 20%, rgba(20,20,20,0.72))';
               `) },
             ],
             grid: [
@@ -373,9 +369,7 @@ function buildConfig(hass, config, statusState) {
                 if (pendingAction === 'stop') return 'var(--error-color)';
                 if (pendingAction === 'start') return 'var(--primary-color)';
                 if (!active) return 'white';
-                const temp = states[${literal(temperature)}];
-                if (!temp || ['unknown','unavailable'].includes(String(temp.state).toLowerCase()) || !Number.isFinite(Number(temp.state))) return 'white';
-                return Number(temp.state) > 20 ? 'rgb(33,150,243)' : 'rgb(244,67,54)';
+                return 'var(--primary-color)';
               `) },
               { animation: climateRuntimeTemplate("return pending ? 'kfzClimatePending 1.2s ease-in-out infinite' : 'none';") },
               { margin: 0 }, { padding: 0 },
