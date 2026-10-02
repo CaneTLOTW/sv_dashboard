@@ -299,7 +299,7 @@ async def async_build_vehicle_diagnostics(
             end_time,
             entity_ids,
             None,
-            True,
+            False,
             False,
             False,
             False,

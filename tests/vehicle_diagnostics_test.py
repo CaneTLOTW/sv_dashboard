@@ -80,7 +80,21 @@ RECORDED_STATES: dict[str, list[object]] = {}
 
 def _get_significant_states(*args):
     RECORDED_CALLS.append(args)
-    return RECORDED_STATES
+    _hass, start_time, end_time, entity_ids, _filters, include_start_time_state = args[:6]
+    result = {}
+    for entity_id in entity_ids:
+        states = RECORDED_STATES.get(entity_id, [])
+        in_window = [
+            state
+            for state in states
+            if start_time <= state.last_updated <= end_time
+        ]
+        if include_start_time_state:
+            before_window = [state for state in states if state.last_updated < start_time]
+            if before_window:
+                in_window.insert(0, before_window[-1])
+        result[entity_id] = in_window
+    return result
 
 
 MODULE.recorder_history.get_significant_states = _get_significant_states
@@ -175,6 +189,49 @@ def test_missing_optional_entities_and_empty_recorder_history_are_safe():
     report = asyncio.run(MODULE.async_build_vehicle_diagnostics(hass, coordinator, 7200))
     assert report["events"] == []
     assert report["recorder_available"] is True
+
+
+def test_pre_window_baseline_alone_does_not_create_a_timeline_event():
+    _reset(
+        {
+            "sensor.temperature": [
+                _state("14", "2026-10-02T08:00:00+00:00"),
+            ]
+        }
+    )
+    coordinator = _coordinator({"temperature": "sensor.temperature"})
+
+    report = asyncio.run(
+        MODULE.async_build_vehicle_diagnostics(FakeHass({}), coordinator, 7200)
+    )
+
+    assert RECORDED_CALLS[0][5] is False
+    assert report["events"] == []
+    assert report["total_events"] == 0
+    assert report["truncated"] is False
+
+
+def test_pre_window_baseline_is_excluded_but_in_window_change_is_kept():
+    _reset(
+        {
+            "sensor.temperature": [
+                _state("14", "2026-10-02T08:00:00+00:00"),
+                _state("15", "2026-10-02T11:15:00+00:00"),
+            ]
+        }
+    )
+    coordinator = _coordinator({"temperature": "sensor.temperature"})
+
+    report = asyncio.run(
+        MODULE.async_build_vehicle_diagnostics(FakeHass({}), coordinator, 7200)
+    )
+
+    assert RECORDED_CALLS[0][5] is False
+    assert [event["value"] for event in report["events"]] == ["15"]
+    assert [event["event_time"] for event in report["events"]] == [
+        "2026-10-02T11:15:00Z"
+    ]
+    assert report["total_events"] == 1
 
 
 def test_refresh_interval_history_preserves_the_real_recorded_value():
@@ -338,8 +395,14 @@ def test_time_window_and_output_are_bounded():
     _reset(
         {
             "sensor.temperature": [
-                _state("14", (datetime(2026, 10, 2, 8, tzinfo=UTC) + timedelta(seconds=index)).isoformat())
-                for index in range(MODULE._MAX_EVENTS + 5)
+                _state("13", "2026-10-01T11:59:00+00:00"),
+                *(
+                    _state(
+                        "14",
+                        (datetime(2026, 10, 2, 8, tzinfo=UTC) + timedelta(seconds=index)).isoformat(),
+                    )
+                    for index in range(MODULE._MAX_EVENTS + 5)
+                ),
             ]
         }
     )
