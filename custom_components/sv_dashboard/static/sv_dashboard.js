@@ -161,6 +161,13 @@ class SvDashboardStrategy extends HTMLElement {
     const serverGpsEntity = serverHistoryEntity("server_gps_history");
     const serverChargeEntity = serverHistoryEntity("server_charge_history");
     const entity = (key) => mapped[key];
+    const refreshIntervalPreset = control("refresh_interval_preset") || Object.entries(hass.states).find(
+      ([entityId, state]) =>
+        entityId.startsWith("select.") &&
+        state?.attributes?.integration_domain === STATUS_DOMAIN &&
+        state?.attributes?.entry_id === attributes.entry_id &&
+        state?.attributes?.target_entity_id === entity("refresh_interval")
+    )?.[0];
     const capabilities = attributes.capabilities || {};
     const powertrain = attributes.powertrain || "unknown";
     const supportsElectric = capabilities.electric_energy ?? Boolean(entity("battery"));
@@ -856,7 +863,7 @@ class SvDashboardStrategy extends HTMLElement {
         entity("privacy") ? separator(strings.privacySharing, "mdi:shield-account") : null,
         entity("privacy") ? { ...bubble("privacy", strings.privacyDataSharing, "mdi:shield-check", [subState("privacy_mode", "", "mdi:shield-account")]), show_state: false, styles: `\${(() => { const raw=hass.states[entity]?.state; card.querySelector('.bubble-state').innerText=raw==='on'?${literalText(strings.unrestricted)}:raw==='off'?${literalText(strings.restricted)}:'—'; icon.setAttribute('icon',raw==='on'?'mdi:shield-check':raw==='off'?'mdi:shield-alert-outline':'mdi:shield-question'); })()}` } : null,
         separator(strings.settings, "mdi:cog-outline"),
-        control("refresh_interval_preset") ? { type: "custom:bubble-card", card_type: "select", entity: control("refresh_interval_preset"), name: strings.refreshInterval, icon: "mdi:update", show_state: true, force_icon: true } : entity("refresh_interval") ? { type: "custom:bubble-card", card_type: "button", button_type: "state", entity: entity("refresh_interval"), name: strings.refreshInterval, icon: "mdi:update", show_state: true, force_icon: true, button_action: { tap_action: { action: "more-info" }, hold_action: { action: "more-info" } } } : null,
+        refreshIntervalPreset ? { type: "custom:bubble-card", card_type: "select", entity: refreshIntervalPreset, name: strings.refreshInterval, icon: "mdi:update", show_state: true, force_icon: true } : entity("refresh_interval") ? { type: "custom:bubble-card", card_type: "button", button_type: "state", entity: entity("refresh_interval"), name: strings.refreshInterval, icon: "mdi:update", show_state: true, force_icon: true, button_action: { tap_action: { action: "more-info" }, hold_action: { action: "more-info" } } } : null,
         supportsElectric && entity("battery_values_correction") ? { type: "custom:bubble-card", card_type: "button", button_type: "switch", entity: entity("battery_values_correction"), name: strings.correctBatteryValues, icon: "mdi:auto-fix", show_state: true, force_icon: true } : null,
         entity("abrp_sync") ? separator("ABRP", "mdi:map-marker-path") : null,
         entity("abrp_sync") ? { type: "custom:bubble-card", card_type: "button", button_type: "switch", entity: entity("abrp_sync"), name: strings.abrpLiveData, icon: "mdi:transit-connection-variant", show_state: true, force_icon: true } : null,
