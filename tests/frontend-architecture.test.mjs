@@ -19,19 +19,20 @@ const switches = read("switch.py");
 const buttons = read("button.py");
 const numbers = read("number.py");
 const times = read("time.py");
+const selects = read("select.py");
 
 test("Home Assistant registers one SV frontend resource", () => {
   assert.match(constants, /FRONTEND_URL = "\/sv_dashboard\/frontend\.js"/);
-  assert.match(constants, /FRONTEND_VERSION = "0\.6\.0-beta\.37"/);
-  assert.equal(manifest.version, "0.6.0-beta.37");
+  assert.match(constants, /FRONTEND_VERSION = "0\.6\.0-beta\.38"/);
+  assert.equal(manifest.version, "0.6.0-beta.38");
   assert.match(constants, /FRONTEND_RESOURCE_URLS = \(FRONTEND_URL,\)/);
-  // beta.37 changes charge-power presentation in Strategy and both Hero variants; unchanged history/i18n/GPS modules retain prior content keys.
-  assert.match(frontend, /import\("\.\/vehicle-overview-card\.js\?v=0\.6\.0-beta\.37"\)/);
+  // beta.38 changes Strategy plus the compact Hero; unchanged history/i18n/GPS/Dual-Energy modules retain prior content keys.
+  assert.match(frontend, /import\("\.\/vehicle-overview-card\.js\?v=0\.6\.0-beta\.38"\)/);
   assert.match(frontend, /import\("\.\/gps-history-card\.js\?v=0\.6\.0-beta\.28"\)/);
   assert.match(frontend, /import\("\.\/charge-history-card\.js\?v=0\.6\.0-beta\.33"\)/);
   assert.match(frontend, /import\("\.\/dual-energy-overview-card\.js\?v=0\.6\.0-beta\.37"\)/);
   assert.match(frontend, /import\("\.\/fuel-history-card\.js\?v=0\.6\.0-beta\.36"\)/);
-  assert.match(frontend, /import\("\.\/sv_dashboard\.js\?v=0\.6\.0-beta\.37"\)/);
+  assert.match(frontend, /import\("\.\/sv_dashboard\.js\?v=0\.6\.0-beta\.38"\)/);
   assert.match(strategy, /from "\.\/i18n\.js\?v=0\.6\.0-beta\.36"/);
   assert.doesNotMatch(frontend, /gps-history-fix\.js/);
   assert.doesNotMatch(frontend, /map-marker-fix\.js/);
@@ -43,8 +44,8 @@ test("dependency preflight never delays Strategy registration", () => {
   assert.match(frontend, /DEPENDENCY_GRACE_MS = 10000/);
   assert.match(frontend, /window\.__svDashboardDependencyReadiness = Promise\.all/);
   assert.doesNotMatch(frontend, /await dependencyReadiness/);
-  assert.match(frontend, /await import\("\.\/sv_dashboard\.js\?v=0\.6\.0-beta\.37"\)/);
-  const strategyImport = frontend.indexOf('await import("./sv_dashboard.js?v=0.6.0-beta.37")');
+  assert.match(frontend, /await import\("\.\/sv_dashboard\.js\?v=0\.6\.0-beta\.38"\)/);
+  const strategyImport = frontend.indexOf('await import("./sv_dashboard.js?v=0.6.0-beta.38")');
   assert.ok(strategyImport >= 0);
   assert.match(strategy, /window\.__svDashboardDependencyReadiness/);
   assert.match(strategy, /await readiness/);
@@ -133,6 +134,14 @@ test("settings and ABRP remain in the system view, not the vehicle overview", ()
   assert.ok(settings < abrp);
 });
 
+test("refresh interval uses a compact preset dropdown instead of a wide slider", () => {
+  assert.match(selects, /_REFRESH_INTERVAL_PRESETS = \(30, 60, 120, 300, 600\)/);
+  assert.match(selects, /"number",[\s\S]*"set_value"/);
+  assert.match(strategy, /const refreshIntervalPreset = control\("refresh_interval_preset"\)/);
+  assert.match(strategy, /card_type: "select", entity: refreshIntervalPreset/);
+  assert.doesNotMatch(strategy, /button_type: "slider", entity: entity\("refresh_interval"\)/);
+});
+
 test("GPS components are canonical cards, not Strategy wrappers", () => {
   assert.match(strategy, /custom:sv-dashboard-gps-date-card/);
   assert.match(strategy, /custom:sv-dashboard-gps-map-card/);
@@ -210,7 +219,7 @@ test("dashboard translations contain every explicit notification and wake-up car
 });
 
 test("package-owned controls keep translation-backed entity names", () => {
-  for (const source of [switches, buttons, numbers, times]) {
+  for (const source of [switches, buttons, numbers, selects, times]) {
     assert.match(source, /_attr_has_entity_name = True/);
     assert.doesNotMatch(source, /_attr_has_entity_name = False/);
   }
