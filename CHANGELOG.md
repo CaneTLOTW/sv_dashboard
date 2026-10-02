@@ -4,6 +4,16 @@
 
 No changes yet.
 
+## 0.6.0-beta.38 owner charging + settings UX candidate
+
+- Fixes live AC charge-power estimation for vehicles that advance SOC/residual energy while reusing a stale Stellantis metric timestamp: source timestamps remain preferred, with the metric's own Home Assistant update time used only as a bounded fallback for timing a real value delta.
+- Keeps the existing provenance diagnostics and marks that fallback explicitly as `home_assistant_fallback`; no upstream range-rate value is relabeled as kW.
+- Replaces the System-view refresh-interval slider with compact presets **30 / 60 / 120 / 300 / 600 s** while retaining visibility of an existing custom value until the user selects a preset.
+- Makes active EV preconditioning use the normal primary/active styling instead of deriving blue/red state from temperature, so red is no longer mistaken for a climate fault.
+- Adds the package Select platform, regression guards for the refresh selector, stale-timestamp charge-power path and neutral climate styling.
+- Bumps package/frontend generation to beta.38 and cache-busts the changed Strategy and compact EV Hero.
+
+
 ## 0.6.0-beta.37 live charge-power hardening candidate
 
 - Fixes the generated Charging status card so an unavailable or non-positive package estimate is shown as **—** instead of the misleading **0 kW** fallback while the vehicle is charging.
