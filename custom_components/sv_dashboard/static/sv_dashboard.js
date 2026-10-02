@@ -161,6 +161,7 @@ class SvDashboardStrategy extends HTMLElement {
     const serverGpsEntity = serverHistoryEntity("server_gps_history");
     const serverChargeEntity = serverHistoryEntity("server_charge_history");
     const entity = (key) => mapped[key];
+    const control = (key) => controls[key];
     const refreshIntervalPreset = control("refresh_interval_preset") || Object.entries(hass.states).find(
       ([entityId, state]) =>
         entityId.startsWith("select.") &&
@@ -176,7 +177,6 @@ class SvDashboardStrategy extends HTMLElement {
     const supportsChargeHistory = capabilities.charge_history ?? (supportsCharging && Boolean(entity("battery")));
     const supportsDualEnergy = supportsElectric && supportsFuel;
     const vehicleIcon = supportsElectric ? "mdi:car-electric" : "mdi:car";
-    const control = (key) => controls[key];
     const present = (cards) => cards.filter(Boolean);
     const literalText = (value) => JSON.stringify(String(value));
     const jinjaText = (value) => String(value).replaceAll("\\", "\\\\").replaceAll("'", "\\'");
