@@ -605,12 +605,8 @@ class VehicleMetricsManager:
         # Prefer direct residual-energy movement, but only when the residual
         # value itself advanced. A present-but-unchanged/coarsely quantized
         # residual value must not suppress the SOC fallback.
-        previous_residual_time = self._sample_metric_time(reference, "residual")
-        residual_time = self._sample_metric_time(sample, "residual")
-        residual_seconds = (
-            (residual_time - previous_residual_time).total_seconds()
-            if previous_residual_time and residual_time
-            else None
+        residual_seconds, residual_time, residual_timestamp_source = (
+            self._metric_delta_timing(reference, sample, "residual")
         )
         if (
             residual_seconds is not None
@@ -624,18 +620,14 @@ class VehicleMetricsManager:
                 power = candidate
                 power_source = "residual_energy_delta"
                 power_time = residual_time
-                power_timestamp_source = sample.get("residual_timestamp_source")
+                power_timestamp_source = residual_timestamp_source
 
         # Fall back to whole-percent SOC only when residual energy did not
         # produce a defensible positive estimate. Time this delta exclusively
         # with the SOC entity's own timestamp.
         if power is None and previous_soc is not None and soc > previous_soc:
-            previous_soc_time = self._sample_metric_time(reference, "soc")
-            soc_time = self._sample_metric_time(sample, "soc")
-            soc_seconds = (
-                (soc_time - previous_soc_time).total_seconds()
-                if previous_soc_time and soc_time
-                else None
+            soc_seconds, soc_time, soc_timestamp_source = self._metric_delta_timing(
+                reference, sample, "soc", minimum_seconds=30
             )
             if soc_seconds is not None and soc_seconds > 30:
                 capacity = (
@@ -650,7 +642,7 @@ class VehicleMetricsManager:
                         power = candidate
                         power_source = "soc_delta"
                         power_time = soc_time
-                        power_timestamp_source = sample.get("soc_timestamp_source")
+                        power_timestamp_source = soc_timestamp_source
 
         if power is not None and power_time is not None:
             rounded_power = round(power, 2)
@@ -1183,6 +1175,16 @@ class VehicleMetricsManager:
         residual_time, residual_timestamp_source = self._entity_sample_time(
             residual_state, received_at
         )
+        soc_ha_time = (
+            state.last_updated
+            if state is not None and isinstance(state.last_updated, datetime)
+            else received_at
+        )
+        residual_ha_time = (
+            residual_state.last_updated
+            if residual_state is not None and isinstance(residual_state.last_updated, datetime)
+            else received_at
+        )
 
         # Keep one aggregate timestamp for timeline/backward compatibility, but
         # never use it to time a delta from a different metric. Provenance still
@@ -1219,6 +1221,7 @@ class VehicleMetricsManager:
             "soc": self._as_float(state.state if state else None),
             "soc_source_time": soc_time.isoformat(),
             "soc_timestamp_source": soc_timestamp_source,
+            "soc_ha_time": soc_ha_time.isoformat(),
             "capacity_kwh": capacity,
             "capacity_source": capacity_source,
             "residual_kwh": self._as_float(
@@ -1226,6 +1229,7 @@ class VehicleMetricsManager:
             ),
             "residual_source_time": residual_time.isoformat(),
             "residual_timestamp_source": residual_timestamp_source,
+            "residual_ha_time": residual_ha_time.isoformat(),
             # Upstream battery_charging_rate is km/h, not kW. Keep the raw
             # value in the session timeline but never expose it as charge power.
             "charging_rate_kmh": self._number("battery_charging_rate"),
@@ -1271,6 +1275,47 @@ class VehicleMetricsManager:
             or sample.get("source_time")
             or sample.get("time")
         )
+
+    def _metric_delta_timing(
+        self,
+        previous: dict[str, Any] | None,
+        current: dict[str, Any],
+        metric: str,
+        *,
+        minimum_seconds: float = 0,
+    ) -> tuple[float | None, datetime | None, str | None]:
+        """Time one metric delta, falling back only when source time is stale.
+
+        Stellantis payload timestamps remain authoritative when they advance.
+        Some vehicles, however, emit a changed SOC/residual value while keeping
+        the metric's source timestamp unchanged. In that case the HA state
+        timestamp is the only defensible elapsed-time observation and prevents a
+        real charge step from being discarded as an untimed delta.
+        """
+        previous_time = self._sample_metric_time(previous, metric)
+        current_time = self._sample_metric_time(current, metric)
+        seconds = (
+            (current_time - previous_time).total_seconds()
+            if previous_time and current_time
+            else None
+        )
+        timestamp_source = current.get(f"{metric}_timestamp_source")
+        if seconds is not None and seconds > minimum_seconds:
+            return seconds, current_time, timestamp_source
+
+        previous_ha = self._parse_sample_timestamp(
+            previous.get(f"{metric}_ha_time") if isinstance(previous, dict) else None
+        )
+        current_ha = self._parse_sample_timestamp(current.get(f"{metric}_ha_time"))
+        ha_seconds = (
+            (current_ha - previous_ha).total_seconds()
+            if previous_ha and current_ha
+            else None
+        )
+        if ha_seconds is not None and ha_seconds > minimum_seconds:
+            return ha_seconds, current_ha, "home_assistant_fallback"
+
+        return seconds, current_time, timestamp_source
 
     def _capacity(self) -> float | None:
         """Compatibility helper for existing callers; never invent a default."""
