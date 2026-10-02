@@ -327,7 +327,7 @@ class SvDashboardStatusSensor(CoordinatorEntity, SensorEntity):
                 metric_entities[technical_key] = registry_entry.entity_id
                 if technical_key.startswith("server_"):
                     server_history_entities[technical_key] = registry_entry.entity_id
-            elif registry_entry.domain in {"switch", "button", "number", "time"}:
+            elif registry_entry.domain in {"switch", "button", "number", "select", "time"}:
                 control_entities[technical_key] = registry_entry.entity_id
 
         return {
