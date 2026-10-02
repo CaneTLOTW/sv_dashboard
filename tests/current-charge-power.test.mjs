@@ -14,8 +14,12 @@ test("live charge power keeps per-metric timestamp provenance", () => {
   assert.match(metrics, /"soc_source_time": soc_time\.isoformat\(\)/);
   assert.match(metrics, /"residual_source_time": residual_time\.isoformat\(\)/);
   assert.match(metrics, /def _sample_metric_time/);
-  assert.match(metrics, /previous_residual_time = self\._sample_metric_time\(reference, "residual"\)/);
-  assert.match(metrics, /previous_soc_time = self\._sample_metric_time\(reference, "soc"\)/);
+  assert.match(metrics, /def _metric_delta_timing/);
+  assert.match(metrics, /"soc_ha_time": soc_ha_time\.isoformat\(\)/);
+  assert.match(metrics, /"residual_ha_time": residual_ha_time\.isoformat\(\)/);
+  assert.match(metrics, /self\._metric_delta_timing\(reference, sample, "residual"\)/);
+  assert.match(metrics, /self\._metric_delta_timing\([\s\S]*reference, sample, "soc", minimum_seconds=30/);
+  assert.match(metrics, /"home_assistant_fallback"/);
 });
 
 test("unchanged residual energy cannot suppress the SOC fallback", () => {
