@@ -22,12 +22,13 @@ const vehicle = read("../custom_components/sv_dashboard/static/vehicle-overview-
 const dualEnergy = read("../custom_components/sv_dashboard/static/dual-energy-overview-card.js");
 const strategy = read("../custom_components/sv_dashboard/static/sv_dashboard.js");
 const audit = read("../custom_components/sv_dashboard/static/vehicle-audit-card.js");
+const diagnostics = read("../custom_components/sv_dashboard/static/vehicle-diagnostics-card.js");
 
 const LANGUAGES = [
   "de", "en", "fr", "it", "es", "pt", "nl", "da", "nb", "sv", "fi", "pl", "cs", "sk", "hu", "ro", "sl", "hr",
 ];
 const EXTRA_LANGUAGES = LANGUAGES.filter((language) => !["de", "en", "fr"].includes(language));
-const NAMESPACES = ["tripHistory", "chargeHistory", "vehicleOverview", "dashboard", "dualEnergyOverview", "fuelHistory", "vehicleAudit"];
+const NAMESPACES = ["tripHistory", "chargeHistory", "vehicleOverview", "dashboard", "dualEnergyOverview", "fuelHistory", "vehicleAudit", "vehicleDiagnostics"];
 // These keys are intentionally composed in i18n.js from complete explicit
 // 18-language tables rather than duplicated across the regional source files.
 const CAPABILITY_EXCEPTIONS = {
@@ -126,7 +127,7 @@ test("owner-reviewed German Dual-Energy wording is resolved by the shared i18n l
 });
 
 test("15 extra languages explicitly provide every overlay-owned EN key before runtime fallback", () => {
-  const coreOwnedNamespaces = new Set(["dualEnergyOverview", "fuelHistory", "vehicleAudit"]);
+  const coreOwnedNamespaces = new Set(["dualEnergyOverview", "fuelHistory", "vehicleAudit", "vehicleDiagnostics"]);
   for (const language of EXTRA_LANGUAGES) {
     for (const namespace of NAMESPACES) {
       if (coreOwnedNamespaces.has(namespace)) continue;
@@ -229,6 +230,14 @@ test("vehicle audit card consumes its localized namespace", () => {
   assert.match(audit, /text\.download/);
   assert.match(audit, /text\.copy/);
   assert.doesNotMatch(audit, /Audit starten|Run audit|Lancer l’audit/);
+});
+
+test("vehicle diagnostics card consumes its 18-language namespace", () => {
+  assert.match(diagnostics, /textFor\(this\._hass \|\| \{\}, "vehicleDiagnostics"\)/);
+  for (const language of LANGUAGES) {
+    assert.ok(FRONTEND_TEXT.vehicleDiagnostics[language].rawCodeNotRecorded, `missing ${language} raw-code limitation`);
+    assert.ok(FRONTEND_TEXT.vehicleDiagnostics[language].telemetryEvidence, `missing ${language} telemetry label`);
+  }
 });
 
 test("trip history provenance copy distinguishes server telemetry from SOC fallback", () => {

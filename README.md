@@ -226,6 +226,7 @@ SV Dashboard is an independent community project and is not affiliated with or e
 - [Vehicle capability evidence matrix](docs/VEHICLE_CAPABILITY_MATRIX.md)
 - [beta.26 DS N°4 external test scope](docs/BETA26_TEST_SCOPE.md)
 - [Vehicle capability audit](docs/VEHICLE_AUDIT.md)
+- [Vehicle diagnostics timeline](docs/VEHICLE_DIAGNOSTICS.en.md)
 - [Community guide](docs/COMMUNITY.en.md)
 - [Concept](docs/CONCEPT.md)
 - [Stellantis API reference and runtime findings](docs/STELLANTIS_API_REFERENCE.md)

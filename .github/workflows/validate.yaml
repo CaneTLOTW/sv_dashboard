@@ -38,6 +38,7 @@ jobs:
           python3 tests/state_contract_test.py
           python3 tests/charge_policy_test.py
           python3 tests/fuel_policy_test.py
+          python3 tests/vehicle_diagnostics_test.py
 
       - name: Check frontend JavaScript
         run: |
@@ -53,6 +54,7 @@ jobs:
           node --check custom_components/sv_dashboard/static/sv_dashboard.js
           node --check custom_components/sv_dashboard/static/vehicle-overview-card.js
           node --check custom_components/sv_dashboard/static/vehicle-audit-card.js
+          node --check custom_components/sv_dashboard/static/vehicle-diagnostics-card.js
           node --check custom_components/sv_dashboard/static/gps-history-card.js
           node --check custom_components/sv_dashboard/static/gps-history-core.js
           node --check custom_components/sv_dashboard/static/trip-history-card.js

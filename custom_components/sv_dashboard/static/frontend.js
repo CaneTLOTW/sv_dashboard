@@ -21,6 +21,7 @@ const INTERNAL_CARD_TYPES = new Set([
   "sv-dashboard-gps-map-card",
   "sv-dashboard-fuel-history-card",
   "sv-dashboard-vehicle-audit-card",
+  "sv-dashboard-vehicle-diagnostics-card",
 ]);
 
 const waitForElement = async ([tag, name]) => {
@@ -93,6 +94,7 @@ const packageModules = Promise.all([
   import("./dual-energy-overview-card.js?v=0.6.0-beta.37"),
   import("./fuel-history-card.js?v=0.6.0-beta.36"),
   import("./vehicle-audit-card.js?v=0.6.0-beta.28"),
+  import("./vehicle-diagnostics-card.js?v=0.6.0-beta.39"),
 ]);
 
 /*
@@ -113,4 +115,4 @@ await packageModules;
 window.customCards = (window.customCards || []).filter(
   (card) => !INTERNAL_CARD_TYPES.has(card?.type),
 );
-await import("./sv_dashboard.js?v=0.6.0-beta.38");
+await import("./sv_dashboard.js?v=0.6.0-beta.39");

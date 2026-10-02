@@ -240,7 +240,8 @@ test("frontend cache-busts changed modules", () => {
   assert.match(frontend, /vehicle-overview-card\.js\?v=0\.6\.0-beta\.38/);
   assert.match(frontend, /dual-energy-overview-card\.js\?v=0\.6\.0-beta\.37/);
   assert.match(frontend, /vehicle-audit-card\.js\?v=0\.6\.0-beta\.28/);
-  assert.match(frontend, /sv_dashboard\.js\?v=0\.6\.0-beta\.38/);
-  assert.match(strategy, /i18n\.js\?v=0\.6\.0-beta\.36/);
+  assert.match(frontend, /vehicle-diagnostics-card\.js\?v=0\.6\.0-beta\.39/);
+  assert.match(frontend, /sv_dashboard\.js\?v=0\.6\.0-beta\.39/);
+  assert.match(strategy, /i18n\.js\?v=0\.6\.0-beta\.39/);
   assert.match(strategy, /modules\.trips && supportsFuel \? \{ type: "custom:sv-dashboard-fuel-history-card"/);
 });

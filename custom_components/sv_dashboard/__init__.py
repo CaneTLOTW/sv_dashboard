@@ -36,6 +36,7 @@ from .fuel_history import FuelHistoryManager, async_register_fuel_history_websoc
 from .notifications import VehicleNotificationManager
 from .server_history import ServerHistoryManager
 from .vehicle_audit import async_register_vehicle_audit_websocket
+from .vehicle_diagnostics import async_register_vehicle_diagnostics_websocket
 
 type SvDashboardConfigEntry = ConfigEntry
 
@@ -118,6 +119,7 @@ async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
     hass.data[DOMAIN] = {}
     async_register_fuel_history_websocket(hass)
     async_register_vehicle_audit_websocket(hass)
+    async_register_vehicle_diagnostics_websocket(hass)
     return True
 
 

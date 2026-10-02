@@ -20,20 +20,23 @@ const buttons = read("button.py");
 const numbers = read("number.py");
 const times = read("time.py");
 const selects = read("select.py");
+const diagnostics = read("static/vehicle-diagnostics-card.js");
+const diagnosticsBackend = read("vehicle_diagnostics.py");
 
 test("Home Assistant registers one SV frontend resource", () => {
   assert.match(constants, /FRONTEND_URL = "\/sv_dashboard\/frontend\.js"/);
-  assert.match(constants, /FRONTEND_VERSION = "0\.6\.0-beta\.38"/);
-  assert.equal(manifest.version, "0.6.0-beta.38");
+  assert.match(constants, /FRONTEND_VERSION = "0\.6\.0-beta\.39"/);
+  assert.equal(manifest.version, "0.6.0-beta.39");
   assert.match(constants, /FRONTEND_RESOURCE_URLS = \(FRONTEND_URL,\)/);
-  // beta.38 changes Strategy plus the compact Hero; unchanged history/i18n/GPS/Dual-Energy modules retain prior content keys.
+  // beta.39 changes Strategy, i18n and the new diagnostics card; unaffected cards retain prior content keys.
   assert.match(frontend, /import\("\.\/vehicle-overview-card\.js\?v=0\.6\.0-beta\.38"\)/);
   assert.match(frontend, /import\("\.\/gps-history-card\.js\?v=0\.6\.0-beta\.28"\)/);
   assert.match(frontend, /import\("\.\/charge-history-card\.js\?v=0\.6\.0-beta\.33"\)/);
   assert.match(frontend, /import\("\.\/dual-energy-overview-card\.js\?v=0\.6\.0-beta\.37"\)/);
   assert.match(frontend, /import\("\.\/fuel-history-card\.js\?v=0\.6\.0-beta\.36"\)/);
-  assert.match(frontend, /import\("\.\/sv_dashboard\.js\?v=0\.6\.0-beta\.38"\)/);
-  assert.match(strategy, /from "\.\/i18n\.js\?v=0\.6\.0-beta\.36"/);
+  assert.match(frontend, /import\("\.\/vehicle-diagnostics-card\.js\?v=0\.6\.0-beta\.39"\)/);
+  assert.match(frontend, /import\("\.\/sv_dashboard\.js\?v=0\.6\.0-beta\.39"\)/);
+  assert.match(strategy, /from "\.\/i18n\.js\?v=0\.6\.0-beta\.39"/);
   assert.doesNotMatch(frontend, /gps-history-fix\.js/);
   assert.doesNotMatch(frontend, /map-marker-fix\.js/);
   assert.match(frontend, /import\("\.\/vehicle-audit-card\.js\?v=0\.6\.0-beta\.28"\)/);
@@ -44,8 +47,8 @@ test("dependency preflight never delays Strategy registration", () => {
   assert.match(frontend, /DEPENDENCY_GRACE_MS = 10000/);
   assert.match(frontend, /window\.__svDashboardDependencyReadiness = Promise\.all/);
   assert.doesNotMatch(frontend, /await dependencyReadiness/);
-  assert.match(frontend, /await import\("\.\/sv_dashboard\.js\?v=0\.6\.0-beta\.38"\)/);
-  const strategyImport = frontend.indexOf('await import("./sv_dashboard.js?v=0.6.0-beta.38")');
+  assert.match(frontend, /await import\("\.\/sv_dashboard\.js\?v=0\.6\.0-beta\.39"\)/);
+  const strategyImport = frontend.indexOf('await import("./sv_dashboard.js?v=0.6.0-beta.39")');
   assert.ok(strategyImport >= 0);
   assert.match(strategy, /window\.__svDashboardDependencyReadiness/);
   assert.match(strategy, /await readiness/);
@@ -76,6 +79,22 @@ test("vehicle capability audit is read-only, internal, and lives in System", () 
   assert.match(auditBackend, /async_authenticated_get/);
   assert.match(auditBackend, /"privacy_redaction_summary"/);
   assert.doesNotMatch(auditBackend, /send_(?:command|mqtt)/);
+});
+
+test("Recorder diagnostics is config-entry scoped, bounded and read-only", () => {
+  assert.match(strategy, /custom:sv-dashboard-vehicle-diagnostics-card/);
+  assert.match(strategy, /entry_id: attributes\.entry_id/);
+  assert.match(init, /async_register_vehicle_diagnostics_websocket\(hass\)/);
+  assert.match(diagnostics, /vehicle_diagnostics/);
+  assert.match(diagnostics, /MAX_COPY_EVENTS = 80/);
+  assert.match(diagnostics, /MAX_COPY_LENGTH = 24000/);
+  assert.match(diagnostics, /@media \(max-width:520px\)/);
+  assert.match(diagnosticsBackend, /recorder_history\.get_significant_states/);
+  assert.match(diagnosticsBackend, /_DURATIONS = \(1800, 7200, 21600, 86400\)/);
+  assert.match(diagnosticsBackend, /raw_command_result_code["']?: ["']not_recorded/);
+  assert.match(diagnosticsBackend, /mapped_state_change_is_not_proof_of_vehicle_online_status/);
+  assert.doesNotMatch(diagnosticsBackend, /async_authenticated_get|aiohttp|\.services\.async_call|send_(?:command|mqtt)/);
+  assert.doesNotMatch(diagnosticsBackend, /entity_id["']\s*:/);
 });
 
 test("vehicle information popup puts maintenance before vehicle data and omits unreliable motorization", () => {
@@ -140,6 +159,9 @@ test("refresh interval uses a compact preset dropdown instead of a wide slider",
   assert.match(strategy, /const refreshIntervalPreset = control\("refresh_interval_preset"\)/);
   assert.match(strategy, /card_type: "select", entity: refreshIntervalPreset/);
   assert.doesNotMatch(strategy, /button_type: "slider", entity: entity\("refresh_interval"\)/);
+  assert.match(selects, /target_entity_id/);
+  assert.match(selects, /"set_value"/);
+  assert.match(selects, /"value": seconds/);
 });
 
 test("GPS components are canonical cards, not Strategy wrappers", () => {

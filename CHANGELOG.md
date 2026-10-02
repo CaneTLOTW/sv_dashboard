@@ -4,6 +4,16 @@
 
 No changes yet.
 
+## 0.6.0-beta.39 recorder-backed vehicle diagnostics candidate
+
+- Adds a read-only, config-entry-scoped System timeline for bounded Home Assistant Recorder history, with 30-minute, 2-hour, 6-hour and 24-hour windows.
+- Correlates mapped refresh interval, preconditioning, temperature, translated command status, optional remote availability, charging, battery level and recorded vehicle-data changes without treating command timeout as proof of vehicle unreachability.
+- Preserves Home Assistant event time and approved source timestamps separately; never fabricates raw command result codes that upstream did not persist.
+- Adds a compact mobile-friendly expandable timeline and bounded privacy-safe clipboard summary; no vehicle command, external request, log scraping or persistent diagnostic cache is used.
+- Documents Recorder evidence and limitations, including the provisional beta.38 refresh selector, climate styling and separate charge-power fallback.
+- Adds focused backend, privacy, event-order, time-bound, translation and mobile/desktop source-contract regression coverage.
+- Bumps package/frontend generation to beta.39 and cache-busts the changed Strategy, i18n and diagnostics card modules.
+
 ## 0.6.0-beta.38 owner charging + settings UX candidate
 
 - Fixes live AC charge-power estimation for vehicles that advance SOC/residual energy while reusing a stale Stellantis metric timestamp: source timestamps remain preferred, with the metric's own Home Assistant update time used only as a bounded fallback for timing a real value delta.
