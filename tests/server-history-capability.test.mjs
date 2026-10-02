@@ -56,8 +56,8 @@ test("server sensors expose only ready server rows and truth metadata", () => {
 });
 
 test("local energy and charge history remain the fallback contract", () => {
-  assert.match(history, /"energy_source"\] = "sv_local_trip_soc_delta"/);
-  assert.match(history, /"consumption_kwh_100km"\] = trip\["energy_per_100_km"\]/);
+  assert.match(history, /resolve_canonical_trip_fields\(trips, local_trips\)/);
+  assert.match(read("custom_components/sv_dashboard/trip_field_resolution.py"), /resolved_trip_soc_capacity_estimate/);
   assert.match(metrics, /return self\.data\.get\("charges", \[\]\)/);
   assert.match(read("custom_components/sv_dashboard/static/trip-history-card.js"), /server_history_ready/);
   assert.match(read("custom_components/sv_dashboard/static/charge-history-card.js"), /server_history_ready/);

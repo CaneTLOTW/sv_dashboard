@@ -10,6 +10,7 @@ const trip = read("../custom_components/sv_dashboard/static/trip-history-card.js
 const chargeHistory = read("../custom_components/sv_dashboard/static/charge-history-card.js");
 const fuelHistory = read("../custom_components/sv_dashboard/static/fuel-history-card.js");
 const fuelHistoryBackend = read("../custom_components/sv_dashboard/fuel_history.py");
+const consumption = read("../custom_components/sv_dashboard/consumption.py");
 const dualHero = read("../custom_components/sv_dashboard/static/dual-energy-overview-card.js");
 const frontend = read("../custom_components/sv_dashboard/static/frontend.js");
 const strategy = read("../custom_components/sv_dashboard/static/sv_dashboard.js");
@@ -37,8 +38,8 @@ test("real DS4 Hybrid fixture covers electric SOC use and fuel-only telemetry wi
   assert.equal(second.endEnergies.find((entry) => entry.type === "Electric")?.level, 68);
   assert.equal(second.energyConsumptions.find((entry) => entry.type === "Fuel")?.consumption, 25.616);
   assert.equal(second.energyConsumptions.find((entry) => entry.type === "Fuel")?.avgConsumption, 826.32263);
-  assert.match(history, /end_soc >= start_soc/);
-  assert.match(history, /not_reliable_short_or_no_soc_change/);
+  assert.match(history, /resolve_canonical_trip_fields\(trips, local_trips\)/);
+  assert.match(consumption, /if trip\.get\("energy_estimated"\) is True:/);
 });
 
 test("hybrid trip history uses the compact six-column table and non-redundant paired details", () => {

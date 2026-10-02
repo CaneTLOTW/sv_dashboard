@@ -71,7 +71,7 @@ def _trip_sort_key(trip: dict[str, Any]) -> tuple[str, str]:
     )
 
 
-def _local_trip_backfill_quality(row: dict[str, Any]) -> tuple[bool, list[str]]:
+def local_trip_backfill_quality(row: dict[str, Any]) -> tuple[bool, list[str]]:
     """Classify local SV trip evidence before it may feed canonical backfill.
 
     Local rows are assembled from live Home Assistant observations. A stale
@@ -125,7 +125,7 @@ def _validated_local_rows(
     rows = [row for row in (local_trips or []) if isinstance(row, dict)]
     validated: list[dict[str, Any]] = []
     for row in rows:
-        usable, flags = _local_trip_backfill_quality(row)
+        usable, flags = local_trip_backfill_quality(row)
         row["backfill_eligible"] = usable
         if flags:
             existing = list(row.get("quality_flags") or [])

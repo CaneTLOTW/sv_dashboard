@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-No changes yet.
+- Resolves completed-trip SOC, electric/fuel range and fuel-consumption fields independently using provenance and strongly matched local trip-boundary evidence; preserves the untouched Stellantis payload for audit.
+- Captures restart-safe mapped electric autonomy, residual battery energy and per-entity source/HA timestamps at trip boundaries. Direct server electric energy remains preferred; local residual/SOC-capacity results are explicitly marked estimated.
+- Keeps older local metric stores valid without inventing historical electric range, and preserves strict direct-telemetry requirements for dual-energy rolling consumption.
 
 ## 0.6.0-beta.39 recorder-backed vehicle diagnostics candidate
 

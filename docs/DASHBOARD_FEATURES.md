@@ -184,6 +184,17 @@ Additional telemetry such as absolute kWh, trip type, SOC, start/end mileage, fu
 
 Raw upstream values remain retained for diagnostics when a derived boundary is repaired.
 
+Trip telemetry is resolved **per field**, not by selecting one complete row as
+authoritative. A local trip contributes only after strong time, mileage,
+distance, duration and physical-quality matching. Canonical rows retain
+`field_sources`, `field_conflicts` and a `local_evidence_match` diagnostic;
+`raw_server` remains unchanged. Direct Stellantis electric consumption wins
+over every estimate. Mapped residual-energy boundary deltas and then resolved
+SOC × capacity may provide explicitly estimated kWh. Fuel fields resolve
+independently, and coarse fuel-level changes are never converted into litres.
+See [Trip field resolution](TRIP_FIELD_RESOLUTION.md) for matching and
+compatibility details.
+
 ## GPS
 
 GPS combines available Home Assistant Recorder points and canonical Stellantis history while keeping the current position separate from archived history.

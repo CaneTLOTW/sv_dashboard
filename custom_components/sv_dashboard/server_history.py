@@ -28,7 +28,8 @@ from .const import (
     UPSTREAM_DOMAIN,
 )
 from .charge_policy import allow_soc_only_charge_reconstruction
-from .trip_repair import repair_trip_odometer_continuity
+from .trip_repair import local_trip_backfill_quality, repair_trip_odometer_continuity
+from .trip_field_resolution import resolve_canonical_trip_fields
 from .entity_identity import vehicle_vin
 from .history_reconcile import (
     AUTO_RECONCILE_DELAYS_SECONDS,
@@ -206,7 +207,9 @@ def _soc_matches(left: Any, right: Any, tolerance: float = 3.0) -> bool:
     return left_number is None or right_number is None or abs(left_number - right_number) <= tolerance
 
 
-def normalize_trip(raw: dict[str, Any], capacity_kwh: Any = None) -> dict[str, Any]:
+def normalize_trip(
+    raw: dict[str, Any], capacity_kwh: Any = None, capacity_source: str | None = None
+) -> dict[str, Any]:
     """Normalise one raw Stellantis trip without discarding unknown fields."""
     start, end = raw.get("startedAt"), raw.get("stoppedAt")
     duration = _duration_seconds(raw.get("duration"), start, end)
@@ -229,21 +232,16 @@ def normalize_trip(raw: dict[str, Any], capacity_kwh: Any = None) -> dict[str, A
 
     electric_consumption = _energy_entry(raw.get("energyConsumptions"))
     measured_energy = _number(electric_consumption.get("consumption")) if electric_consumption else None
-    energy_kwh = round(measured_energy / 1000, 3) if measured_energy and measured_energy > 0 else None
-    energy_estimated = energy_kwh is None
-    energy_source = "stellantis_trip.energy_consumptions" if energy_kwh is not None else "derived_from_trip_soc"
-
-    no_reliable_soc_energy = (
-        distance is None
-        or distance <= _MIN_TRIP_DISTANCE_KM
-        or start_soc is None
-        or end_soc is None
-        or end_soc >= start_soc
+    # Keep a direct measured zero distinct from absent telemetry. Estimates are
+    # applied later by the per-field resolver after local boundary evidence is
+    # matched and canonical SOC has been resolved.
+    energy_kwh = (
+        round(measured_energy / 1000, 3)
+        if measured_energy is not None and measured_energy >= 0
+        else None
     )
-    if energy_kwh is None and not no_reliable_soc_energy and capacity is not None:
-        energy_kwh = round((start_soc - end_soc) * capacity / 100, 3)
-    if energy_kwh is None:
-        energy_source = "not_reliable_short_or_no_soc_change"
+    energy_estimated = False
+    energy_source = "stellantis_trip.energy_consumptions" if energy_kwh is not None else "unknown"
 
     fuel_consumption = _energy_entry(raw.get("energyConsumptions"), "Fuel")
     raw_fuel_consumption = _number(fuel_consumption.get("consumption")) if fuel_consumption else None
@@ -324,6 +322,7 @@ def normalize_trip(raw: dict[str, Any], capacity_kwh: Any = None) -> dict[str, A
         "energy_kwh": energy_kwh,
         "energy_estimated": energy_estimated,
         "energy_source": energy_source,
+        "capacity_source": capacity_source,
         "consumption_kwh_100km": (
             round(energy_kwh / distance * 100, 2)
             if energy_kwh is not None and distance and distance > 0
@@ -349,6 +348,30 @@ def normalize_trip(raw: dict[str, Any], capacity_kwh: Any = None) -> dict[str, A
         "created_at": raw.get("createdAt"),
         "updated_at": raw.get("updatedAt"),
         "raw_server": dict(raw),
+        "field_sources": {
+            "soc_start": "stellantis_trip.startEnergies.Electric.level" if start_soc is not None else "unknown",
+            "soc_end": "stellantis_trip.endEnergies.Electric.level" if end_soc is not None else "unknown",
+            "electric_range_start_km": "stellantis_trip.startEnergies.Electric.autonomy" if electric_range_start_km is not None else "unknown",
+            "electric_range_end_km": "stellantis_trip.endEnergies.Electric.autonomy" if electric_range_end_km is not None else "unknown",
+            "fuel_level_start": "stellantis_trip.startEnergies.Fuel.level" if fuel_level_start is not None else "unknown",
+            "fuel_level_end": "stellantis_trip.endEnergies.Fuel.level" if fuel_level_end is not None else "unknown",
+            "fuel_range_start_km": "stellantis_trip.startEnergies.Fuel.autonomy" if fuel_range_start_km is not None else "unknown",
+            "fuel_range_end_km": "stellantis_trip.endEnergies.Fuel.autonomy" if fuel_range_end_km is not None else "unknown",
+            "fuel_consumption_l": "stellantis_trip.energyConsumptions.Fuel.consumption" if fuel_consumption_l is not None else "unknown",
+            "fuel_consumption_l_100km": (
+                "stellantis_trip.energyConsumptions.Fuel.avgConsumption"
+                if raw_fuel_average is not None and raw_fuel_average >= 0
+                else "derived_from_server_fuel_and_distance"
+                if fuel_consumption_l_100km is not None
+                else "unknown"
+            ),
+            "energy_kwh": (
+                "stellantis_trip.energyConsumptions.Electric.consumption"
+                if energy_kwh is not None
+                else "unknown"
+            ),
+        },
+        "field_conflicts": {},
     }
 
 
@@ -647,95 +670,6 @@ def merge_charges(
             charge.get("start_time") or charge.get("window_start") or charge.get("id") or ""
         ),
     )
-
-
-def enrich_trips_with_local_energy(
-    server_trips: list[dict[str, Any]],
-    local_trips: list[dict[str, Any]] | None = None,
-) -> list[dict[str, Any]]:
-    """Fill only missing electric trip energy from a matched local observation.
-
-    The server trip remains canonical for timing, distance and fuel telemetry.
-    Local SV tracking is used only when the server row has no electric energy,
-    a positive locally derived energy value exists, and odometer/distance match
-    the same physical trip. Existing server electric telemetry is never
-    overwritten, and zero/unknown local energy is never promoted into history.
-    """
-    local_rows = [row for row in (local_trips or []) if isinstance(row, dict)]
-    for trip in server_trips:
-        if _number(trip.get("energy_kwh")) is not None:
-            continue
-
-        # Keep one canonical row internally consistent. The N°4 API exposes
-        # integer-percent SOC trip endpoints. If the server explicitly reports
-        # both endpoints and they show no decrease, do not inject a positive
-        # local SOC-derived energy value captured on slightly different live
-        # boundaries (for example server 96→96 paired with local 99→96).
-        # Local enrichment remains allowed when the server SOC boundary is
-        # missing; otherwise the server trip's own SOC semantics win.
-        server_soc_start = _number(trip.get("soc_start"))
-        server_soc_end = _number(trip.get("soc_end"))
-        if (
-            server_soc_start is not None
-            and server_soc_end is not None
-            and server_soc_end >= server_soc_start
-        ):
-            continue
-
-        start_mileage = _number(trip.get("start_mileage"))
-        distance = _number(trip.get("distance_km"))
-        if start_mileage is None or distance is None or distance <= 0:
-            continue
-
-        candidates: list[tuple[float, dict[str, Any]]] = []
-        trip_start = _parse_time(trip.get("start_time"))
-        for local in local_rows:
-            local_energy = _number(local.get("energy_kwh"))
-            local_start_mileage = _number(local.get("start_mileage"))
-            local_distance = _number(local.get("distance_km"))
-            if (
-                local_energy is None
-                or local_energy <= 0
-                or local_start_mileage is None
-                or local_distance is None
-            ):
-                continue
-            mileage_delta = abs(local_start_mileage - start_mileage)
-            distance_delta = abs(local_distance - distance)
-            if mileage_delta > 0.25 or distance_delta > 2.0:
-                continue
-            local_start = _parse_time(local.get("start_time"))
-            time_delta = None
-            if trip_start is not None and local_start is not None:
-                time_delta = abs((trip_start - local_start).total_seconds())
-                if time_delta > 20 * 60:
-                    continue
-            score = mileage_delta * 1000 + distance_delta * 100 + ((time_delta or 0) / 60)
-            candidates.append((score, local))
-
-        if not candidates:
-            continue
-        local = min(candidates, key=lambda item: item[0])[1]
-        local_energy = _number(local.get("energy_kwh"))
-        if local_energy is None or local_energy <= 0:
-            continue
-
-        trip["energy_kwh"] = round(local_energy, 3)
-        trip["energy_per_100_km"] = round(local_energy / distance * 100, 2)
-        trip["consumption_kwh_100km"] = trip["energy_per_100_km"]
-        trip["energy_estimated"] = True
-        trip["consumption_estimated"] = True
-        trip["energy_source"] = "sv_local_trip_soc_delta"
-        for key in ("soc_start", "soc_end", "capacity_kwh"):
-            if trip.get(key) is None and local.get(key) is not None:
-                trip[key] = local.get(key)
-        fuel_used = (_number(trip.get("fuel_consumption_l")) or 0) > 0
-        trip["trip_type"] = "hybrid" if fuel_used else "ev"
-        trip["sources"] = list(dict.fromkeys([
-            *(trip.get("sources") or [trip.get("source")]),
-            "sv_local_trip",
-        ]))
-    return server_trips
 
 
 class ServerHistoryManager:
@@ -1073,27 +1007,45 @@ class ServerHistoryManager:
         }
         self._update_archive_metadata()
 
-    def _capacity_for_trip(self, raw: dict[str, Any]) -> float | None:
+    def _capacity_for_trip(self, raw: dict[str, Any]) -> tuple[float | None, str | None]:
         historic = self._historical_capacity(raw.get("startedAt"))
         if historic is not None:
-            return historic
+            return historic, "recorder_capacity_sample"
         # A matching local live trip may have captured the event capacity.
+        raw_start = _parse_time(raw.get("startedAt"))
+        raw_end = _parse_time(raw.get("stoppedAt"))
+        raw_mileage = _number(raw.get("startMileage"))
+        raw_distance = _number(raw.get("distance"))
         for trip in getattr(self.metrics, "data", {}).get("trips", []) if self.metrics else []:
             if not isinstance(trip, dict):
                 continue
+            usable, _flags = local_trip_backfill_quality(trip)
+            local_start = _parse_time(trip.get("start_time"))
+            local_end = _parse_time(trip.get("end_time"))
+            local_mileage = _number(trip.get("start_mileage"))
+            local_distance = _number(trip.get("distance_km"))
+            if not usable or not all((raw_start, raw_end, local_start, local_end)):
+                continue
             if (
-                abs((_number(trip.get("start_mileage")) or -1) - (_number(raw.get("startMileage")) or -2)) <= 0.1
+                abs((raw_start - local_start).total_seconds()) <= 5 * 60
+                and abs((raw_end - local_end).total_seconds()) <= 5 * 60
+                and raw_mileage is not None
+                and local_mileage is not None
+                and abs(raw_mileage - local_mileage) <= 0.5
+                and raw_distance is not None
+                and local_distance is not None
+                and abs(raw_distance - local_distance) <= max(0.5, raw_distance * 0.15)
                 and _number(trip.get("capacity_kwh")) is not None
             ):
-                return _capacity(trip.get("capacity_kwh"))
+                return _capacity(trip.get("capacity_kwh")), "sv_local_trip_boundary"
         capacity_entity = self.entity_mapping.get("battery_capacity")
         current = self.hass.states.get(capacity_entity) if capacity_entity else None
         if current and _number(current.state) is not None:
-            return _capacity(current.state)
+            return _capacity(current.state), "upstream_capacity_entity"
         if self.metrics:
-            resolved, _source = self.metrics.battery_capacity()
-            return _capacity(resolved)
-        return None
+            resolved, source = self.metrics.battery_capacity()
+            return _capacity(resolved), source
+        return None, None
 
     def _historical_capacity(self, timestamp: Any) -> float | None:
         event_time = _parse_time(timestamp)
@@ -1114,7 +1066,7 @@ class ServerHistoryManager:
             self.data.get("recorder_observed_charges_archive", [])
         )
         trips = [
-            normalize_trip(raw, self._capacity_for_trip(raw))
+            normalize_trip(raw, *self._capacity_for_trip(raw))
             for raw in self.data.get("server_trips_raw", [])
             if isinstance(raw, dict) and raw.get("id")
         ]
@@ -1124,7 +1076,7 @@ class ServerHistoryManager:
             if isinstance(item, dict)
         ] if self.metrics else []
         trips = repair_trip_odometer_continuity(trips, local_trips)
-        trips = enrich_trips_with_local_energy(trips, local_trips)
+        trips = resolve_canonical_trip_fields(trips, local_trips)
         by_id = {trip["id"]: trip for trip in trips if trip.get("id")}
         all_trips = derive_trip_display_positions(
             sorted(by_id.values(), key=_trip_sort_key)

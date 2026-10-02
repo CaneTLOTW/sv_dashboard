@@ -39,6 +39,7 @@ jobs:
           python3 tests/charge_policy_test.py
           python3 tests/fuel_policy_test.py
           python3 tests/vehicle_diagnostics_test.py
+          python3 tests/trip_field_resolution_test.py
 
       - name: Check frontend JavaScript
         run: |

@@ -337,8 +337,9 @@ class VehicleMetricsManager:
             _LOGGER.debug("Not starting local SV trip: mileage is unavailable")
             return
         capacity, capacity_source = self.battery_capacity()
+        now = dt_util.utcnow()
         self.data["active_trip"] = {
-            "start_time": dt_util.utcnow().isoformat(),
+            "start_time": now.isoformat(),
             "start_mileage": mileage,
             "start_soc": self._number("battery"),
             "start_fuel": self._number("fuel"),
@@ -346,6 +347,7 @@ class VehicleMetricsManager:
             "start_fuel_total": self._number("fuel_consumption_total"),
             "capacity_kwh": capacity,
             "capacity_source": capacity_source,
+            "boundary_evidence": {"start": self._trip_boundary_evidence(now)},
         }
         await self._save_and_refresh()
 
@@ -363,6 +365,9 @@ class VehicleMetricsManager:
         active["end_fuel"] = self._number("fuel")
         active["end_fuel_range"] = self._number("fuel_autonomy")
         active["end_fuel_total"] = self._number("fuel_consumption_total")
+        boundary_evidence = active.setdefault("boundary_evidence", {})
+        if isinstance(boundary_evidence, dict):
+            boundary_evidence["end"] = self._trip_boundary_evidence(now)
         active["end_mileage"] = (
             mileage
             if mileage is not None and start_mileage is not None and mileage > start_mileage
@@ -485,6 +490,8 @@ class VehicleMetricsManager:
                 "average_speed": round(distance_km / (duration_seconds / 3600), 1),
                 "soc_start": start_soc,
                 "soc_end": end_soc,
+                "electric_range_start_km": self._trip_boundary_value(candidate, "start", "electric_range_km"),
+                "electric_range_end_km": self._trip_boundary_value(candidate, "end", "electric_range_km"),
                 "fuel_level_start": fuel_level_start,
                 "fuel_level_end": fuel_level_end,
                 "fuel_range_start_km": fuel_range_start,
@@ -494,6 +501,7 @@ class VehicleMetricsManager:
                 "trip_type": trip_type,
                 "capacity_kwh": round(capacity, 2) if capacity is not None else None,
                 "capacity_source": candidate.get("capacity_source"),
+                "boundary_evidence": candidate.get("boundary_evidence", {}),
                 "energy_kwh": energy_kwh,
                 "energy_per_100_km": consumption,
                 "estimated": energy_kwh is not None,
@@ -1158,6 +1166,63 @@ class VehicleMetricsManager:
         entity_id = self.mapping.get(mapping_key)
         state = self.hass.states.get(entity_id) if entity_id else None
         return self._as_float(state.state if state else None)
+
+    def _trip_boundary_evidence(self, captured_at: datetime) -> dict[str, dict[str, Any]]:
+        """Persist mapped numeric values with per-entity source and HA times."""
+        mapping_keys = {
+            "soc": "battery",
+            "electric_range_km": "autonomy",
+            "fuel_level": "fuel",
+            "fuel_range_km": "fuel_autonomy",
+            "fuel_consumption_total": "fuel_consumption_total",
+            "residual_energy_kwh": "battery_residual",
+        }
+        evidence: dict[str, dict[str, Any]] = {}
+        for field, mapping_key in mapping_keys.items():
+            entity_id = self.mapping.get(mapping_key)
+            state = self.hass.states.get(entity_id) if entity_id else None
+            value = self._as_float(state.state if state else None)
+            if value is None:
+                continue
+            source_time, timestamp_source = self._entity_sample_time(state, captured_at)
+            ha_time = getattr(state, "last_updated", None)
+            evidence[field] = {
+                "value": value,
+                "source_time": source_time.isoformat(),
+                "timestamp_source": timestamp_source,
+                "ha_time": ha_time.isoformat() if isinstance(ha_time, datetime) else None,
+                "captured_at": captured_at.isoformat(),
+            }
+        capacity, capacity_source = self.battery_capacity()
+        if capacity is not None:
+            evidence["capacity_kwh"] = {
+                "value": capacity,
+                "source": capacity_source,
+                "captured_at": captured_at.isoformat(),
+            }
+        return evidence
+
+    @staticmethod
+    def _trip_boundary_value(candidate: dict[str, Any], edge: str, field: str) -> float | None:
+        boundary = candidate.get("boundary_evidence")
+        observation = boundary.get(edge, {}).get(field) if isinstance(boundary, dict) else None
+        if isinstance(observation, dict):
+            try:
+                return float(observation.get("value"))
+            except (TypeError, ValueError):
+                return None
+        if field == "electric_range_km":
+            return None
+        legacy_key = {
+            "soc": "start_soc" if edge == "start" else "end_soc",
+            "fuel_level": "start_fuel" if edge == "start" else "end_fuel",
+            "fuel_range_km": "start_fuel_range" if edge == "start" else "end_fuel_range",
+            "fuel_consumption_total": "start_fuel_total" if edge == "start" else "end_fuel_total",
+        }.get(field)
+        try:
+            return float(candidate.get(legacy_key)) if legacy_key else None
+        except (TypeError, ValueError):
+            return None
 
     def _charge_sample(self) -> dict[str, Any]:
         """Capture metric-specific timestamps and unmodified upstream values."""

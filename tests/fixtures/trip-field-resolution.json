@@ -1,0 +1,95 @@
+{
+  "description": "Sanitized generic completed-trip field-resolution evidence; no vehicle/account identifiers or locations.",
+  "duplicated_boundary": {
+    "server": {
+      "id": "fixture-trip-duplicate",
+      "done": true,
+      "startedAt": "2026-10-01T10:09:16Z",
+      "stoppedAt": "2026-10-01T10:19:12Z",
+      "duration": 596,
+      "distance": 2.1,
+      "startMileage": 2472.7,
+      "startEnergies": [
+        {"type": "Electric", "level": 67, "autonomy": 44},
+        {"type": "Fuel", "level": 100, "autonomy": 700}
+      ],
+      "endEnergies": [
+        {"type": "Electric", "level": 67, "autonomy": 44},
+        {"type": "Fuel", "level": 100, "autonomy": 700}
+      ],
+      "energyConsumptions": [
+        {"type": "Fuel", "consumption": 0, "avgConsumption": 0}
+      ]
+    },
+    "local": {
+      "id": "local-boundary-a",
+      "start_time": "2026-10-01T10:09:18Z",
+      "end_time": "2026-10-01T10:19:10Z",
+      "duration_seconds": 592,
+      "distance_km": 2.1,
+      "start_mileage": 2472.7,
+      "end_mileage": 2474.8,
+      "start_soc": 70,
+      "end_soc": 67,
+      "start_fuel": 100,
+      "end_fuel": 100,
+      "start_fuel_range": 700,
+      "end_fuel_range": 700,
+      "start_fuel_total": 0,
+      "end_fuel_total": 0,
+      "capacity_kwh": 40,
+      "capacity_source": "api",
+      "boundary_evidence": {
+        "start": {
+          "soc": {"value": 70, "source_time": "2026-10-01T10:09:18Z", "timestamp_source": "stellantis"},
+          "electric_range_km": {"value": 50, "source_time": "2026-10-01T10:09:18Z", "timestamp_source": "stellantis"},
+          "fuel_level": {"value": 100, "source_time": "2026-10-01T10:09:18Z", "timestamp_source": "stellantis"},
+          "fuel_range_km": {"value": 700, "source_time": "2026-10-01T10:09:18Z", "timestamp_source": "stellantis"},
+          "fuel_consumption_total": {"value": 0, "source_time": "2026-10-01T10:09:18Z", "timestamp_source": "stellantis"},
+          "residual_energy_kwh": {"value": 28, "source_time": "2026-10-01T10:09:18Z", "timestamp_source": "stellantis"}
+        },
+        "end": {
+          "soc": {"value": 67, "source_time": "2026-10-01T10:19:10Z", "timestamp_source": "stellantis"},
+          "electric_range_km": {"value": 44, "source_time": "2026-10-01T10:19:10Z", "timestamp_source": "stellantis"},
+          "fuel_level": {"value": 100, "source_time": "2026-10-01T10:19:10Z", "timestamp_source": "stellantis"},
+          "fuel_range_km": {"value": 700, "source_time": "2026-10-01T10:19:10Z", "timestamp_source": "stellantis"},
+          "fuel_consumption_total": {"value": 0, "source_time": "2026-10-01T10:19:10Z", "timestamp_source": "stellantis"},
+          "residual_energy_kwh": {"value": 27, "source_time": "2026-10-01T10:19:10Z", "timestamp_source": "stellantis"}
+        }
+      }
+    }
+  },
+  "equal_soc_short_trip": {
+    "server_soc": [70, 70],
+    "local_soc": [70, 70],
+    "server_range_km": [50, 50],
+    "local_range_km": [50, 50],
+    "expected_energy_kwh": null
+  },
+  "valid_server_delta": {
+    "server_soc": [80, 74],
+    "local_soc": [80, 74]
+  },
+  "impossible_server_increase": {
+    "server_soc": [0, 78],
+    "local_soc": [72, 70]
+  },
+  "missing_local_match": {
+    "server_soc": [67, 67],
+    "local_start_time": "2026-09-30T10:09:18Z"
+  },
+  "bad_local_composite": {
+    "distance_km": 25,
+    "duration_seconds": 362,
+    "start_mileage": 2472.7,
+    "end_mileage": 2497.7,
+    "start_time": "2026-10-01T10:09:18Z",
+    "end_time": "2026-10-01T10:15:20Z"
+  },
+  "fuel_resolution": {
+    "server_fuel_l": 2,
+    "server_fuel_l_100km": 4,
+    "local_fuel_total_delta_l": 0.2,
+    "fuel_fields_are_independent": true
+  }
+}
