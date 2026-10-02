@@ -5,7 +5,7 @@ from __future__ import annotations
 from homeassistant.const import Platform
 
 DOMAIN = "sv_dashboard"
-PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH, Platform.BUTTON, Platform.NUMBER, Platform.TIME]
+PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH, Platform.BUTTON, Platform.NUMBER, Platform.SELECT, Platform.TIME]
 
 UPSTREAM_DOMAIN = "stellantis_vehicles"
 MIN_UPSTREAM_VERSION = "2026.7.2"
