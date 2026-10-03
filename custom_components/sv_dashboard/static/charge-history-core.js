@@ -245,11 +245,26 @@ export function samePhysicalChargeSession(left, right, gapMs) {
 
 export function mergeChargeSessionEvidence(preferred, supplementary) {
     const result = { ...preferred };
+    const preferredEnd = timestampValue(preferred?.end);
+    const supplementaryEnd = timestampValue(supplementary?.end);
+    const supplementaryHasLaterBoundary = Number.isFinite(preferredEnd)
+        && Number.isFinite(supplementaryEnd)
+        && supplementaryEnd > preferredEnd
+        && supplementaryEnd - preferredEnd <= 5 * 60000;
+    const laterBoundaryFields = new Set([
+        "end", "duration_seconds", "soc_end", "energy_kwh", "average_power_kw",
+    ]);
     for (const field of [
         "start", "end", "duration_seconds", "soc_start", "soc_end", "capacity_kwh",
         "energy_kwh", "average_power_kw", "maximum_power_kw", "charge_type",
     ]) {
-        if (!chargeFieldKnown(field, result[field]) && chargeFieldKnown(field, supplementary?.[field])) {
+        const preferredKnown = chargeFieldKnown(field, result[field]);
+        const supplementaryKnown = chargeFieldKnown(field, supplementary?.[field]);
+        const useSupplementary = supplementaryKnown && (
+            !preferredKnown
+            || (supplementaryHasLaterBoundary && laterBoundaryFields.has(field))
+        );
+        if (useSupplementary) {
             result[field] = field === "charge_type"
                 ? normalizeChargeType(supplementary[field])
                 : supplementary[field];
