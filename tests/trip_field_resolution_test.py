@@ -227,6 +227,37 @@ def test_capture_time_without_entity_timestamp_is_not_treated_as_source_time():
     assert result["energy_kwh"] is None
 
 
+def test_home_assistant_timestamp_is_fallback_not_strong_override_evidence():
+    raw, local = _scenario()
+    for edge in ("start", "end"):
+        local["boundary_evidence"][edge]["soc"]["timestamp_source"] = "home_assistant"
+        local["boundary_evidence"][edge]["residual_energy_kwh"]["timestamp_source"] = "home_assistant"
+
+    result = _rebuild(raw, local)
+
+    assert (result["soc_start"], result["soc_end"]) == (67, 67)
+    assert result["field_conflicts"]["soc_start"]["resolution"] == "ambiguous_server_retained"
+    assert result["energy_kwh"] is None
+
+
+def test_exactness_is_measured_against_server_boundary_not_delayed_local_tracker():
+    raw, local = _scenario()
+    local["start_time"] = "2026-10-01T10:13:00Z"
+    local["end_time"] = "2026-10-01T10:22:54Z"
+    local["duration_seconds"] = 594
+    local["boundary_evidence"]["start"]["soc"]["source_time"] = local["start_time"]
+    local["boundary_evidence"]["end"]["soc"]["source_time"] = local["end_time"]
+    local["boundary_evidence"]["start"]["residual_energy_kwh"]["source_time"] = local["start_time"]
+    local["boundary_evidence"]["end"]["residual_energy_kwh"]["source_time"] = local["end_time"]
+
+    result = _rebuild(raw, local)
+
+    assert result["local_evidence_match"]["matched"] is True
+    assert (result["soc_start"], result["soc_end"]) == (67, 67)
+    assert result["field_conflicts"]["soc_start"]["resolution"] == "ambiguous_server_retained"
+    assert result["energy_kwh"] is None
+
+
 def test_valid_server_soc_delta_agreed_by_local_evidence_remains_server_sourced():
     raw, local = _scenario()
     _set_pair(raw, "startEnergies", "Electric", "level", [80, 74])
@@ -352,15 +383,32 @@ def test_measured_zero_fuel_consumption_is_preserved():
     )
 
 
-def test_old_local_store_never_fabricates_missing_electric_range():
+def test_old_local_store_is_fallback_only_and_cannot_override_known_server_fields():
     raw, local = _scenario()
     local.pop("boundary_evidence")
 
     result = _rebuild(raw, local)
 
-    assert (result["soc_start"], result["soc_end"]) == (70, 67)
+    assert (result["soc_start"], result["soc_end"]) == (67, 67)
+    assert result["field_sources"]["soc_start"].startswith("stellantis_trip.")
+    assert result["field_conflicts"]["soc_start"]["resolution"] == "ambiguous_server_retained"
     assert (result["electric_range_start_km"], result["electric_range_end_km"]) == (44, 44)
     assert result["field_sources"]["electric_range_start_km"].startswith("stellantis_trip.")
+    assert result["energy_kwh"] is None
+
+
+def test_old_local_store_may_fill_missing_server_field_but_marks_fallback():
+    raw, local = _scenario()
+    local.pop("boundary_evidence")
+    electric_start = next(item for item in raw["startEnergies"] if item["type"] == "Electric")
+    electric_start.pop("level")
+
+    result = _rebuild(raw, local)
+
+    assert result["soc_start"] == 70
+    assert result["field_sources"]["soc_start"] == "sv_local_trip_boundary_fallback"
+    assert result["soc_end"] == 67
+    assert result["energy_kwh"] is None
 
 
 def test_server_normalization_and_canonical_rebuild_keep_raw_payload_unchanged():
