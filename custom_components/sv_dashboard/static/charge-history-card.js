@@ -1,5 +1,5 @@
 import { LitElement, html, css, nothing } from "./vendor-lit.js?v=0.6.0-beta.7";
-import { buildChargeCurve, buildChargeSessions, buildLocalChargeSessions, chargeSessionId, findChargeSession, mergeChargeSessions } from "./charge-history-core.js?v=0.6.0-beta.15";
+import { buildChargeCurve, buildChargeSessions, buildLocalChargeSessions, chargeSessionId, findChargeSession, mergeChargeSessionEvidence, mergeChargeSessions, samePhysicalChargeSession } from "./charge-history-core.js?v=0.6.0-beta.40";
 import { localeFor, textFor } from "./i18n.js?v=0.6.0-beta.28";
 
 const SELECTION_QUERY_PARAM = "sv_charge";
@@ -27,7 +27,7 @@ function storedPowerCurve(samples, fallbackCapacity = null) {
             }
         }
         if (!Number.isFinite(soc)) continue;
-        const timestamp = Date.parse(sample?.source_time || sample?.time || sample?.received_at || "");
+        const timestamp = Date.parse(sample?.power_observed_at || sample?.received_at || sample?.source_time || sample?.time || "");
         points.push({
             timestamp: Number.isFinite(timestamp) ? timestamp : null,
             soc,
@@ -731,17 +731,13 @@ class CodexStellantisChargeCurveBrowserCardV1 extends LitElement {
                 if (!serverSession.start || !serverSession.end) continue;
                 const index = mergedSessions.findIndex((session) =>
                     session.id === serverSession.id
-                    || Math.abs(Date.parse(session.start) - Date.parse(serverSession.start)) <= 5 * 60000
+                    || samePhysicalChargeSession(session, serverSession, 5 * 60000)
                 );
                 if (index >= 0) {
                     const existing = mergedSessions[index];
                     mergedSessions[index] = {
-                        ...existing,
-                        ...serverSession,
-                        samples: Array.isArray(serverSession.samples) && serverSession.samples.length
-                            ? serverSession.samples
-                            : existing.samples,
-                        has_charge_curve: Boolean(serverSession.has_charge_curve || existing.has_charge_curve),
+                        ...mergeChargeSessionEvidence(serverSession, existing),
+                        id: serverSession.id || existing.id,
                     };
                 } else {
                     mergedSessions.push(serverSession);
