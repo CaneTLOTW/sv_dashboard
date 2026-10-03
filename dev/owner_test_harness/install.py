@@ -65,11 +65,14 @@ OWNER_READY_PATCH = '''    if (readiness && typeof readiness.then === "function"
 
 
 SELECTOR_DECL_ANCHOR = "    const overviewSections = [\n"
-SELECTOR_DECL_PATCH = '''    const ownerTestSelector = {
+SELECTOR_DECL_PATCH = '''    const ownerTestSelector = (
+      typeof window !== "undefined"
+      && window.__svDashboardOwnerHarness?.harnessRequested?.()
+    ) ? {
       type: "custom:sv-dashboard-owner-test-selector-card",
       entry_id: attributes.entry_id,
       grid_options: { columns: "full", rows: 1 },
-    };
+    } : null;
 
     const overviewSections = [
 '''
@@ -208,7 +211,8 @@ def install(target: Path) -> None:
         "Full Home Assistant restart required so Lovelace registers "
         "the owner-specific frontend resource URL."
     )
-    print("The generated Vehicle view contains the Owner-Testmodus selector.")
+    print("Owner-Testmodus is hidden on the naked dashboard URL.")
+    print("Open ?sv_owner_harness=1 or a valid ?sv_owner_fixture=... to show it.")
     print("Fixture profiles:")
     for profile in ("phev", "phev-fresh", "phev-idle", "phev-driving", "phev-charging", "phev-stale"):
         print(f"  ?sv_owner_fixture={profile}")
