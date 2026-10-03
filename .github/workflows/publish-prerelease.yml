@@ -156,8 +156,8 @@ jobs:
           VERSION: ${{ steps.request.outputs.version }}
         run: |
           set -euo pipefail
-          awk -v heading="## $VERSION" '
-            $0 == heading { found=1; next }
+          awk -v prefix="## $VERSION" '
+            index($0, prefix) == 1 { found=1; next }
             found && /^## / { exit }
             found { print }
           ' CHANGELOG.md > "$RUNNER_TEMP/release-notes.md"
