@@ -100,10 +100,14 @@ test("whole-dashboard context is injected in the active Strategy generate path a
   assert.match(harness, /inner\.hass = fixtureHass/);
 });
 
-test("standard selector removes fixture parameter and keeps an explicit identity path", () => {
+test("standard selector removes both owner URL parameters and keeps an explicit identity path", () => {
   assert.match(harness, /Standard · Testmodus aus/);
+  assert.match(harness, /const HARNESS_PARAM = "sv_owner_harness"/);
+  assert.match(harness, /function|const harnessRequested/);
+  assert.match(harness, /params\.get\(HARNESS_PARAM\) === "1"/);
   assert.match(harness, /url\.searchParams\.set\(PROFILE_PARAM, profile\)/);
   assert.match(harness, /url\.searchParams\.delete\(PROFILE_PARAM\)/);
+  assert.match(harness, /url\.searchParams\.delete\(HARNESS_PARAM\)/);
   assert.match(harness, /function fixtureHass\(hass, entryId, profile = activeProfile\(\)\)/);
   assert.match(harness, /if \(!profile \|\| !VALID_PROFILES\.has\(profile\)\) return hass/);
   assert.match(harness, /if \(!profile\) return dashboard/);
@@ -155,9 +159,12 @@ test("owner harness installer is valid Python", () => {
 });
 
 
-test("owner selector uses the proven direct Strategy insertion path", () => {
+test("owner selector keeps direct Strategy insertion but only after explicit URL opt-in", () => {
   assert.match(installer, /SELECTOR_DECL_ANCHOR/);
-  assert.match(installer, /const ownerTestSelector = \{/);
+  assert.match(installer, /const ownerTestSelector = \(/);
+  assert.match(installer, /window\.__svDashboardOwnerHarness\?\.harnessRequested\?\.\(\)/);
+  assert.match(installer, /\) \? \{/);
+  assert.match(installer, /\} : null/);
   assert.match(installer, /SELECTOR_CARD_ANCHOR/);
   assert.match(installer, /ownerTestSelector,\\n        hero/);
 });
@@ -199,7 +206,8 @@ test("owner installer runs end-to-end against a temporary beta.39 runtime", () =
     assert.match(installedFrontend, new RegExp(`owner-test-harness-card\\.js\\?v=owner-${token}`));
     assert.match(installedFrontend, new RegExp(`sv_dashboard\\.js\\?v=owner-${token}`));
     assert.match(installedConst, new RegExp(`FRONTEND_VERSION = "0\\.6\\.0-beta\\.39-owner-${token}"`));
-    assert.match(installedStrategy, /const ownerTestSelector = \{/);
+    assert.match(installedStrategy, /const ownerTestSelector = \(/);
+    assert.match(installedStrategy, /window\.__svDashboardOwnerHarness\?\.harnessRequested\?\.\(\)/);
     assert.match(installedStrategy, /ownerTestSelector,\n        hero,/);
     assert.match(installedStrategy, /static async generate\(config, hass\)/);
     assert.match(installedStrategy, /hass = ownerHarness\.fixtureHass\(hass, config\?\.entry_id, ownerProfile\)/);
@@ -357,10 +365,17 @@ test("patched Strategy.generate applies phev-driving fixture before dashboard ge
     window.location = new URL("http://localhost/citroen-dashboard/vehicle");
     const standardDashboard = await Strategy.generate({ entry_id: "entry-1" }, hass);
     const standardSerialized = JSON.stringify(standardDashboard);
-    assert.match(standardSerialized, /sv-dashboard-owner-test-selector-card/);
+    assert.doesNotMatch(standardSerialized, /sv-dashboard-owner-test-selector-card/);
     assert.doesNotMatch(standardSerialized, /sv-dashboard-owner-test-context-card/);
     assert.match(standardSerialized, /sv-dashboard-vehicle-overview-card/);
     assert.doesNotMatch(standardSerialized, /sv-dashboard-dual-energy-overview-card/);
+
+    window.location = new URL("http://localhost/citroen-dashboard/vehicle?sv_owner_harness=1");
+    const harnessDashboard = await Strategy.generate({ entry_id: "entry-1" }, hass);
+    const harnessSerialized = JSON.stringify(harnessDashboard);
+    assert.match(harnessSerialized, /sv-dashboard-owner-test-selector-card/);
+    assert.doesNotMatch(harnessSerialized, /sv-dashboard-owner-test-context-card/);
+    assert.match(harnessSerialized, /sv-dashboard-vehicle-overview-card/);
   } finally {
     if (previous.HTMLElement === undefined) delete globalThis.HTMLElement;
     else globalThis.HTMLElement = previous.HTMLElement;
