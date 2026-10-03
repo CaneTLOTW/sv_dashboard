@@ -54,11 +54,16 @@ MQTT topics and raw payloads. Only selected state values, approved units, event
 times and recognized source-time attributes are included. No report is written
 to the server.
 
-## beta.38 provisional changes
+## Related charging/settings behavior
 
 The beta.38 refresh-interval preset remains a convenience proxy to the actual
 upstream number entity; it does not introduce a second polling interval or
-performance fix. The beta.38 neutral active-preconditioning color remains
-provisional and is not validated or redesigned by this diagnostics feature.
-The beta.38 charge-power timing fallback remains a separate investigation in
-Issue #115.
+performance fix. The neutral active-preconditioning color is retained as UI
+semantics and is independent of this diagnostics timeline.
+
+For beta.40, charge-power sampling keeps vehicle source time and Home Assistant
+observation time separately. A frozen upstream timestamp no longer identifies
+all later changed SOC/residual observations as one payload; bounded HA
+observation-time fallback is explicitly marked when it is needed to time a real
+value delta. The diagnostics timeline remains read-only and does not alter that
+calculation.
