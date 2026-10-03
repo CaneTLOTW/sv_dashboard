@@ -7,8 +7,39 @@ const {
     buildLocalChargeSessions,
     findChargeSession,
     mergeChargeSessions,
+    storedSocHistoryStates,
     validateChargingSocTimeline,
 } = await import(`data:text/javascript,${encodeURIComponent(source)}`);
+
+test("stored SOC curve prefers HA observation time over frozen source time", () => {
+    const rows = storedSocHistoryStates([
+        {
+            soc: 62,
+            source_time: "2026-09-16T15:34:34Z",
+            received_at: "2026-10-02T14:59:00Z",
+        },
+        {
+            soc: 65,
+            source_time: "2026-09-16T15:34:34Z",
+            received_at: "2026-10-02T15:27:00Z",
+        },
+        {
+            soc: 70,
+            source_time: "2026-09-16T15:34:34Z",
+            received_at: "2026-10-02T17:02:00Z",
+        },
+    ]);
+
+    assert.deepEqual(
+        rows.map((row) => row.last_updated),
+        [
+            "2026-10-02T14:59:00Z",
+            "2026-10-02T15:27:00Z",
+            "2026-10-02T17:02:00Z",
+        ],
+    );
+    assert.deepEqual(rows.map((row) => row.state), [62, 65, 70]);
+});
 
 const state = (value, timestamp, attributes = undefined) => ({
     state: String(value),
