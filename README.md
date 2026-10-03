@@ -4,7 +4,7 @@
 
 SV Dashboard is a HACS custom integration that builds a vehicle-focused Home Assistant dashboard on top of [Stellantis Vehicles](https://github.com/andreadegiovine/homeassistant-stellantis-vehicles).
 
-> **Beta status:** SV Dashboard is the successor to `CaneTLOTW/e_c3_dashboard`. The new Home Assistant domain is `sv_dashboard`. Owner runtime validation has progressed through beta.25; **beta.26 remains the frozen external DS N°4/French validation candidate**. Development has moved on to a beta.29 candidate that keeps the beta.28 Dual-Energy UI and adds automatic bounded Trip/Charge History reconciliation after local completion events; beta.26 is not retagged or modified. Real-vehicle evidence now covers both field availability and vehicle-specific timing/behavior differences before promotion to `main`.
+> **Beta status:** SV Dashboard is the successor to `CaneTLOTW/e_c3_dashboard`. The current `develop` line is preparing **0.6.0-beta.40** as a canonical Trip/Charge stabilization candidate. The external DS N°4 tester remains on the previously published beta.36 until the exact beta.40 candidate passes owner runtime acceptance; published prerelease tags remain immutable.
 
 [![Open the SV Dashboard repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=CaneTLOTW&repository=sv_dashboard&category=integration)
 
@@ -211,7 +211,7 @@ CI currently checks:
 - Hassfest
 - HACS repository validation
 
-Promotion to `main` happens only after the exact candidate has passed CI and the required owner/external live acceptance. The current plan is to complete the frozen beta.26 DS N°4/French retest before the next `develop` → `main` promotion.
+Promotion to `main` happens only after the exact candidate has passed CI and the required owner/external live acceptance. For beta.40 the exact candidate is first deployed to the owner Home Assistant runtime, then published as an immutable prerelease for the focused DS N°4 retest; stable promotion remains a separate acceptance step.
 
 ## License and trademarks
 
@@ -224,7 +224,7 @@ SV Dashboard is an independent community project and is not affiliated with or e
 - [Installation](docs/INSTALLATION.en.md)
 - [Vehicle validation guide](docs/VEHICLE_VALIDATION.en.md)
 - [Vehicle capability evidence matrix](docs/VEHICLE_CAPABILITY_MATRIX.md)
-- [beta.26 DS N°4 external test scope](docs/BETA26_TEST_SCOPE.md)
+- [beta.40 owner + DS N°4 acceptance scope](docs/BETA40_TEST_SCOPE.md)
 - [Vehicle capability audit](docs/VEHICLE_AUDIT.md)
 - [Vehicle diagnostics timeline](docs/VEHICLE_DIAGNOSTICS.en.md)
 - [Community guide](docs/COMMUNITY.en.md)
