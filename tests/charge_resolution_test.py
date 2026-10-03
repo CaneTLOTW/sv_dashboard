@@ -182,6 +182,22 @@ def test_preferred_finished_boundary_beats_earlier_intermediate_soc():
     assert merged["field_conflicts"]["soc_end"]["resolution"] == "preferred_known_retained"
 
 
+def test_equivalent_charge_type_spellings_do_not_create_false_conflict():
+    preferred = {
+        "start_time": "2026-10-03T08:00:00+00:00",
+        "end_time": "2026-10-03T09:00:00+00:00",
+        "charge_type": "slow",
+    }
+    supplementary = {
+        "charge_type": "AC",
+    }
+
+    merged = MODULE.merge_charge_evidence(preferred, supplementary)
+
+    assert merged["charge_type"] == "AC"
+    assert "charge_type" not in merged.get("field_conflicts", {})
+
+
 def test_impossible_estimated_maximum_below_average_is_suppressed():
     preferred = {
         "start_time": "2026-10-03T08:00:00+00:00",
