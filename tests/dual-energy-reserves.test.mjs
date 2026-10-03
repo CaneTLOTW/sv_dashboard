@@ -26,7 +26,7 @@ test("canonical reserve and fuel rolling metrics are package-owned", () => {
 
 test("remaining energy and fuel provenance is exposed by dedicated sensors", () => {
   assert.match(sensors, /class SvRemainingBatteryEnergySensor/);
-  assert.match(sensors, /SensorDeviceClass\.ENERGY/);
+  assert.match(sensors, /SensorDeviceClass\.ENERGY_STORAGE/);
   assert.match(sensors, /class SvRemainingFuelLitersSensor/);
   assert.match(sensors, /SensorDeviceClass\.VOLUME/);
   assert.match(sensors, /class SvTrailingFuelConsumptionSensor/);
