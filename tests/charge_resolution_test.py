@@ -13,13 +13,23 @@ assert SPEC.loader is not None
 SPEC.loader.exec_module(MODULE)
 
 
-def _sample(received_at, soc, *, source_time="2026-09-16T15:34:34+00:00", residual=None):
+def _sample(
+    received_at,
+    soc,
+    *,
+    source_time="2026-09-16T15:34:34+00:00",
+    residual=None,
+    trigger_metric=None,
+    fanout_metrics=None,
+):
     return {
         "source_time": source_time,
         "received_at": received_at,
         "soc": soc,
         "residual_kwh": residual,
         "charge_type": "slow",
+        "trigger_metric": trigger_metric,
+        "fanout_metrics": fanout_metrics or ([trigger_metric] if trigger_metric else []),
     }
 
 
@@ -31,11 +41,31 @@ def test_charge_type_requires_explicit_mode_evidence():
 
 
 def test_same_source_timestamp_only_coalesces_bounded_entity_fanout():
-    first = _sample("2026-10-03T08:00:00+00:00", 70)
-    fanout = _sample("2026-10-03T08:00:04+00:00", 70, residual=28.0)
-    later = _sample("2026-10-03T08:01:05+00:00", 71, residual=28.0)
+    first = _sample(
+        "2026-10-03T08:00:00+00:00", 70, trigger_metric="soc"
+    )
+    fanout = _sample(
+        "2026-10-03T08:00:04+00:00",
+        70,
+        residual=28.0,
+        trigger_metric="residual",
+    )
+    repeated_soc = _sample(
+        "2026-10-03T08:00:07+00:00",
+        71,
+        residual=28.0,
+        trigger_metric="soc",
+        fanout_metrics=["soc"],
+    )
+    later = _sample(
+        "2026-10-03T08:01:05+00:00",
+        71,
+        residual=28.0,
+        trigger_metric="soc",
+    )
 
     assert MODULE.charge_samples_same_payload(first, fanout) is True
+    assert MODULE.charge_samples_same_payload(first, repeated_soc) is False
     assert MODULE.charge_samples_same_payload(fanout, later) is False
 
 
