@@ -8,6 +8,7 @@
 - Merges completed-charge fields independently with known-beats-unknown semantics, preserving richer Recorder/curve evidence instead of allowing a sparse finalization row to erase start SOC, energy, average power or charge type.
 - Handles the real DS N°4 24→96 plus later 24→99 completion sequence as one physical AC session; conflicting end-SOC evidence no longer creates duplicate Charge History rows.
 - Separates vehicle measurement/source time from Home Assistant observation time for charge samples. A frozen Stellantis timestamp can no longer collapse later real SOC/residual changes into one sample; only bounded cross-entity payload fan-out is coalesced.
+- Restores recent stored charge curves when Stellantis reuses a stale source timestamp: the curve browser now reconstructs the SOC timeline from the persisted HA observation time first, with source time only as a legacy fallback.
 - Keeps live charge power conservative: recent changed observations can use an explicitly marked HA-time fallback when source time is frozen, but retrospective average power is never exposed as instantaneous current power and upstream charging-rate km/h is never relabeled as kW.
 - Enriches degraded active-charge metadata from later trustworthy same-session evidence, so transient `No`/Unknown charging mode does not remain the final charge type when Slow/Quick evidence later exists.
 - Preserves exact-vs-sample charge-boundary provenance and marks sample-boundary energy as partial evidence rather than pretending it was measured at the physical plug-in/off edge.
