@@ -126,7 +126,23 @@ def charge_samples_same_payload(
         delta = abs((current_received - previous_received).total_seconds())
     except TypeError:
         return False
-    return delta <= fanout_seconds
+    if delta > fanout_seconds:
+        return False
+
+    # Runtime samples record which mapped HA metric triggered this timeline
+    # point. A second update from the same metric is a new observation even if
+    # Stellantis reused the same source timestamp within the fan-out window.
+    current_trigger = current.get("trigger_metric")
+    previous_metrics = {
+        str(value)
+        for value in (previous.get("fanout_metrics") or [])
+        if value
+    }
+    if previous.get("trigger_metric"):
+        previous_metrics.add(str(previous.get("trigger_metric")))
+    if current_trigger and str(current_trigger) in previous_metrics:
+        return False
+    return True
 
 
 def _sample_sort_time(sample: dict[str, Any]) -> datetime | None:
@@ -282,6 +298,17 @@ def merge_charge_evidence(
             source = _field_source(supplementary, field)
             if source:
                 field_sources[field] = source
+            if field == "maximum_power_kw" and "maximum_power_kw_estimated" in supplementary:
+                result["maximum_power_kw_estimated"] = bool(
+                    supplementary.get("maximum_power_kw_estimated")
+                )
+            if field in {"average_power_kw", "maximum_power_kw"} and "power_estimated" in supplementary:
+                result["power_estimated"] = bool(supplementary.get("power_estimated"))
+            if field in {"energy_kwh", "battery_energy_added_kwh"}:
+                if "energy_estimated" in supplementary:
+                    result["energy_estimated"] = bool(supplementary.get("energy_estimated"))
+                if supplementary.get("energy_source"):
+                    result["energy_source"] = supplementary.get("energy_source")
         elif preferred_known and supplementary_known and preferred_value != supplementary_value:
             conflicts.setdefault(
                 field,
