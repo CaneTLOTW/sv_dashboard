@@ -6,7 +6,7 @@ from typing import Any
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfEnergy, UnitOfLength, UnitOfPower, UnitOfVolume
+from homeassistant.const import MATCH_ALL, UnitOfEnergy, UnitOfLength, UnitOfPower, UnitOfVolume
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers import entity_registry as er
@@ -291,6 +291,11 @@ async def async_setup_entry(
 
 class SvDashboardStatusSensor(CoordinatorEntity, SensorEntity):
     """Expose setup, mapping and module diagnostics to the dashboard strategy."""
+    # This entity is a live dashboard/API surface, not a historical payload.
+    # Recorder keeps the native state, while the potentially large live
+    # attributes remain available from hass.states without being serialized
+    # into every Recorder state row.
+    _unrecorded_attributes = frozenset({MATCH_ALL})
 
     _attr_has_entity_name = True
     _attr_name = "Dashboard status"
@@ -418,6 +423,11 @@ class SvMetricSensor(SensorEntity):
 
 class SvServerTripHistorySensor(SvMetricSensor):
     """Count and compact attributes for canonical Stellantis trips."""
+    # This entity is a live dashboard/API surface, not a historical payload.
+    # Recorder keeps the native state, while the potentially large live
+    # attributes remain available from hass.states without being serialized
+    # into every Recorder state row.
+    _unrecorded_attributes = frozenset({MATCH_ALL})
 
     _attr_name = "Server trip history"
     _attr_translation_key = "server_trip_history"
@@ -461,6 +471,11 @@ class SvServerTripHistorySensor(SvMetricSensor):
 
 class SvServerGpsHistorySensor(SvMetricSensor):
     """Expose server-trip positions as a GeoJSON map overlay."""
+    # This entity is a live dashboard/API surface, not a historical payload.
+    # Recorder keeps the native state, while the potentially large live
+    # attributes remain available from hass.states without being serialized
+    # into every Recorder state row.
+    _unrecorded_attributes = frozenset({MATCH_ALL})
 
     _attr_name = "Server GPS history"
     _attr_translation_key = "server_gps_history"
@@ -500,6 +515,11 @@ class SvServerGpsHistorySensor(SvMetricSensor):
 
 class SvServerChargeHistorySensor(SvMetricSensor):
     """Count and compact attributes for deterministic charge windows."""
+    # This entity is a live dashboard/API surface, not a historical payload.
+    # Recorder keeps the native state, while the potentially large live
+    # attributes remain available from hass.states without being serialized
+    # into every Recorder state row.
+    _unrecorded_attributes = frozenset({MATCH_ALL})
 
     _attr_name = "Server charge history"
     _attr_translation_key = "server_charge_history"
