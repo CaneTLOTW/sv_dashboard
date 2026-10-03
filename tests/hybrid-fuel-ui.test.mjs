@@ -237,7 +237,7 @@ test("frontend cache-busts changed modules", () => {
     assert.match(frontend, new RegExp(`${module}\\.js\\?v=0\\.6\\.0-beta\\.28`));
   }
   assert.match(frontend, /fuel-history-card\.js\?v=0\.6\.0-beta\.36/);
-  assert.match(frontend, /charge-history-card\.js\?v=0\.6\.0-beta\.33/);
+  assert.match(frontend, /charge-history-card\.js\?v=0\.6\.0-beta\.40/);
   assert.match(frontend, /vehicle-overview-card\.js\?v=0\.6\.0-beta\.38/);
   assert.match(frontend, /dual-energy-overview-card\.js\?v=0\.6\.0-beta\.37/);
   assert.match(frontend, /vehicle-audit-card\.js\?v=0\.6\.0-beta\.28/);
