@@ -61,6 +61,7 @@ test("charge-start forecast rejects stale episode data and scans recent plausibl
   assert.match(source, /_upstream_charge_end\(start\)/);
   assert.match(source, /updated < active_start - _CHARGE_END_START_TOLERANCE/);
   assert.match(source, /for sample in reversed\(samples\):/);
+  assert.match(source, /power_observed_at[\s\S]*received_at[\s\S]*source_time/);
   assert.match(source, /_MAX_RECENT_CHARGE_SAMPLE_AGE/);
   assert.match(source, /_MAX_RECENT_CHARGE_POWER_KW/);
   assert.match(source, /if len\(values\) == 2:/);
