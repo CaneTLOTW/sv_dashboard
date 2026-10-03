@@ -14,6 +14,11 @@ from homeassistant.helpers.event import async_call_later, async_track_state_chan
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
+from .charge_resolution import (
+    charge_samples_same_payload,
+    charge_type_is_known,
+    normalize_charge_type,
+)
 from .const import (
     CONF_BATTERY_CAPACITY_KWH,
     CONF_TANK_CAPACITY_L,
@@ -83,6 +88,7 @@ class VehicleMetricsManager:
             "current_charge_power_kw": None,
             "current_charge_power_source": None,
             "current_charge_power_source_time": None,
+            "current_charge_power_observed_at": None,
             "current_charge_power_timestamp_source": None,
             "last_valid_battery_capacity_kwh": None,
             "canonical_mileage_km": None,
@@ -563,16 +569,25 @@ class VehicleMetricsManager:
         first_sample = self._charge_sample()
         soc = first_sample.get("soc")
         location = self._current_position()
+        initial_type = normalize_charge_type(first_sample.get("charge_type"))
         self.data["active_charge"] = {
             "start_time": now.isoformat(),
             "start_soc": soc,
+            "soc_start_source": "charge_start" if soc is not None else None,
             "start_mileage": self._number("mileage"),
             "capacity_kwh": first_sample["capacity_kwh"],
             "capacity_source": first_sample.get("capacity_source"),
-            "charge_type": first_sample.get("charge_type") or "Unknown",
+            "charge_type": initial_type,
+            "charge_type_source": (
+                "charge_start" if charge_type_is_known(initial_type) else None
+            ),
             "location": location,
             "location_source": "live_tracker" if location else None,
-            "samples": ([first_sample] if soc is not None else []),
+            "samples": (
+                [first_sample]
+                if soc is not None or first_sample.get("residual_kwh") is not None
+                else []
+            ),
         }
         self._clear_current_charge_power()
         await self._save_and_refresh()
@@ -586,9 +601,24 @@ class VehicleMetricsManager:
             return
         samples = [item for item in active.get("samples", []) if isinstance(item, dict)]
         previous = samples[-1] if samples else None
-        same_source_update = bool(
-            previous and previous.get("source_time") == sample.get("source_time")
-        )
+        same_source_update = charge_samples_same_payload(previous, sample)
+
+        # Session metadata is allowed to improve only while it is degraded.
+        # A later sample is explicit fallback evidence, not a claim that the
+        # value was measured at the physical charging edge.
+        if active.get("start_soc") is None and soc is not None:
+            active["start_soc"] = soc
+            active["soc_start_source"] = "first_sample"
+        if self._as_float(active.get("capacity_kwh")) is None:
+            sample_capacity = self._as_float(sample.get("capacity_kwh"))
+            if sample_capacity is not None and sample_capacity > 0:
+                active["capacity_kwh"] = sample_capacity
+                active["capacity_source"] = sample.get("capacity_source")
+        if not charge_type_is_known(active.get("charge_type")):
+            sample_type = normalize_charge_type(sample.get("charge_type"))
+            if charge_type_is_known(sample_type):
+                active["charge_type"] = sample_type
+                active["charge_type_source"] = "sample"
 
         # One Stellantis payload fans out to several HA entities. The battery
         # entity may therefore fire before battery_residual even though both
@@ -660,10 +690,12 @@ class VehicleMetricsManager:
                 sample["derived_power_kw"] = rounded_power
                 sample["power_source"] = power_source
                 sample["power_source_time"] = power_time.isoformat()
+                sample["power_observed_at"] = sample.get("received_at")
                 sample["power_timestamp_source"] = power_timestamp_source
                 self.data["current_charge_power_kw"] = rounded_power
                 self.data["current_charge_power_source"] = power_source
                 self.data["current_charge_power_source_time"] = power_time.isoformat()
+                self.data["current_charge_power_observed_at"] = sample.get("received_at")
                 self.data["current_charge_power_timestamp_source"] = (
                     power_timestamp_source
                 )
@@ -744,12 +776,75 @@ class VehicleMetricsManager:
             self._clear_current_charge_power()
             await self._save_and_refresh()
             return
-        capacity = self._as_float(active.get("capacity_kwh"))
-        start_soc = self._as_float(active.get("start_soc"))
-        end_soc = self._number("battery")
         samples = [item for item in active.get("samples", []) if isinstance(item, dict)]
-        start_residual = self._as_float(samples[0].get("residual_kwh")) if samples else None
+        capacity = self._as_float(active.get("capacity_kwh"))
+        if capacity is None:
+            capacity = next(
+                (
+                    value
+                    for item in samples
+                    if (value := self._as_float(item.get("capacity_kwh"))) is not None
+                    and value > 0
+                ),
+                None,
+            )
+
+        start_soc = self._as_float(active.get("start_soc"))
+        soc_start_source = active.get("soc_start_source")
+        if start_soc is None:
+            start_soc = next(
+                (
+                    value
+                    for item in samples
+                    if (value := self._as_float(item.get("soc"))) is not None
+                ),
+                None,
+            )
+            if start_soc is not None:
+                soc_start_source = "first_sample"
+
+        end_soc = self._number("battery")
+        soc_end_source = "charge_end" if end_soc is not None else None
+        if end_soc is None:
+            end_soc = next(
+                (
+                    value
+                    for item in reversed(samples)
+                    if (value := self._as_float(item.get("soc"))) is not None
+                ),
+                None,
+            )
+            if end_soc is not None:
+                soc_end_source = "last_sample"
+
+        start_residual = next(
+            (
+                value
+                for item in samples
+                if (value := self._as_float(item.get("residual_kwh"))) is not None
+            ),
+            None,
+        )
         end_residual = self._number("battery_residual")
+        if end_residual is None:
+            end_residual = next(
+                (
+                    value
+                    for item in reversed(samples)
+                    if (value := self._as_float(item.get("residual_kwh"))) is not None
+                ),
+                None,
+            )
+
+        charge_type = normalize_charge_type(active.get("charge_type"))
+        charge_type_source = active.get("charge_type_source")
+        if not charge_type_is_known(charge_type):
+            for item in samples:
+                candidate_type = normalize_charge_type(item.get("charge_type"))
+                if charge_type_is_known(candidate_type):
+                    charge_type = candidate_type
+                    charge_type_source = "sample"
+                    break
         residual_energy = (
             round(max(0, end_residual - start_residual), 3)
             if start_residual is not None and end_residual is not None
@@ -772,6 +867,15 @@ class VehicleMetricsManager:
         powers = [self._as_float(item.get("derived_power_kw", item.get("power_kw"))) for item in samples]
         powers = [power for power in powers if power is not None]
         average_power = round(energy_kwh * 3600 / duration_seconds, 2) if energy_kwh is not None else None
+        maximum_power = round(max(powers), 2) if powers else None
+        quality_flags: list[str] = []
+        if (
+            maximum_power is not None
+            and average_power is not None
+            and maximum_power < average_power
+        ):
+            maximum_power = None
+            quality_flags.append("estimated_max_below_average_suppressed")
         power_sources = {item.get("power_source") for item in samples if item.get("power_source")}
         timestamp_sources = [item.get("timestamp_source") for item in samples]
         charge = {
@@ -781,19 +885,23 @@ class VehicleMetricsManager:
             "duration_seconds": duration_seconds,
             "duration": self._duration_text(duration_seconds),
             "soc_start": start_soc,
+            "soc_start_source": soc_start_source,
             "soc_end": end_soc,
+            "soc_end_source": soc_end_source,
             "capacity_kwh": round(capacity, 2) if capacity is not None else None,
             "capacity_source": active.get("capacity_source"),
             "energy_kwh": energy_kwh,
             "energy_source": energy_source,
             "average_power_kw": average_power,
-            "maximum_power_kw": round(max(powers), 2) if powers else average_power,
-            "minimum_power_kw": round(min(powers), 2) if powers else average_power,
-            "median_power_kw": round(median(powers), 2) if powers else average_power,
+            "maximum_power_kw": maximum_power,
+            "minimum_power_kw": round(min(powers), 2) if powers else None,
+            "median_power_kw": round(median(powers), 2) if powers else None,
             "maximum_power_kw_estimated": True,
             "power_estimated": energy_kwh is not None,
             "power_source": next(iter(power_sources)) if len(power_sources) == 1 else "mixed" if power_sources else None,
-            "charge_type": active.get("charge_type") or "Unknown",
+            "charge_type": charge_type,
+            "charge_type_source": charge_type_source,
+            "quality_flags": quality_flags,
             "location": active.get("location"),
             "location_source": active.get("location_source"),
             # Persist the observed SOC timeline as well.  The points remain
@@ -852,6 +960,7 @@ class VehicleMetricsManager:
         self.data["current_charge_power_kw"] = None
         self.data["current_charge_power_source"] = None
         self.data["current_charge_power_source_time"] = None
+        self.data["current_charge_power_observed_at"] = None
         self.data["current_charge_power_timestamp_source"] = None
         if self._cancel_charge_power_expiry:
             self._cancel_charge_power_expiry()
@@ -859,7 +968,8 @@ class VehicleMetricsManager:
 
     def _charge_power_age_seconds(self) -> float | None:
         source_time = self._parse_sample_timestamp(
-            self.data.get("current_charge_power_source_time")
+            self.data.get("current_charge_power_observed_at")
+            or self.data.get("current_charge_power_source_time")
         )
         if source_time is None:
             return None
@@ -912,6 +1022,7 @@ class VehicleMetricsManager:
             "estimated": True,
             "power_source": self.data.get("current_charge_power_source"),
             "source_time": self.data.get("current_charge_power_source_time"),
+            "observed_at": self.data.get("current_charge_power_observed_at"),
             "timestamp_source": self.data.get(
                 "current_charge_power_timestamp_source"
             ),
