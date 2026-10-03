@@ -12,6 +12,7 @@ const STATUS_DOMAIN = "sv_dashboard";
 const SELECTOR_TAG = "sv-dashboard-owner-test-selector-card";
 const CONTEXT_TAG = "sv-dashboard-owner-test-context-card";
 const PROFILE_PARAM = "sv_owner_fixture";
+const HARNESS_PARAM = "sv_owner_harness";
 const SYNTH_PREFIX = "sensor.sv_owner_fixture_";
 
 const PROFILE_OPTIONS = [
@@ -47,6 +48,11 @@ const state = (entityId, value, attributes = {}, updated = nowIso()) => ({
 const activeProfile = () => {
   const raw = new URLSearchParams(window.location.search).get(PROFILE_PARAM) || "";
   return VALID_PROFILES.has(raw) ? raw : "";
+};
+
+const harnessRequested = () => {
+  const params = new URLSearchParams(window.location.search);
+  return params.get(HARNESS_PARAM) === "1" || activeProfile() !== "";
 };
 
 const candidates = (hass, entryId) => Object.entries(hass?.states || {}).filter(([id, item]) => {
@@ -543,7 +549,7 @@ function decorateDashboard(dashboard, entryId, profile = activeProfile()) {
   if (!dashboard || !Array.isArray(dashboard.views)) return dashboard;
 
   const vehicle = dashboard.views.find((view) => view?.path === "vehicle");
-  if (vehicle) {
+  if (vehicle && harnessRequested()) {
     const selector = selectorConfig(entryId);
     const firstLayout = Array.isArray(vehicle.cards) ? vehicle.cards[0] : null;
     if (Array.isArray(firstLayout?.cards)) {
@@ -593,8 +599,12 @@ class SvDashboardOwnerTestSelectorCard extends HTMLElement {
   _setProfile(profile) {
     if (profile === activeProfile()) return;
     const url = new URL(window.location.href);
-    if (profile) url.searchParams.set(PROFILE_PARAM, profile);
-    else url.searchParams.delete(PROFILE_PARAM);
+    if (profile) {
+      url.searchParams.set(PROFILE_PARAM, profile);
+    } else {
+      url.searchParams.delete(PROFILE_PARAM);
+      url.searchParams.delete(HARNESS_PARAM);
+    }
     window.location.assign(url.toString());
   }
 
@@ -663,6 +673,7 @@ if (!customElements.get(CONTEXT_TAG)) customElements.define(CONTEXT_TAG, SvDashb
 
 window.__svDashboardOwnerHarness = {
   activeProfile,
+  harnessRequested,
   fixtureHass,
   decorateDashboard,
   selectorTag: SELECTOR_TAG,
