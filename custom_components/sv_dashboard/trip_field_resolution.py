@@ -106,56 +106,82 @@ def _boundary_observation(local: dict[str, Any], field: str, edge: str) -> dict[
 
 
 def _fresh_observation(
-    local: dict[str, Any], field: str, edge: str
+    local: dict[str, Any],
+    field: str,
+    edge: str,
+    *,
+    reference_time: Any = None,
 ) -> dict[str, Any] | None:
+    """Return boundary evidence that is fresh enough to use as a fallback.
+
+    Freshness is evaluated against the canonical/server trip boundary when it
+    is available. Untimestamped legacy observations remain readable only as
+    fallback evidence; they can never become an exact boundary.
+    """
     observation = _boundary_observation(local, field, edge)
     if observation is None:
         return None
-    source_time = observation.get("source_time")
-    reference_time = local.get("start_time" if edge == "start" else "end_time")
-    age = _delta_seconds(source_time, reference_time)
-    if age is not None and age <= _BOUNDARY_FRESHNESS_SECONDS:
-        return observation
     if observation.get("source") == "legacy_boundary":
+        return observation
+
+    boundary_time = (
+        reference_time
+        if reference_time is not None
+        else local.get("start_time" if edge == "start" else "end_time")
+    )
+    age = _delta_seconds(observation.get("source_time"), boundary_time)
+    if age is not None and age <= _BOUNDARY_FRESHNESS_SECONDS:
         return observation
     return None
 
 
-def _local_value(local: dict[str, Any], field: str, edge: str) -> float | None:
+def _local_value(
+    local: dict[str, Any],
+    field: str,
+    edge: str,
+    *,
+    reference_time: Any = None,
+) -> float | None:
     spec = _FIELD_BOUNDARIES.get(field)
     if spec is None:
         return None
-    evidence_field, legacy_key, _server_source, _tolerance = spec
-    boundaries = local.get("boundary_evidence")
-    edge_data = boundaries.get(edge) if isinstance(boundaries, dict) else None
-    if isinstance(edge_data, dict) and evidence_field in edge_data:
-        observation = _fresh_observation(local, evidence_field, edge)
-        return _number(observation.get("value")) if observation is not None else None
-    observation = _fresh_observation(local, evidence_field, edge)
-    if observation is not None:
-        return _number(observation.get("value"))
-    # Compatibility for earlier restart-safe stores. Electric autonomy and
-    # residual energy have no legacy key and therefore remain absent.
-    if evidence_field in {"soc", "fuel_level", "fuel_range_km"}:
-        return _number(local.get(legacy_key))
-    return None
+    evidence_field, _legacy_key, _server_source, _tolerance = spec
+    observation = _fresh_observation(
+        local, evidence_field, edge, reference_time=reference_time
+    )
+    return _number(observation.get("value")) if observation is not None else None
 
 
-def _local_boundary_source(local: dict[str, Any], field: str, edge: str) -> str | None:
-    """Classify a transition snapshot by its telemetry timestamp provenance."""
-    observation = _fresh_observation(local, field, edge)
+def _local_boundary_source(
+    local: dict[str, Any],
+    field: str,
+    edge: str,
+    *,
+    reference_time: Any = None,
+) -> str | None:
+    """Classify local evidence as exact upstream boundary or fallback only."""
+    observation = _fresh_observation(
+        local, field, edge, reference_time=reference_time
+    )
     if observation is None:
         return None
     if observation.get("source") == "legacy_boundary":
-        return "sv_local_trip_boundary"
-    if observation.get("timestamp_source") == "received_at":
         return "sv_local_trip_boundary_fallback"
-    age = _delta_seconds(
-        observation.get("source_time"),
-        local.get("start_time" if edge == "start" else "end_time"),
+
+    # Only a genuine upstream/Stellantis metric timestamp can contradict and
+    # replace an already-known server trip boundary. HA receipt/update time is
+    # useful fallback evidence but is not measurement-time proof.
+    if observation.get("timestamp_source") != "stellantis":
+        return "sv_local_trip_boundary_fallback"
+
+    boundary_time = (
+        reference_time
+        if reference_time is not None
+        else local.get("start_time" if edge == "start" else "end_time")
     )
+    age = _delta_seconds(observation.get("source_time"), boundary_time)
     if age is None:
-        return None
+        return "sv_local_trip_boundary_fallback"
     if age <= _EXACT_BOUNDARY_TOLERANCE_SECONDS:
         return "sv_local_trip_boundary"
     return "sv_local_trip_boundary_fallback"
@@ -258,10 +284,20 @@ def _resolve_pair(
     trip: dict[str, Any], local: dict[str, Any], first: str, second: str, tolerance: float
 ) -> None:
     first_spec, second_spec = _FIELD_BOUNDARIES[first], _FIELD_BOUNDARIES[second]
-    first_local = _local_value(local, first, "start")
-    second_local = _local_value(local, second, "end")
-    first_local_source = _local_boundary_source(local, first_spec[0], "start")
-    second_local_source = _local_boundary_source(local, second_spec[0], "end")
+    server_start_time = trip.get("start_time")
+    server_end_time = trip.get("end_time")
+    first_local = _local_value(
+        local, first, "start", reference_time=server_start_time
+    )
+    second_local = _local_value(
+        local, second, "end", reference_time=server_end_time
+    )
+    first_local_source = _local_boundary_source(
+        local, first_spec[0], "start", reference_time=server_start_time
+    )
+    second_local_source = _local_boundary_source(
+        local, second_spec[0], "end", reference_time=server_end_time
+    )
     server_first, server_second = _number(trip.get(first)), _number(trip.get(second))
     first_conflict = (
         server_first is not None and first_local is not None
@@ -334,14 +370,34 @@ def resolve_trip_fields(trip: dict[str, Any], local: dict[str, Any] | None = Non
                 _field_source(resolved, field, "unknown")
 
     if local is not None:
-        fuel_start = _fresh_observation(local, "fuel_consumption_total", "start")
-        fuel_end = _fresh_observation(local, "fuel_consumption_total", "end")
+        fuel_start = _fresh_observation(
+            local,
+            "fuel_consumption_total",
+            "start",
+            reference_time=resolved.get("start_time"),
+        )
+        fuel_end = _fresh_observation(
+            local,
+            "fuel_consumption_total",
+            "end",
+            reference_time=resolved.get("end_time"),
+        )
         local_fuel_delta = None
         if (
             fuel_start
             and fuel_end
-            and _local_boundary_source(local, "fuel_consumption_total", "start") == "sv_local_trip_boundary"
-            and _local_boundary_source(local, "fuel_consumption_total", "end") == "sv_local_trip_boundary"
+            and _local_boundary_source(
+                local,
+                "fuel_consumption_total",
+                "start",
+                reference_time=resolved.get("start_time"),
+            ) == "sv_local_trip_boundary"
+            and _local_boundary_source(
+                local,
+                "fuel_consumption_total",
+                "end",
+                reference_time=resolved.get("end_time"),
+            ) == "sv_local_trip_boundary"
         ):
             start_value = _number(fuel_start.get("value"))
             end_value = _number(fuel_end.get("value"))
@@ -392,13 +448,33 @@ def resolve_trip_fields(trip: dict[str, Any], local: dict[str, Any] | None = Non
         energy = None
         energy_source = "unknown"
         if local is not None:
-            residual_start = _fresh_observation(local, "residual_energy_kwh", "start")
-            residual_end = _fresh_observation(local, "residual_energy_kwh", "end")
+            residual_start = _fresh_observation(
+                local,
+                "residual_energy_kwh",
+                "start",
+                reference_time=resolved.get("start_time"),
+            )
+            residual_end = _fresh_observation(
+                local,
+                "residual_energy_kwh",
+                "end",
+                reference_time=resolved.get("end_time"),
+            )
             if (
                 residual_start
                 and residual_end
-                and _local_boundary_source(local, "residual_energy_kwh", "start") == "sv_local_trip_boundary"
-                and _local_boundary_source(local, "residual_energy_kwh", "end") == "sv_local_trip_boundary"
+                and _local_boundary_source(
+                    local,
+                    "residual_energy_kwh",
+                    "start",
+                    reference_time=resolved.get("start_time"),
+                ) == "sv_local_trip_boundary"
+                and _local_boundary_source(
+                    local,
+                    "residual_energy_kwh",
+                    "end",
+                    reference_time=resolved.get("end_time"),
+                ) == "sv_local_trip_boundary"
             ):
                 start_value = _number(residual_start.get("value"))
                 end_value = _number(residual_end.get("value"))
@@ -413,8 +489,12 @@ def resolve_trip_fields(trip: dict[str, Any], local: dict[str, Any] | None = Non
             energy_source == "unknown"
             and start_soc is not None
             and end_soc is not None
-            and _local_boundary_source(local, "soc", "start") == "sv_local_trip_boundary"
-            and _local_boundary_source(local, "soc", "end") == "sv_local_trip_boundary"
+            and _local_boundary_source(
+                local, "soc", "start", reference_time=resolved.get("start_time")
+            ) == "sv_local_trip_boundary"
+            and _local_boundary_source(
+                local, "soc", "end", reference_time=resolved.get("end_time")
+            ) == "sv_local_trip_boundary"
             and start_soc > end_soc
             and capacity is not None
             and capacity > 0
