@@ -20,6 +20,12 @@ from homeassistant.helpers.storage import Store
 from homeassistant.core import callback
 from homeassistant.util import dt as dt_util
 
+from .charge_resolution import (
+    merge_charge_evidence,
+    merge_charge_samples,
+    normalize_charge_type,
+    same_physical_charge,
+)
 from .const import (
     CONF_VEHICLE_SLUG,
     DEFAULT_OPTIONS,
@@ -132,24 +138,9 @@ def _capacity(value: Any) -> float | None:
 
 
 def _charge_type(value: Any, average_power_kw: Any = None) -> str:
-    """Normalize AC/DC and use average load as a fallback.
-
-    The upstream ``battery_charging_type`` entity can report ``NO`` even
-    while a Recorder/live charging session is being captured.  When that
-    happens, an observed average battery charging load is the best available
-    fallback requested by the dashboard contract: values above 22 kW are DC,
-    values up to and including 22 kW are AC.  A pure SOC-window reconstruction
-    normally has no valid charging load and therefore remains Unknown.
-    """
-    normalized = str(value or "").strip().lower()
-    if normalized in {"ac", "slow", "normal", "standard"}:
-        return "AC"
-    if normalized in {"dc", "fast", "quick", "rapid"}:
-        return "DC"
-    average_power = _number(average_power_kw)
-    if average_power is not None and average_power >= 0:
-        return "DC" if average_power > 22 else "AC"
-    return "Unknown"
+    """Normalize only explicitly recorded AC/DC charging-mode evidence."""
+    del average_power_kw
+    return normalize_charge_type(value)
 
 
 def _is_real_trip(trip: dict[str, Any]) -> bool:
@@ -471,7 +462,7 @@ def reconstruct_charge_windows(trips: list[dict[str, Any]]) -> list[dict[str, An
 def normalize_observed_charge(
     local: dict[str, Any], source: str = "ha_live"
 ) -> dict[str, Any] | None:
-    """Map the restart-safe local session to the canonical charge contract."""
+    """Map one restart-safe local/Recorder session to the canonical contract."""
     start, end = local.get("start_time"), local.get("end_time")
     if not start or not end:
         return None
@@ -479,8 +470,17 @@ def normalize_observed_charge(
     samples = [sample for sample in local.get("samples", []) if isinstance(sample, dict)]
     local_id = str(local.get("id") or start)
     average_power = _number(local.get("average_power_kw"))
-    return {
-        # Match the stable browser selection ID created by charge-history-core.
+    field_sources = {
+        key: value
+        for key, value in {
+            "soc_start": local.get("soc_start_source"),
+            "soc_end": local.get("soc_end_source"),
+            "charge_type": local.get("charge_type_source"),
+            "energy_kwh": local.get("energy_source"),
+        }.items()
+        if isinstance(value, str) and value
+    }
+    normalized = {
         "id": f"charge-{start}",
         "raw_live_id": local_id,
         "status": "complete",
@@ -499,15 +499,12 @@ def normalize_observed_charge(
         "start_mileage_km": _number(local.get("start_mileage")),
         "energy_kwh": _number(local.get("energy_kwh")),
         "battery_energy_added_kwh": _number(local.get("energy_kwh")),
-        "energy_estimated": True,
-        "energy_source": "local_live_soc_delta",
+        "energy_estimated": bool(local.get("estimated", True)),
+        "energy_source": local.get("energy_source"),
         "average_power_kw": average_power,
-        "average_power_estimated": True,
+        "average_power_estimated": bool(local.get("power_estimated", True)),
         "maximum_power_kw": _number(local.get("maximum_power_kw")),
-        "charge_type": _charge_type(local.get("charge_type"), average_power),
-        # A live session may have captured the current tracker location.  It
-        # remains optional: a missing tracker must never make a charge match
-        # fail.
+        "charge_type": normalize_charge_type(local.get("charge_type")),
         "location": local.get("location"),
         "location_source": local.get("location_source"),
         "previous_trip_id": None,
@@ -522,9 +519,12 @@ def normalize_observed_charge(
         "maximum_power_kw_estimated": bool(local.get("maximum_power_kw_estimated", True)),
         "power_estimated": bool(local.get("power_estimated", True)),
         "power_source": local.get("power_source"),
+        "field_sources": field_sources,
+        "quality_flags": list(local.get("quality_flags") or []),
         "confidence": "high",
-        "estimated": True,
+        "estimated": bool(local.get("estimated", True)),
     }
+    return merge_charge_evidence(normalized, {})
 
 
 def merge_charges(
@@ -645,7 +645,7 @@ def merge_charges(
     for index, observed in enumerate(observed_charges):
         if index in claimed_observed:
             continue
-        matches = [
+        time_matches = [
             window
             for window in remaining_windows
             if _time_in_window(
@@ -654,9 +654,16 @@ def merge_charges(
                 window.get("window_start"),
                 window.get("window_end"),
             )
-            and _soc_matches(observed.get("soc_start"), window.get("soc_start"))
-            and _soc_matches(observed.get("soc_end"), window.get("soc_end"))
         ]
+        if len(time_matches) == 1:
+            matches = time_matches
+        else:
+            matches = [
+                window
+                for window in time_matches
+                if _soc_matches(observed.get("soc_start"), window.get("soc_start"))
+                and _soc_matches(observed.get("soc_end"), window.get("soc_end"))
+            ]
         if matches:
             matched = min(matches, key=lambda window: match_score(observed, window))
             remaining_windows.remove(matched)
@@ -757,23 +764,9 @@ class ServerHistoryManager:
     def _merge_session_samples(
         existing: list[dict[str, Any]], incoming: list[dict[str, Any]]
     ) -> list[dict[str, Any]]:
-        """Merge raw SOC samples without duplicating equal source timestamps."""
-        merged: dict[str, dict[str, Any]] = {}
-        existing_items = existing if isinstance(existing, list) else []
-        incoming_items = incoming if isinstance(incoming, list) else []
-        for sample in [*existing_items, *incoming_items]:
-            if not isinstance(sample, dict):
-                continue
-            key = str(sample.get("source_time") or sample.get("time") or sample.get("received_at") or "")
-            if not key:
-                key = f"received:{len(merged)}"
-            merged[key] = sample
-        return sorted(
-            merged.values(),
-            key=lambda sample: str(
-                sample.get("source_time") or sample.get("time") or sample.get("received_at") or ""
-            ),
-        )
+        """Merge raw samples without collapsing changed frozen-source observations."""
+        return merge_charge_samples(existing, incoming)
+
 
     @classmethod
     def _merge_observed_archive(
@@ -787,11 +780,19 @@ class ServerHistoryManager:
             if not isinstance(session, dict):
                 continue
             key = cls._archive_session_key(session)
-            previous = merged.get(key, {})
-            combined = {**previous, **session}
-            combined["samples"] = cls._merge_session_samples(
-                previous.get("samples", []), session.get("samples", [])
-            )
+            previous = merged.get(key)
+            if previous:
+                preferred, supplementary = (
+                    (session, previous)
+                    if session.get("source") == "ha_live"
+                    else (previous, session)
+                )
+                combined = merge_charge_evidence(preferred, supplementary)
+            else:
+                combined = dict(session)
+                combined["samples"] = cls._merge_session_samples(
+                    [], session.get("samples", [])
+                )
             merged[key] = combined
         return sorted(
             merged.values(),
@@ -833,10 +834,9 @@ class ServerHistoryManager:
             if not isinstance(session, dict):
                 continue
             curve = curve_sessions.get(self._archive_session_key(session), {})
-            combined = {**curve, **session}
-            combined["samples"] = self._merge_session_samples(
-                curve.get("samples", []) if isinstance(curve, dict) else [],
-                session.get("samples", []),
+            combined = merge_charge_evidence(
+                session,
+                curve if isinstance(curve, dict) else {},
             )
             if combined["samples"]:
                 combined["sample_count"] = len(combined["samples"])
@@ -1085,55 +1085,32 @@ class ServerHistoryManager:
         observed_by_id: dict[str, dict[str, Any]] = {}
 
         def add_observed(normalized: dict[str, Any], *, prefer_new: bool) -> None:
-            """Keep one observed session for the same physical charge.
+            """Keep one canonical row for each strongly matched physical charge.
 
-            Recorder and the restart-safe local Store can differ by a few
-            microseconds at the on/off edges.  Match only an extremely close
-            start plus compatible SOC here, so two genuinely separate charge
-            sessions are not collapsed.
+            Physical interval identity is resolved independently from SOC/type/
+            energy because those telemetry fields can conflict across local,
+            Recorder and later REST evidence.
             """
-            start = _parse_time(normalized.get("start_time"))
             existing_key = next(
                 (
                     key
                     for key, existing in observed_by_id.items()
                     if key == normalized["id"]
-                    or (
-                        start
-                        and (existing_start := _parse_time(existing.get("start_time")))
-                        and abs((start - existing_start).total_seconds()) <= 90
-                        and _soc_matches(normalized.get("soc_start"), existing.get("soc_start"), 1)
-                        and _soc_matches(normalized.get("soc_end"), existing.get("soc_end"), 2)
-                    )
+                    or same_physical_charge(existing, normalized)
                 ),
                 None,
             )
             if existing_key is None:
                 observed_by_id[normalized["id"]] = normalized
                 return
+
             existing = observed_by_id.pop(existing_key)
-            preferred, supplementary = (normalized, existing) if prefer_new else (existing, normalized)
-            if not preferred.get("has_charge_curve") and supplementary.get("has_charge_curve"):
-                preferred["samples"] = supplementary.get("samples", [])
-                preferred["has_charge_curve"] = True
-                preferred["sample_count"] = len(preferred["samples"])
-                for field in (
-                    "source_timestamp_count",
-                    "ha_fallback_timestamp_count",
-                    "minimum_power_kw",
-                    "median_power_kw",
-                    "maximum_power_kw",
-                    "maximum_power_kw_estimated",
-                    "power_estimated",
-                    "power_source",
-                ):
-                    if supplementary.get(field) is not None:
-                        preferred[field] = supplementary[field]
-            preferred["sources"] = list(dict.fromkeys([
-                *(preferred.get("sources") or []),
-                *(supplementary.get("sources") or []),
-            ]))
-            observed_by_id[preferred["id"]] = preferred
+            preferred, supplementary = (
+                (normalized, existing) if prefer_new else (existing, normalized)
+            )
+            merged = merge_charge_evidence(preferred, supplementary)
+            merged["id"] = preferred.get("id") or supplementary.get("id")
+            observed_by_id[merged["id"]] = merged
 
         for recorder_charge in self.data.get(
             "recorder_observed_charges_archive",
