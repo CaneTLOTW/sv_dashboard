@@ -160,6 +160,11 @@ test("dual-energy hero exposes native HA interactions without nested custom card
   assert.doesNotMatch(dualHero, /custom:button-card/);
 });
 
+test("stored canonical SOC reconstruction prefers observation time over frozen source time", () => {
+  assert.match(chargeHistory, /storedSocHistoryStates\(selected\?\.samples\)/);
+  assert.match(chargeHistory, /charge-history-core\.js\?v=0\.6\.0-beta\.40-curve1/);
+});
+
 test("charge curve prefers stored derived power and keeps SOC reconstruction as fallback", () => {
   assert.match(chargeHistory, /function storedPowerCurve\(samples, fallbackCapacity = null\)/);
   assert.match(chargeHistory, /sample\?\.derived_power_kw/);
@@ -237,7 +242,7 @@ test("frontend cache-busts changed modules", () => {
     assert.match(frontend, new RegExp(`${module}\\.js\\?v=0\\.6\\.0-beta\\.28`));
   }
   assert.match(frontend, /fuel-history-card\.js\?v=0\.6\.0-beta\.36/);
-  assert.match(frontend, /charge-history-card\.js\?v=0\.6\.0-beta\.40/);
+  assert.match(frontend, /charge-history-card\.js\?v=0\.6\.0-beta\.40-curve1/);
   assert.match(frontend, /vehicle-overview-card\.js\?v=0\.6\.0-beta\.38/);
   assert.match(frontend, /dual-energy-overview-card\.js\?v=0\.6\.0-beta\.37/);
   assert.match(frontend, /vehicle-audit-card\.js\?v=0\.6\.0-beta\.28/);
