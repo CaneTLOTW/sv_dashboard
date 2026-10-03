@@ -31,6 +31,12 @@ Open `/citroen-dashboard/vehicle?sv_owner_harness=1` to show the local-only
 string is the only activation authority; nothing is persisted in Home Assistant
 or browser storage.
 
+The installer also gives the patched owner frontend a content-derived cache
+token that includes both harness code and the canonical product frontend/
+Strategy inputs. Installing a newer beta candidate therefore produces a new
+resource URL whenever the browser-visible product code changes; owner
+acceptance must not depend on manually clearing an older module cache.
+
 Selector choices:
 
 - **Standard · Testmodus aus** — removes both `sv_owner_fixture` and `sv_owner_harness`
