@@ -16,6 +16,8 @@
 - Makes scheduled wake-up during charging observation-aware: recent HA-observed charging telemetry suppresses a redundant 5-minute wake-up while stale recovery remains available.
 - Keeps the beta.39 Recorder-backed Vehicle diagnostics feature intact and updates its documentation for the new charge observation/source-time contract.
 - Makes the local owner QA harness opt-in: the normal generated dashboard stays production-like, while `?sv_owner_harness=1` or a valid `sv_owner_fixture` explicitly enables the local selector/context.
+- Moves static JavaScript asset discovery off the Home Assistant event loop to remove the beta.40 owner-runtime blocking-I/O warning during integration setup.
+- Classifies **Remaining battery energy** as Home Assistant `energy_storage` rather than cumulative `energy`, keeping its `measurement` state class valid for instantaneous stored battery energy.
 - Bumps package/frontend generation to beta.40 and cache-busts the changed Charge History module; unchanged frontend modules retain their prior validated content keys.
 
 ## 0.6.0-beta.39 recorder-backed vehicle diagnostics candidate
