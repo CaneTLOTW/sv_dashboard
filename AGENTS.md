@@ -2,9 +2,20 @@
 
 This file is a compact operating guide for AI-assisted and automated changes. It complements, rather than replaces, [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## Agent role split — mandatory
+
+- **ChatGPT owns development.** Analysis, architecture, source-code changes, documentation changes, tests, migrations, candidate/version preparation and release-plan changes are prepared and reviewed by ChatGPT before any Codex handoff.
+- **Codex is deployment/runtime execution only.** Codex may execute an already prepared runbook against the designated Home Assistant runtime: verify the exact candidate SHA/version, deploy/install it, reload/restart when instructed, run the prescribed runtime checks, collect sanitized evidence and report PASS/FAIL in the canonical GitHub Issue.
+- **Codex must never develop or patch product source.** It must not edit source, frontend, tests, docs, translations, manifests, version/cache values or repository architecture; it must not create an implementation commit, “quick fix”, hotfix, migration or speculative workaround during deployment.
+- If deployment exposes a defect, missing prerequisite or ambiguous instruction, Codex must **STOP and report the evidence back to the Issue**. ChatGPT then prepares the required source change and a new exact Candidate.
+- Codex may run read-only/static validation commands defined by the Issue or this repository, but validation does not authorize source modification.
+- Codex must never turn an uncommitted/runtime-only patch into a candidate. A runtime copy is not a source of truth.
+- Repository mutations that are not deployment evidence comments are outside the Codex role unless the maintainer gives an explicit one-off instruction for a non-development administrative action.
+
 ## Codex handoff default
 
-- ChatGPT → Codex handoffs are **Issue-driven by default**. When the complete task/runbook already exists in a GitHub Issue, the user-facing handoff must normally contain **only the full repository name and the Issue number**.
+- ChatGPT → Codex handoffs are **Issue-driven**. The canonical GitHub Issue must already contain the complete deployment runbook, exact Candidate SHA/version, runtime steps, acceptance criteria, abort conditions and prohibited actions before Codex is started.
+- When that canonical Issue exists, the user-facing Codex start instruction must contain **only the full repository name and the Issue number**.
 - Canonical short handoff form:
 
   ```text
@@ -12,8 +23,10 @@ This file is a compact operating guide for AI-assisted and automated changes. It
   Issue: #55
   ```
 
-- Do **not** duplicate the Issue body, runbook, SHA list, acceptance criteria or prohibitions into the chat handoff. Codex must open the referenced Issue itself and follow the latest applicable `## ChatGPT → Codex Handoff` or `## ChatGPT Review / Next Step` comment.
-- Expand the chat handoff only when no canonical Issue exists yet or when an additional fact is required to disambiguate the task. An Issue number without the full repository name is never sufficient.
+- Do **not** duplicate the Issue body, runbook, SHA list, acceptance criteria, prohibitions or explanatory prose into the chat handoff.
+- Codex must open the referenced Issue itself and follow the latest applicable `## ChatGPT → Codex Handoff` or `## ChatGPT Review / Next Step` comment.
+- If the Issue is not yet complete enough for execution, **do not expand the chat handoff**. First update the canonical Issue, then hand off only repository + Issue number.
+- An Issue number without the full repository name is never sufficient.
 
 ## Vehicle capability evidence matrix
 
@@ -29,8 +42,8 @@ This file is a compact operating guide for AI-assisted and automated changes. It
 - Develop **all** features, fixes, documentation, tests, dependency changes and candidate version bumps on `develop`. Do not commit product feature/fix work directly to `main`.
 - The designated Home Assistant household instance is the acceptance/canary runtime and may intentionally run an **exact `develop` SHA**. This is live acceptance, not a public/stable release.
 - Every runtime Issue must distinguish:
-  - **Candidate** = exact `develop` SHA/version prepared in GitHub;
-  - **Runtime** = exact SHA/version deployed into Home Assistant;
+  - **Candidate** = exact `develop` SHA/version prepared in GitHub by the development/review side;
+  - **Runtime** = exact SHA/version deployed into Home Assistant by the deployment executor;
   - **Validated** = exact Runtime SHA/version that passed required live/user checks.
 - Never describe a Candidate as deployed or validated merely because it exists on `develop`.
 - Every Codex deployment records the exact SHA and reports PASS/FAIL against that same SHA in the relevant GitHub Issue.
@@ -47,7 +60,8 @@ Full rationale: [Branch and deployment workflow](docs/BRANCH_AND_DEPLOYMENT_WORK
 ## Temporary patches versus accepted source
 
 - Temporary runtime/frontend patches are diagnostic evidence, not accepted architecture.
-- Before acceptance, fold proven behavior into the canonical owning source, remove the temporary path, bump frontend cache/version when required and repeat affected tests.
+- Before acceptance, ChatGPT must fold proven behavior into the canonical owning source, remove the temporary path, bump frontend cache/version when required and repeat affected tests.
+- Codex must not create or retain runtime monkey patches as a deployment shortcut.
 - Do not accumulate post-generation Strategy wrappers, `customElements.define` interception, runtime monkey patches or multiple separately registered Lovelace resources merely because they worked during diagnosis.
 - Prefer one package-owned frontend entry resource; internal ES module order/readiness is owned by that entry module.
 - Browser runtime dependencies must be pinned and shipped locally with SV Dashboard; do not add CDN/runtime imports such as unpkg to package JavaScript. Preserve required third-party license notices.
@@ -60,13 +74,12 @@ Full rationale: [Branch and deployment workflow](docs/BRANCH_AND_DEPLOYMENT_WORK
 - Do not maintain a duplicate Home Assistant todo item for repository work.
 - Durable architecture/contracts belong in repository code/docs; an Issue is the work thread, not the only documentation.
 - Search existing/open/recently closed Issues before creating a duplicate.
-- ChatGPT prepares analysis, architecture, code, tests, documentation and executable runbooks as far as possible before Codex handoff.
-- Codex is primarily the executor for work requiring the real Home Assistant runtime: deployment, entity/config-entry resolution, reload/restart, runtime tests and sanitized evidence.
-- Codex may fix a **small, obvious and local defect** needed for the handed-off acceptance, on `develop`, with focused tests and explicit reporting.
-- Larger contract/architecture changes are handed back instead of being redesigned during execution.
+- ChatGPT prepares analysis, architecture, source changes, tests, documentation, exact Candidate SHA/version and the executable deployment runbook **before** Codex handoff.
+- Codex executes only the prepared deployment/runtime runbook. It may resolve runtime entity/config-entry identifiers, install the exact Candidate, reload/restart, perform the specified runtime checks and collect sanitized evidence.
+- Codex **must not fix even a small or obvious defect** during execution. Any defect or missing source change is returned to ChatGPT for preparation of a new Candidate.
 - Use Issue comments headed `## ChatGPT → Codex Handoff`, `## Codex → ChatGPT Ergebnis`, and `## ChatGPT Review / Next Step`.
 - Handoffs reference exact branch/SHA, scope, runbook, acceptance criteria and prohibited changes **inside the canonical Issue**.
-- Chat handoffs should use the short repository-qualified form defined at the top of this file whenever the Issue already contains the complete task.
+- Chat handoffs must use the short repository-qualified form defined at the top of this file whenever the Issue already contains the complete task.
 - Keep an Issue open until its acceptance/runtime criteria are actually complete.
 
 ## Scope and architecture
