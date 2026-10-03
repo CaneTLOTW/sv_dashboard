@@ -305,7 +305,14 @@ class VehicleMetricsManager:
             # residual-energy step. Some vehicles update residual kWh while
             # whole-percent SOC remains unchanged, so both entities must feed
             # the live charge sampler.
-            self.hass.async_create_task(self.async_track_charge_sample())
+            trigger_metric = (
+                "soc"
+                if entity_id == self.mapping.get("battery")
+                else "residual"
+            )
+            self.hass.async_create_task(
+                self.async_track_charge_sample(trigger_metric=trigger_metric)
+            )
         elif entity_id == self.mapping.get("battery_capacity"):
             self.hass.async_create_task(self._async_capture_capacity())
         elif entity_id == self.mapping.get("mileage"):
@@ -592,10 +599,12 @@ class VehicleMetricsManager:
         self._clear_current_charge_power()
         await self._save_and_refresh()
 
-    async def async_track_charge_sample(self) -> None:
+    async def async_track_charge_sample(
+        self, *, trigger_metric: str | None = None
+    ) -> None:
         """Persist a raw charge sample and derive only defensible power."""
         active = self.data.get("active_charge")
-        sample = self._charge_sample()
+        sample = self._charge_sample(trigger_metric=trigger_metric)
         soc = sample.get("soc")
         if not isinstance(active, dict) or soc is None or not self._is_on("battery_charging"):
             return
@@ -704,6 +713,18 @@ class VehicleMetricsManager:
         if same_source_update:
             merged = dict(previous)
             merged.update(sample)
+            merged["fanout_metrics"] = list(
+                dict.fromkeys(
+                    [
+                        *(previous.get("fanout_metrics") or []),
+                        previous.get("trigger_metric"),
+                        sample.get("trigger_metric"),
+                    ]
+                )
+            )
+            merged["fanout_metrics"] = [
+                value for value in merged["fanout_metrics"] if value
+            ]
             # Do not erase a power result already derived by the first entity
             # update of this payload unless the follow-up derived a better one.
             if sample.get("derived_power_kw") is None and previous.get("derived_power_kw") is not None:
@@ -1335,7 +1356,9 @@ class VehicleMetricsManager:
         except (TypeError, ValueError):
             return None
 
-    def _charge_sample(self) -> dict[str, Any]:
+    def _charge_sample(
+        self, *, trigger_metric: str | None = None
+    ) -> dict[str, Any]:
         """Capture metric-specific timestamps and unmodified upstream values."""
         received_at = dt_util.utcnow()
         battery_entity = self.mapping.get("battery")
@@ -1392,6 +1415,8 @@ class VehicleMetricsManager:
             "source_time": source_time.isoformat(),
             "received_at": received_at.isoformat(),
             "timestamp_source": timestamp_source,
+            "trigger_metric": trigger_metric,
+            "fanout_metrics": [trigger_metric] if trigger_metric else [],
             # Compatibility bridge for older stores/tools that used `time`.
             "time": source_time.isoformat(),
             "soc": self._as_float(state.state if state else None),
