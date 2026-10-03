@@ -227,6 +227,7 @@ SV Dashboard is an independent community project and is not affiliated with or e
 - [beta.40 owner + DS N°4 acceptance scope](docs/BETA40_TEST_SCOPE.md)
 - [Vehicle capability audit](docs/VEHICLE_AUDIT.md)
 - [Vehicle diagnostics timeline](docs/VEHICLE_DIAGNOSTICS.en.md)
+- [Canonical charge-session resolution](docs/CHARGE_SESSION_RESOLUTION.md)
 - [Community guide](docs/COMMUNITY.en.md)
 - [Concept](docs/CONCEPT.md)
 - [Stellantis API reference and runtime findings](docs/STELLANTIS_API_REFERENCE.md)
