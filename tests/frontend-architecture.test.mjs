@@ -31,7 +31,7 @@ test("Home Assistant registers one SV frontend resource", () => {
   // beta.40 changes the package resource and Charge History; unchanged internal modules retain prior content keys.
   assert.match(frontend, /import\("\.\/vehicle-overview-card\.js\?v=0\.6\.0-beta\.38"\)/);
   assert.match(frontend, /import\("\.\/gps-history-card\.js\?v=0\.6\.0-beta\.28"\)/);
-  assert.match(frontend, /import\("\.\/charge-history-card\.js\?v=0\.6\.0-beta\.40"\)/);
+  assert.match(frontend, /import\("\.\/charge-history-card\.js\?v=0\.6\.0-beta\.40-curve1"\)/);
   assert.match(frontend, /import\("\.\/dual-energy-overview-card\.js\?v=0\.6\.0-beta\.37"\)/);
   assert.match(frontend, /import\("\.\/fuel-history-card\.js\?v=0\.6\.0-beta\.36"\)/);
   assert.match(frontend, /import\("\.\/vehicle-diagnostics-card\.js\?v=0\.6\.0-beta\.39"\)/);
