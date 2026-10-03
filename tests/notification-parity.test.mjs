@@ -56,6 +56,23 @@ test("charge-start report does not invent ETA and is not dropped without ETA", (
   assert.match(notifications, /else:[\s\S]*charge_started_message_no_eta[\s\S]*_async_notify/);
 });
 
+test("charge-start report labels the actual ETA evidence source", () => {
+  assert.match(notifications, /eta_source = "upstream_charge_end"/);
+  assert.match(notifications, /eta_source = "observed_charge_power"/);
+  assert.match(notifications, /charge_eta_source_upstream/);
+  assert.match(notifications, /charge_eta_source_observed_power/);
+  assert.match(notifications, /"charge_start_eta_source"/);
+  assert.match(notifications, /normalize_charge_type\(active\.get\("charge_type"\)\)/);
+});
+
+test("charging wake-up is suppressed by recent HA-observed charging telemetry", () => {
+  assert.match(notifications, /_CHARGING_WAKEUP_MIN_INTERVAL = timedelta\(minutes=5\)/);
+  assert.match(notifications, /_CHARGING_OBSERVATION_FRESHNESS = timedelta\(minutes=5\)/);
+  assert.match(notifications, /def _latest_charging_observation/);
+  assert.match(notifications, /battery_residual[\s\S]*battery_charging_type[\s\S]*battery_charging_end/);
+  assert.match(notifications, /not telemetry_fresh[\s\S]*_CHARGING_WAKEUP_MIN_INTERVAL/);
+});
+
 test("charge completion uses first observed off boundary after debounce", () => {
   assert.match(metrics, /end_candidate_time/);
   assert.match(metrics, /_async_mark_charge_end_candidate/);
