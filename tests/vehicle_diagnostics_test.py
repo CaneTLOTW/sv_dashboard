@@ -63,7 +63,7 @@ def _install_stubs():
     package.__path__ = [str(MODULE_PATH.parent)]
     const = types.ModuleType("sv_dashboard.const")
     const.DOMAIN = "sv_dashboard"
-    const.FRONTEND_VERSION = "0.6.0-beta.39"
+    const.FRONTEND_VERSION = "0.6.0-beta.40"
     sys.modules["sv_dashboard"] = package
     sys.modules["sv_dashboard.const"] = const
 
