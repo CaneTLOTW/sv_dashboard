@@ -584,6 +584,12 @@ class VehicleMetricsManager:
             "start_mileage": self._number("mileage"),
             "capacity_kwh": first_sample["capacity_kwh"],
             "capacity_source": first_sample.get("capacity_source"),
+            "start_residual_kwh": first_sample.get("residual_kwh"),
+            "residual_start_source": (
+                "charge_start"
+                if self._as_float(first_sample.get("residual_kwh")) is not None
+                else None
+            ),
             "charge_type": initial_type,
             "charge_type_source": (
                 "charge_start" if charge_type_is_known(initial_type) else None
@@ -623,6 +629,11 @@ class VehicleMetricsManager:
             if sample_capacity is not None and sample_capacity > 0:
                 active["capacity_kwh"] = sample_capacity
                 active["capacity_source"] = sample.get("capacity_source")
+        if self._as_float(active.get("start_residual_kwh")) is None:
+            sample_residual = self._as_float(sample.get("residual_kwh"))
+            if sample_residual is not None:
+                active["start_residual_kwh"] = sample_residual
+                active["residual_start_source"] = "first_sample"
         if not charge_type_is_known(active.get("charge_type")):
             sample_type = normalize_charge_type(sample.get("charge_type"))
             if charge_type_is_known(sample_type):
@@ -838,15 +849,21 @@ class VehicleMetricsManager:
             if end_soc is not None:
                 soc_end_source = "last_sample"
 
-        start_residual = next(
-            (
-                value
-                for item in samples
-                if (value := self._as_float(item.get("residual_kwh"))) is not None
-            ),
-            None,
-        )
+        start_residual = self._as_float(active.get("start_residual_kwh"))
+        residual_start_source = active.get("residual_start_source")
+        if start_residual is None:
+            start_residual = next(
+                (
+                    value
+                    for item in samples
+                    if (value := self._as_float(item.get("residual_kwh"))) is not None
+                ),
+                None,
+            )
+            if start_residual is not None:
+                residual_start_source = "first_sample"
         end_residual = self._number("battery_residual")
+        residual_end_source = "charge_end" if end_residual is not None else None
         if end_residual is None:
             end_residual = next(
                 (
@@ -856,6 +873,8 @@ class VehicleMetricsManager:
                 ),
                 None,
             )
+            if end_residual is not None:
+                residual_end_source = "last_sample"
 
         charge_type = normalize_charge_type(active.get("charge_type"))
         charge_type_source = active.get("charge_type_source")
@@ -878,10 +897,20 @@ class VehicleMetricsManager:
         )
         if residual_energy is not None:
             energy_kwh = residual_energy
-            energy_source = "residual_energy_delta"
+            energy_source = (
+                "residual_energy_delta"
+                if residual_start_source == "charge_start"
+                and residual_end_source == "charge_end"
+                else "residual_energy_delta_sample_boundary"
+            )
         elif soc_energy is not None:
             energy_kwh = soc_energy
-            energy_source = "soc_delta"
+            energy_source = (
+                "soc_delta"
+                if soc_start_source == "charge_start"
+                and soc_end_source == "charge_end"
+                else "soc_delta_sample_boundary"
+            )
         else:
             energy_kwh = None
             energy_source = None
@@ -913,6 +942,11 @@ class VehicleMetricsManager:
             "capacity_source": active.get("capacity_source"),
             "energy_kwh": energy_kwh,
             "energy_source": energy_source,
+            "energy_partial": bool(
+                energy_source and energy_source.endswith("_sample_boundary")
+            ),
+            "residual_start_source": residual_start_source,
+            "residual_end_source": residual_end_source,
             "average_power_kw": average_power,
             "maximum_power_kw": maximum_power,
             "minimum_power_kw": round(min(powers), 2) if powers else None,
