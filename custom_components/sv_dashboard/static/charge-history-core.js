@@ -233,6 +233,13 @@ export function samePhysicalChargeSession(left, right, gapMs) {
     if (Math.abs(leftStart - rightStart) > gapMs) return false;
     if (!Number.isFinite(leftEnd) || !Number.isFinite(rightEnd)) return false;
     if (Math.abs(leftEnd - rightEnd) > gapMs) return false;
+
+    const leftDuration = numericOrNull(left?.duration_seconds);
+    const rightDuration = numericOrNull(right?.duration_seconds);
+    if (leftDuration !== null && rightDuration !== null) {
+        const tolerance = Math.max(120, 0.2 * Math.max(leftDuration, rightDuration));
+        if (Math.abs(leftDuration - rightDuration) > tolerance) return false;
+    }
     return true;
 }
 
@@ -246,6 +253,15 @@ export function mergeChargeSessionEvidence(preferred, supplementary) {
             result[field] = field === "charge_type"
                 ? normalizeChargeType(supplementary[field])
                 : supplementary[field];
+            if (field === "maximum_power_kw" && supplementary?.maximum_power_kw_estimated !== undefined) {
+                result.maximum_power_kw_estimated = supplementary.maximum_power_kw_estimated;
+            }
+            if (["average_power_kw", "maximum_power_kw"].includes(field) && supplementary?.power_estimated !== undefined) {
+                result.power_estimated = supplementary.power_estimated;
+            }
+            if (field === "energy_kwh" && supplementary?.energy_estimated !== undefined) {
+                result.energy_estimated = supplementary.energy_estimated;
+            }
         }
     }
     result.charge_type = normalizeChargeType(result.charge_type) ?? "—";
