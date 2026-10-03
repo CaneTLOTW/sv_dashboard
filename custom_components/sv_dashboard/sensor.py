@@ -756,7 +756,7 @@ class SvRemainingBatteryEnergySensor(SvMetricSensor):
     _attr_translation_key = "remaining_battery_energy_kwh"
     _attr_icon = "mdi:battery-medium"
     _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
-    _attr_device_class = SensorDeviceClass.ENERGY
+    _attr_device_class = SensorDeviceClass.ENERGY_STORAGE
     _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, coordinator, entry: ConfigEntry) -> None:
