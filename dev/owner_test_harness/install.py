@@ -131,9 +131,28 @@ def _patch_frontend_resource_version(integration_root: Path, token: str) -> str:
 
 
 def _owner_token(source: Path) -> str:
+    """Return a cache token for both harness behavior and patched product inputs.
+
+    The owner resource URL must change when the canonical product frontend or
+    Strategy changes. Otherwise iterative beta candidates can install new files
+    behind the same browser URL and the owner's acceptance browser may keep
+    executing an older cached frontend.
+    """
+    root = _repo_root()
+    inputs = (
+        source,
+        Path(__file__),
+        root / "custom_components" / "sv_dashboard" / "static" / "frontend.js",
+        root / "custom_components" / "sv_dashboard" / "static" / "sv_dashboard.js",
+        root / "custom_components" / "sv_dashboard" / "const.py",
+        root / "custom_components" / "sv_dashboard" / "manifest.json",
+    )
     digest = hashlib.sha256()
-    digest.update(source.read_bytes())
-    digest.update(Path(__file__).read_bytes())
+    for path in inputs:
+        digest.update(str(path.relative_to(root)).encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+        digest.update(b"\0")
     return digest.hexdigest()[:12]
 
 
