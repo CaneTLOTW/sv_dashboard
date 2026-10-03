@@ -309,15 +309,26 @@ def merge_charge_evidence(
                     result["energy_estimated"] = bool(supplementary.get("energy_estimated"))
                 if supplementary.get("energy_source"):
                     result["energy_source"] = supplementary.get("energy_source")
-        elif preferred_known and supplementary_known and preferred_value != supplementary_value:
-            conflicts.setdefault(
-                field,
-                {
-                    "preferred": preferred_value,
-                    "supplementary": supplementary_value,
-                    "resolution": "preferred_known_retained",
-                },
+        elif preferred_known and supplementary_known:
+            preferred_compare = (
+                normalize_charge_type(preferred_value)
+                if field == "charge_type"
+                else preferred_value
             )
+            supplementary_compare = (
+                normalize_charge_type(supplementary_value)
+                if field == "charge_type"
+                else supplementary_value
+            )
+            if preferred_compare != supplementary_compare:
+                conflicts.setdefault(
+                    field,
+                    {
+                        "preferred": preferred_value,
+                        "supplementary": supplementary_value,
+                        "resolution": "preferred_known_retained",
+                    },
+                )
 
     if charge_type_is_known(result.get("charge_type")):
         result["charge_type"] = normalize_charge_type(result.get("charge_type"))
