@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import test from "node:test";
 import { readFile } from "node:fs/promises";
 
 const source = await readFile(new URL("../custom_components/sv_dashboard/static/charge-history-core.js", import.meta.url), "utf8");
