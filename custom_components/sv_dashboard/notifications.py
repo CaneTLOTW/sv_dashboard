@@ -15,6 +15,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 from homeassistant.util import slugify
 
+from .charge_resolution import normalize_charge_type
 from .const import (
     CONF_VEHICLE_SLUG,
     DOMAIN,
@@ -84,6 +85,8 @@ _MAX_RECENT_CHARGE_POWER_KW = 350.0
 _MAX_RECENT_CHARGE_SAMPLE_AGE = timedelta(minutes=30)
 _CHARGE_END_START_TOLERANCE = timedelta(minutes=5)
 _MAX_NOTIFIED_EVENTS = 100
+_CHARGING_WAKEUP_MIN_INTERVAL = timedelta(minutes=5)
+_CHARGING_OBSERVATION_FRESHNESS = timedelta(minutes=5)
 
 
 def available_notification_recipients(hass: HomeAssistant) -> list[str]:
@@ -171,6 +174,9 @@ class VehicleNotificationManager:
             self._entity("engine"),
             self._entity("battery_charging"),
             self._entity("battery"),
+            self._entity("battery_residual"),
+            self._entity("battery_charging_type"),
+            self._entity("battery_charging_end"),
             self._entity("autonomy", "range"),
             self._entity("service_battery"),
             self._entity("vehicle"),
@@ -465,7 +471,11 @@ class VehicleNotificationManager:
             energy=self._number(charge.get("energy_kwh"), 2),
             average_power=self._number(charge.get("average_power_kw"), 2),
             maximum_power=self._number(charge.get("maximum_power_kw"), 2),
-            charge_type=charge.get("charge_type") or text(self.hass, "unknown"),
+            charge_type=(
+                normalized_type
+                if (normalized_type := normalize_charge_type(charge.get("charge_type"))) != "Unknown"
+                else text(self.hass, "unknown")
+            ),
         )
         event_key = self._logical_event_key("charge", charge)
         if self._event_already_notified(event_key):
@@ -693,9 +703,20 @@ class VehicleNotificationManager:
                 if soc is not None and capacity is not None and power and target > soc
                 else None
             )
-        charge_type = active.get("charge_type") or text(self.hass, "unknown")
+        normalized_type = normalize_charge_type(active.get("charge_type"))
+        charge_type = (
+            normalized_type
+            if normalized_type != "Unknown"
+            else text(self.hass, "unknown")
+        )
+        eta_source = None
         if remaining is not None and remaining > 0:
-            if not direct_finish:
+            if direct_finish:
+                eta_source = "upstream_charge_end"
+                eta_source_text = text(self.hass, "charge_eta_source_upstream")
+            else:
+                eta_source = "observed_charge_power"
+                eta_source_text = text(self.hass, "charge_eta_source_observed_power")
                 finish = dt_util.utcnow() + timedelta(hours=remaining)
             end = self._format_charge_end(finish)
             message = text(
@@ -705,6 +726,7 @@ class VehicleNotificationManager:
                 soc=self._number(soc, 0),
                 duration=self._duration(round(remaining * 3600)),
                 end=end,
+                eta_source=eta_source_text,
                 charge_type=charge_type,
             )
         else:
@@ -723,7 +745,27 @@ class VehicleNotificationManager:
         )
         if sent:
             self.data["markers"]["charge_start_reported"] = True
+            self.data["markers"]["charge_start_eta_source"] = eta_source or "none"
             await self._save()
+
+    def _latest_charging_observation(self):
+        """Return the newest relevant HA-observed charging telemetry timestamp."""
+        candidates = []
+        for key in (
+            "battery",
+            "battery_residual",
+            "battery_charging",
+            "battery_charging_type",
+            "battery_charging_end",
+        ):
+            entity_id = self._entity(key)
+            state = self.hass.states.get(entity_id) if entity_id else None
+            if state is None or state.state in {"unknown", "unavailable", "none", ""}:
+                continue
+            stamp = self._parse_time(getattr(state, "last_updated", None))
+            if stamp is not None:
+                candidates.append(stamp)
+        return max(candidates) if candidates else None
 
     async def _evaluate_scheduled_wakeup(self) -> None:
         now = dt_util.utcnow()
@@ -734,7 +776,19 @@ class VehicleNotificationManager:
             and self.is_enabled(SWITCH_WAKEUP_CHARGING)
             and self._is_on("battery_charging")
         ):
-            if last is None or now - last >= timedelta(minutes=5):
+            observed = self._latest_charging_observation()
+            telemetry_fresh = bool(
+                observed is not None
+                and now >= observed
+                and now - observed < _CHARGING_OBSERVATION_FRESHNESS
+            )
+            if (
+                not telemetry_fresh
+                and (
+                    last is None
+                    or now - last >= _CHARGING_WAKEUP_MIN_INTERVAL
+                )
+            ):
                 await self._async_wakeup(text(self.hass, "wakeup_charging"))
             return
         charging_inactive = not supports_charging or self._is_off("battery_charging")
@@ -1021,9 +1075,10 @@ class VehicleNotificationManager:
                         sample.get("derived_power_kw", sample.get("power_kw"))
                     )
                     sample_time = self._parse_time(
-                        sample.get("source_time")
-                        or sample.get("time")
+                        sample.get("power_observed_at")
                         or sample.get("received_at")
+                        or sample.get("source_time")
+                        or sample.get("time")
                     )
                 else:
                     value = self._as_float(sample)
