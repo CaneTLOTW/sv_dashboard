@@ -67,15 +67,17 @@ Use a strategy, not a vehicle special case:
 
 ### Example: live charge sample time and charge-curve provenance
 
-1. Prefer a vehicle/upstream payload timestamp when the mapped charging sample exposes one.
-2. Home Assistant `last_updated` is a receipt/runtime fallback only; it must not outrank a valid upstream timestamp merely because HA observed the entity later.
-3. Keep SOC and residual-energy timestamps **separate**. A Battery/SOC timestamp may time only a SOC delta; a residual-energy timestamp may time only a residual-energy delta.
-4. Battery-side power derived from a positive residual-energy delta is preferred when the residual value itself advances and the result is plausible.
-5. A present but unchanged/coarsely quantized residual-energy value must not suppress the whole-percent SOC × trustworthy-capacity fallback.
-6. Tiny/non-positive derived values are **unavailable**, not a measured 0 kW. The current package threshold is 0.1 kW.
-7. A live derived-power value is freshness-bounded; stale estimates must disappear instead of remaining indefinitely.
-8. Battery-side power already derived from trustworthy deltas is preferred for the displayed charge curve.
-9. Keep `received_at` alongside source timestamps for diagnostics; receipt time and vehicle-source time answer different questions and must not be conflated.
+1. Preserve a vehicle/upstream payload timestamp whenever the mapped charging metric exposes one; it remains the measurement/source-time provenance.
+2. Preserve Home Assistant observation time and local `received_at` **separately**. They describe when SV actually observed a state, not when the vehicle claims the measurement was produced.
+3. Keep SOC and residual-energy timestamps separate. A Battery/SOC timestamp may time only a SOC delta; a residual-energy timestamp may time only a residual-energy delta.
+4. Source-time equality alone is not payload identity. If Stellantis reuses one source timestamp while HA later observes a real SOC/residual value change, SV must retain that later observation as a new sample rather than folding an hour-long charge into one point.
+5. Entity fan-out from one payload may still be coalesced when it is bounded in time and comes from different mapped charging metrics. A repeated update from the same metric is a new observation.
+6. When a metric value changes but its upstream timestamp does not advance, a bounded HA observation-time delta may be used for the calculation with explicit `home_assistant_fallback` provenance. This does not rewrite the original source timestamp.
+7. Battery-side power from a positive residual-energy delta is preferred when the residual itself advances and the result is plausible. An unchanged/coarsely quantized residual must not suppress the whole-percent SOC × trustworthy-capacity fallback.
+8. Tiny/non-positive derived values are **unavailable**, not a measured 0 kW. The current package threshold is 0.1 kW.
+9. Freshness of a derived current-power estimate is based on the recent observation/derivation time, while its source measurement time remains separately exposed for diagnosis.
+10. Retrospective session average power is not instantaneous current power. If there is no defensible recent delta, the live kW value remains unavailable.
+11. Battery-side power already derived from trustworthy deltas is preferred for the displayed charge curve, and compact curve samples retain both source and observation times.
 
 This is a provenance rule, not a vehicle-model rule. It applies wherever the upstream integration exposes usable source timestamps and energy data.
 
