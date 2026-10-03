@@ -224,7 +224,7 @@ function chargeFieldKnown(field, value) {
     return value !== null && value !== undefined && String(value).trim() !== "";
 }
 
-function samePhysicalChargeSession(left, right, gapMs) {
+export function samePhysicalChargeSession(left, right, gapMs) {
     const leftStart = timestampValue(left?.start);
     const rightStart = timestampValue(right?.start);
     const leftEnd = timestampValue(left?.end);
@@ -236,7 +236,7 @@ function samePhysicalChargeSession(left, right, gapMs) {
     return true;
 }
 
-function mergeChargeSessionEvidence(preferred, supplementary) {
+export function mergeChargeSessionEvidence(preferred, supplementary) {
     const result = { ...preferred };
     for (const field of [
         "start", "end", "duration_seconds", "soc_start", "soc_end", "capacity_kwh",
