@@ -175,7 +175,7 @@ test("owner cache token changes when installer behavior changes", () => {
   assert.match(installer, /digest\.update\(Path\(__file__\)\.read_bytes\(\)\)/);
 });
 
-test("owner installer runs end-to-end against a temporary beta.39 runtime", () => {
+test("owner installer runs end-to-end against a temporary beta.40 runtime", () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "sv-owner-install-"));
   const integrationRoot = path.join(tempRoot, "sv_dashboard");
   const staticRoot = path.join(integrationRoot, "static");
@@ -205,7 +205,7 @@ test("owner installer runs end-to-end against a temporary beta.39 runtime", () =
 
     assert.match(installedFrontend, new RegExp(`owner-test-harness-card\\.js\\?v=owner-${token}`));
     assert.match(installedFrontend, new RegExp(`sv_dashboard\\.js\\?v=owner-${token}`));
-    assert.match(installedConst, new RegExp(`FRONTEND_VERSION = "0\\.6\\.0-beta\\.39-owner-${token}"`));
+    assert.match(installedConst, new RegExp(`FRONTEND_VERSION = "0\\.6\\.0-beta\\.40-owner-${token}"`));
     assert.match(installedStrategy, /const ownerTestSelector = \(/);
     assert.match(installedStrategy, /window\.__svDashboardOwnerHarness\?\.harnessRequested\?\.\(\)/);
     assert.match(installedStrategy, /ownerTestSelector,\n        hero,/);
