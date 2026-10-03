@@ -1,0 +1,193 @@
+name: Publish prerelease
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - ".github/release-requests/*.json"
+  workflow_dispatch:
+    inputs:
+      request_file:
+        description: "Path to a release request JSON file"
+        required: true
+        default: ".github/release-requests/v0.6.0-beta.40.json"
+        type: string
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: publish-prerelease
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Validate exact SHA and publish prerelease
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout release-control commit
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Resolve request file
+        id: request_file
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            file="${{ inputs.request_file }}"
+          else
+            file="$(git diff-tree --no-commit-id --name-only -r "$GITHUB_SHA" -- '.github/release-requests/*.json' | tail -n 1)"
+          fi
+          test -n "$file"
+          test -f "$file"
+          echo "path=$file" >> "$GITHUB_OUTPUT"
+
+      - name: Parse and validate release request
+        id: request
+        shell: bash
+        env:
+          REQUEST_FILE: ${{ steps.request_file.outputs.path }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          path = Path(os.environ["REQUEST_FILE"])
+          data = json.loads(path.read_text(encoding="utf-8"))
+
+          required = {"tag", "version", "sha", "title", "prerelease"}
+          missing = sorted(required - data.keys())
+          if missing:
+              raise SystemExit(f"Missing request fields: {missing}")
+
+          tag = str(data["tag"]).strip()
+          version = str(data["version"]).strip()
+          sha = str(data["sha"]).strip().lower()
+          title = str(data["title"]).strip()
+          prerelease = data["prerelease"]
+
+          if tag != f"v{version}":
+              raise SystemExit(f"Tag/version mismatch: {tag!r} vs {version!r}")
+          if not re.fullmatch(r"[0-9a-f]{40}", sha):
+              raise SystemExit(f"Expected exact 40-character commit SHA, got {sha!r}")
+          if prerelease is not True:
+              raise SystemExit("This workflow only publishes prereleases")
+          if not title:
+              raise SystemExit("Release title must not be empty")
+
+          print(f"tag={tag}")
+          print(f"version={version}")
+          print(f"sha={sha}")
+          print(f"title={title}")
+          PY
+
+      - name: Require absent tag and release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.request.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "Tag already exists: $TAG" >&2
+            exit 1
+          fi
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release already exists: $TAG" >&2
+            exit 1
+          fi
+
+      - name: Require successful Validate run for exact SHA
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.request.outputs.sha }}
+        run: |
+          set -euo pipefail
+          run_id="$(
+            gh api               -H "Accept: application/vnd.github+json"               "/repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$SHA&status=completed&per_page=100"               --jq '.workflow_runs[] | select(.name == "Validate" and .conclusion == "success") | .id'               | head -n 1
+          )"
+          if [[ -z "$run_id" ]]; then
+            echo "No successful Validate workflow found for exact SHA $SHA" >&2
+            exit 1
+          fi
+          echo "Validated by workflow run $run_id"
+
+      - name: Checkout exact release SHA
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.request.outputs.sha }}
+          fetch-depth: 0
+
+      - name: Verify candidate ancestry and package version
+        shell: bash
+        env:
+          SHA: ${{ steps.request.outputs.sha }}
+          VERSION: ${{ steps.request.outputs.version }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SHA"
+          git fetch origin develop
+          git merge-base --is-ancestor "$SHA" origin/develop
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          manifest = json.loads(
+              Path("custom_components/sv_dashboard/manifest.json").read_text(encoding="utf-8")
+          )
+          expected = os.environ["VERSION"]
+          actual = manifest.get("version")
+          if actual != expected:
+              raise SystemExit(f"Manifest version mismatch: expected {expected}, got {actual}")
+          PY
+
+      - name: Build release notes from changelog
+        shell: bash
+        env:
+          VERSION: ${{ steps.request.outputs.version }}
+        run: |
+          set -euo pipefail
+          awk -v heading="## $VERSION" '
+            $0 == heading { found=1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md > "$RUNNER_TEMP/release-notes.md"
+          if [[ ! -s "$RUNNER_TEMP/release-notes.md" ]]; then
+            echo "No changelog section found for $VERSION" >&2
+            exit 1
+          fi
+
+      - name: Publish immutable GitHub prerelease
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.request.outputs.tag }}
+          SHA: ${{ steps.request.outputs.sha }}
+          TITLE: ${{ steps.request.outputs.title }}
+        run: |
+          set -euo pipefail
+          gh release create "$TAG"             --repo "$GITHUB_REPOSITORY"             --target "$SHA"             --title "$TITLE"             --notes-file "$RUNNER_TEMP/release-notes.md"             --prerelease
+
+      - name: Verify published release target
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.request.outputs.tag }}
+          SHA: ${{ steps.request.outputs.sha }}
+        run: |
+          set -euo pipefail
+          tag_sha="$(git ls-remote --tags origin "refs/tags/$TAG^{}" | awk '{print $1}')"
+          if [[ -z "$tag_sha" ]]; then
+            tag_sha="$(git ls-remote --tags origin "refs/tags/$TAG" | awk '{print $1}')"
+          fi
+          test "$tag_sha" = "$SHA"
+          gh release view "$TAG"             --repo "$GITHUB_REPOSITORY"             --json tagName,isPrerelease,isDraft,url             --jq '.'
