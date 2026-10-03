@@ -27,15 +27,19 @@ Canonical trip rows expose:
   derived;
 - `raw_server`: the unmodified server payload for audit.
 
-The telemetry source timestamp must be within 2 minutes of the trip edge to
-prove an exact local boundary change. A sample no older than 10 minutes may
-still fill a missing server field, but is explicitly labeled
-`sv_local_trip_boundary_fallback`; it cannot override a conflicting server
-value or support residual/SOC/fuel-total delta calculations. Older or
-observations timestamped only as receipt time are not treated as exact, and
-older or untimestamped new observations are ignored. Earlier Store rows that already
-persisted values directly at the trip transition remain compatible as legacy
-transition evidence.
+A strong local override requires a genuine upstream/Stellantis telemetry
+timestamp within 2 minutes of the **canonical/server trip boundary**. Exactness
+is never measured against a delayed local tracker start/end merely because that
+local trip still matches the physical server trip.
+
+A fresh sample no older than 10 minutes may still fill a missing server field,
+but is explicitly labeled `sv_local_trip_boundary_fallback`. Home Assistant
+`last_updated`, local receipt/capture time and older Store rows without a
+telemetry source timestamp are fallback evidence only: they cannot override a
+known conflicting server value and cannot prove an exact residual/SOC/fuel-total
+boundary delta. Legacy transition values therefore remain readable for backward
+compatibility and may fill an otherwise missing canonical field, but they are
+never promoted to exact boundary evidence.
 
 Electric energy priority is direct Stellantis trip energy (including a real
 zero), then a positive mapped residual-energy boundary decrease, then a
