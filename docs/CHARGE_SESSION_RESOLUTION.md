@@ -119,6 +119,13 @@ One physical completed session should retain one curve association through:
 
 A duplicate history row is never required to keep a richer curve.
 
+The live Server Charge History sensor is a dashboard/API surface, not the
+long-term storage layer. Its large live attributes (including bounded curve
+samples) are excluded from Home Assistant Recorder serialization while the
+native state count remains recordable. Full canonical metadata and raw curve
+evidence remain in the package Stores. This avoids Recorder's attribute-size
+limit without removing live Lovelace data.
+
 ## Regression sources
 
 The principal regression cases are:
