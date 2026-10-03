@@ -1,5 +1,5 @@
 import { LitElement, html, css, nothing } from "./vendor-lit.js?v=0.6.0-beta.7";
-import { buildChargeCurve, buildChargeSessions, buildLocalChargeSessions, chargeSessionId, findChargeSession, mergeChargeSessionEvidence, mergeChargeSessions, samePhysicalChargeSession } from "./charge-history-core.js?v=0.6.0-beta.40";
+import { buildChargeCurve, buildChargeSessions, buildLocalChargeSessions, chargeSessionId, findChargeSession, mergeChargeSessionEvidence, mergeChargeSessions, samePhysicalChargeSession, storedSocHistoryStates } from "./charge-history-core.js?v=0.6.0-beta.40-curve1";
 import { localeFor, textFor } from "./i18n.js?v=0.6.0-beta.28";
 
 const SELECTION_QUERY_PARAM = "sv_charge";
@@ -863,12 +863,7 @@ class CodexStellantisChargeCurveBrowserCardV1 extends LitElement {
         const requestedSession = findChargeSession(sessions, this._requestedSelection());
         const selectedId = requestedSession?.id ?? this._selectedId;
         const selected = sessions.find((session) => session.id === selectedId);
-        const storedSoc = Array.isArray(selected?.samples)
-            ? selected.samples.map((sample) => ({
-                state: sample.soc,
-                last_updated: sample.source_time || sample.time || sample.received_at,
-            })).filter((sample) => sample.state !== null && sample.state !== undefined && sample.last_updated)
-            : [];
+        const storedSoc = storedSocHistoryStates(selected?.samples);
         const directPowerPoints = storedPowerCurve(
             selected?.samples,
             selected?.capacity_kwh,
