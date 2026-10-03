@@ -182,6 +182,38 @@ assert.equal(dsMerged[0].charge_type, "AC");
 assert.equal(dsMerged[0].maximum_power_kw, null, "estimated maximum below average must be suppressed");
 assert.ok(dsMerged[0].quality_flags.includes("estimated_max_below_average_suppressed"));
 
+const dsLaterRaw = [{
+    id: "charge-2026-10-02T19:54:00.000Z",
+    start: "2026-10-02T19:54:00Z",
+    end: "2026-10-03T01:36:00Z",
+    duration_seconds: 20520,
+    soc_start: 24,
+    soc_end: 99,
+    capacity_kwh: 14.6,
+    energy_kwh: 10.95,
+    average_power_kw: 1.92,
+    maximum_power_kw: null,
+    charge_type: "AC",
+}];
+const dsEarlyLocal = buildLocalChargeSessions([
+    state("unknown", "2026-10-03T01:35:30Z", {
+        start_time: "2026-10-02T19:54:00Z",
+        end_time: "2026-10-03T01:35:00Z",
+        duration_seconds: 20460,
+        soc_start: 24,
+        soc_end: 96,
+        capacity_kwh: 14.6,
+        energy_kwh: 10.51,
+        average_power_kw: 1.85,
+        charge_type: "AC",
+    }),
+]);
+const dsLaterWins = mergeChargeSessions(dsLaterRaw, dsEarlyLocal);
+assert.equal(dsLaterWins.length, 1);
+assert.equal(dsLaterWins[0].soc_end, 99, "later completed boundary must enrich an earlier local summary");
+assert.equal(dsLaterWins[0].energy_kwh, 10.95);
+assert.equal(dsLaterWins[0].average_power_kw, 1.92);
+
 const distinctLocal = buildLocalChargeSessions([
     state("unknown", "2026-10-03T09:30:00Z", {
         start_time: "2026-10-03T08:01:00Z",
