@@ -1,3 +1,20 @@
+export function storedSocHistoryStates(samples = []) {
+    return (Array.isArray(samples) ? samples : [])
+        .filter((sample) => sample?.soc !== null && sample?.soc !== undefined)
+        .map((sample) => ({
+            state: sample.soc,
+            // For a stored canonical sample, received_at is the time SV/HA
+            // actually observed this SOC. The upstream source timestamp may
+            // be frozen for hours or days and therefore cannot be preferred
+            // when reconstructing the visible curve timeline.
+            last_updated: sample.received_at
+                || sample.power_observed_at
+                || sample.source_time
+                || sample.time,
+        }))
+        .filter((sample) => sample.last_updated);
+}
+
 export function normalizeHistoryState(raw) {
     const lastUpdated = raw?.last_updated ?? raw?.last_changed ?? raw?.lu;
     let timestamp;
