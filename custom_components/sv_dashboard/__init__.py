@@ -104,7 +104,9 @@ async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
         return True
 
     static_dir = Path(__file__).parent / "static"
-    static_paths = sorted(path.name for path in static_dir.glob("*.js"))
+    static_paths = await hass.async_add_executor_job(
+        lambda: sorted(path.name for path in static_dir.glob("*.js"))
+    )
     await hass.http.async_register_static_paths(
         [
             StaticPathConfig(
