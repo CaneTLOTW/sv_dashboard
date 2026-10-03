@@ -105,6 +105,16 @@ SV Dashboard uses a strict hierarchy:
 4. estimate remaining time only from recent positive plausible power samples;
 5. if neither upstream end time nor a defensible estimate exists, still send the truthful charge-start report but omit the precise finish time.
 
+The charge-start message keeps the ETA provenance explicit. A direct upstream
+charging-end timestamp is labelled as Stellantis/upstream ETA evidence; a
+locally calculated ETA is labelled as an observed-charge-power estimate. The
+message no longer describes both paths generically as an SOC trend.
+
+Charging mode is normalized only from explicit mode evidence. A transient
+`No`/Unknown value during a proven active charge is treated as degraded
+metadata and is not rendered as the final AC/DC type when later same-session
+Slow/Quick evidence is available.
+
 No fixed battery capacity or hard-coded 80 % target is used.
 
 ## Wake-up controls
@@ -119,7 +129,15 @@ The Wake-up view can include:
 
 Automatic switches start off.
 
-The existence or success of an upstream command entity is not proof that the selected vehicle supports the physical action. See [Vehicle capability matrix](VEHICLE_CAPABILITY_MATRIX.en.md).
+**Wake-up while charging** is observation-aware. The five-minute minimum spacing
+is retained, but a scheduled charging wake-up is skipped when relevant
+charging telemetry was observed recently in Home Assistant. If that telemetry
+becomes stale, the recovery wake-up remains available. Vehicle source
+timestamps and HA observation times are kept separate, so a frozen upstream
+timestamp does not by itself force repeated wake-ups while real new charging
+states are still arriving.
+
+The existence or success of an upstream command entity is not proof that the selected vehicle supports the physical action. See [Vehicle capability matrix](VEHICLE_CAPABILITY_MATRIX.md).
 
 ## Recipient management
 
