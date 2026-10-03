@@ -22,6 +22,22 @@ test("live charge power keeps per-metric timestamp provenance", () => {
   assert.match(metrics, /"home_assistant_fallback"/);
 });
 
+test("charge sampling separates source time from repeated HA observations", () => {
+  assert.match(metrics, /charge_samples_same_payload\(previous, sample\)/);
+  assert.match(metrics, /trigger_metric=trigger_metric/);
+  assert.match(metrics, /"fanout_metrics"/);
+  assert.match(metrics, /current_charge_power_observed_at/);
+  assert.match(metrics, /power_observed_at/);
+});
+
+test("sample-derived charge boundaries remain explicitly partial evidence", () => {
+  assert.match(metrics, /"soc_start_source": "charge_start"/);
+  assert.match(metrics, /"first_sample"/);
+  assert.match(metrics, /residual_energy_delta_sample_boundary/);
+  assert.match(metrics, /soc_delta_sample_boundary/);
+  assert.match(metrics, /"energy_partial"/);
+});
+
 test("unchanged residual energy cannot suppress the SOC fallback", () => {
   assert.match(metrics, /residual > previous_residual/);
   assert.match(metrics, /if power is None and previous_soc is not None and soc > previous_soc:/);
@@ -46,14 +62,14 @@ test("live charge power expires and exposes provenance diagnostics", () => {
   assert.match(metrics, /age > _CHARGE_POWER_STALE_AFTER\.total_seconds\(\)/);
   assert.match(metrics, /def current_charge_power_provenance/);
   assert.match(sensor, /current_charge_power_provenance\(\)/);
-  for (const key of ["estimated", "power_source", "source_time", "timestamp_source", "sample_age_seconds", "fresh"]) {
+  for (const key of ["estimated", "power_source", "source_time", "observed_at", "timestamp_source", "sample_age_seconds", "fresh"]) {
     assert.match(metrics, new RegExp(`"${key}"`));
   }
 });
 
 test("compact charge samples retain provenance needed by Charge Curve V2", () => {
   assert.match(sensor, /def _compact_curve_samples\(samples: Any, limit: int = 24\)/);
-  for (const key of ["source_time", "soc", "residual_kwh", "capacity_kwh", "derived_power_kw", "power_source", "timestamp_source"]) {
+  for (const key of ["source_time", "received_at", "power_observed_at", "soc", "residual_kwh", "capacity_kwh", "derived_power_kw", "power_source", "timestamp_source"]) {
     assert.match(sensor, new RegExp(`"${key}"`));
   }
 });
