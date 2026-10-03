@@ -21,14 +21,19 @@ Synthetic defaults:
   mileage, so the fixture stays plausible on the Owner vehicle instead of
   showing unrelated absolute demo mileage.
 
-After installation the generated LIVE view also shows a local-only **Owner-Testmodus**
-selector. It changes the same URL parameter and reloads the view, so the URL
-remains the single source of truth and profiles can still be bookmarked/shared
-locally.
+After installation the normal naked dashboard remains visually production-like:
+`/citroen-dashboard/vehicle` shows no Owner-Testmodus selector and uses the
+unmodified real Home Assistant context.
+
+Open `/citroen-dashboard/vehicle?sv_owner_harness=1` to show the local-only
+**Owner-Testmodus** selector while still using real vehicle data. A valid direct
+`?sv_owner_fixture=...` URL also shows the selector automatically. The query
+string is the only activation authority; nothing is persisted in Home Assistant
+or browser storage.
 
 Selector choices:
 
-- **Standard · echter Fahrzeug-Hero** — removes the fixture parameter completely
+- **Standard · Testmodus aus** — removes both `sv_owner_fixture` and `sv_owner_harness`
 - **PHEV · Live EV + Fuel-Dummy** — `?sv_owner_fixture=phev`
 - **PHEV · Freshness aktuell** — `?sv_owner_fixture=phev-fresh`
 - **PHEV · Idle** — `?sv_owner_fixture=phev-idle`
@@ -45,7 +50,10 @@ Profiles:
 - `?sv_owner_fixture=phev-charging` — engine OFF, plugged/charging ON, AC, 7.4 kW + deterministic future charge end
 - `?sv_owner_fixture=phev-stale` — deterministic idle plus EV/fuel source timestamps one hour old
 
-Append the parameter to the normal generated vehicle view, for example:
+For selector-only QA use:
+`/citroen-dashboard/vehicle?sv_owner_harness=1`.
+
+For a direct fixture use, for example:
 `/citroen-dashboard/vehicle?sv_owner_fixture=phev-driving`.
 
 The local patch does **not** mutate real Home Assistant states. It supplies a
@@ -75,8 +83,9 @@ The installer:
 4. locally resets and patches `const.py` so the package resource becomes
    `/sv_dashboard/frontend.js?v=<product>-owner-<hash>`, forcing the top-level
    frontend module itself to reload after a Harness update;
-5. injects the Owner-Testmodus selector directly into the generated LIVE
-   Strategy layout before the Hero, matching the proven beta.30/beta.31 path;
+5. keeps the proven direct LIVE-layout selector insertion path but returns
+   `null` unless `sv_owner_harness=1` or a valid fixture profile explicitly
+   activates owner QA;
 6. patches Strategy generation and rendered Hybrid visual cards with the
    browser-local PHEV context;
 7. leaves the repository's committed production `custom_components/` package
