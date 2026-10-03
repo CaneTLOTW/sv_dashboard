@@ -215,6 +215,63 @@ function numericOrNull(value) {
     return Number.isFinite(number) ? number : null;
 }
 
+function chargeFieldKnown(field, value) {
+    if (field === "charge_type") return normalizeChargeType(value) !== null;
+    if (["duration_seconds", "soc_start", "soc_end", "capacity_kwh", "energy_kwh", "average_power_kw", "maximum_power_kw"].includes(field)) {
+        return numericOrNull(value) !== null;
+    }
+    if (field === "start" || field === "end") return Number.isFinite(timestampValue(value));
+    return value !== null && value !== undefined && String(value).trim() !== "";
+}
+
+function samePhysicalChargeSession(left, right, gapMs) {
+    const leftStart = timestampValue(left?.start);
+    const rightStart = timestampValue(right?.start);
+    const leftEnd = timestampValue(left?.end);
+    const rightEnd = timestampValue(right?.end);
+    if (!Number.isFinite(leftStart) || !Number.isFinite(rightStart)) return false;
+    if (Math.abs(leftStart - rightStart) > gapMs) return false;
+    if (!Number.isFinite(leftEnd) || !Number.isFinite(rightEnd)) return false;
+    if (Math.abs(leftEnd - rightEnd) > gapMs) return false;
+    return true;
+}
+
+function mergeChargeSessionEvidence(preferred, supplementary) {
+    const result = { ...preferred };
+    for (const field of [
+        "start", "end", "duration_seconds", "soc_start", "soc_end", "capacity_kwh",
+        "energy_kwh", "average_power_kw", "maximum_power_kw", "charge_type",
+    ]) {
+        if (!chargeFieldKnown(field, result[field]) && chargeFieldKnown(field, supplementary?.[field])) {
+            result[field] = field === "charge_type"
+                ? normalizeChargeType(supplementary[field])
+                : supplementary[field];
+        }
+    }
+    result.charge_type = normalizeChargeType(result.charge_type) ?? "—";
+    const preferredSamples = Array.isArray(preferred?.samples) ? preferred.samples : [];
+    const supplementarySamples = Array.isArray(supplementary?.samples) ? supplementary.samples : [];
+    result.samples = preferredSamples.length >= supplementarySamples.length
+        ? preferredSamples
+        : supplementarySamples;
+    result.has_charge_curve = result.samples.length >= 2
+        || Boolean(preferred?.has_charge_curve || supplementary?.has_charge_curve);
+    result.quality_flags = [...new Set([
+        ...(Array.isArray(preferred?.quality_flags) ? preferred.quality_flags : []),
+        ...(Array.isArray(supplementary?.quality_flags) ? supplementary.quality_flags : []),
+    ])];
+    const average = numericOrNull(result.average_power_kw);
+    const maximum = numericOrNull(result.maximum_power_kw);
+    const maximumEstimated = result.maximum_power_kw_estimated !== false;
+    if (average !== null && maximum !== null && maximumEstimated && maximum < average) {
+        result.maximum_power_kw = null;
+        if (!result.quality_flags.includes("estimated_max_below_average_suppressed")) {
+            result.quality_flags.push("estimated_max_below_average_suppressed");
+        }
+    }
+    return result;
+}
+
 /**
  * Converts historical states of the restart-safe local result sensor into
  * charging sessions. The current sensor state may be `unknown`; the
@@ -234,7 +291,8 @@ export function buildLocalChargeSessions(resultStates = []) {
             energy_kwh: numericOrNull(attrs.energy_kwh),
             average_power_kw: numericOrNull(attrs.average_power_kw),
             maximum_power_kw: numericOrNull(attrs.maximum_power_kw),
-            charge_type: attrs.charge_type || "—",
+            maximum_power_kw_estimated: attrs.maximum_power_kw_estimated !== false,
+            charge_type: normalizeChargeType(attrs.charge_type) ?? "—",
             samples: Array.isArray(attrs.samples) ? attrs.samples : [],
             has_charge_curve: Array.isArray(attrs.samples) && attrs.samples.length >= 2,
             estimated: attrs.estimated !== false,
@@ -255,15 +313,25 @@ export function mergeChargeSessions(rawSessions = [], localSessions = [], mergeG
     for (const local of localSessions) {
         const localId = chargeSessionId(local.start);
         const index = merged.findIndex((raw) =>
-            raw.id === localId || Math.abs(timestampValue(raw.start) - timestampValue(local.start)) <= gapMs
+            raw.id === localId || samePhysicalChargeSession(raw, local, gapMs)
         );
-        if (index >= 0) merged.splice(index, 1);
-        const duplicateIndex = merged.findIndex((session) => session.id === localId);
-        if (duplicateIndex >= 0) merged.splice(duplicateIndex, 1);
+        if (index >= 0) {
+            const raw = merged[index];
+            merged.splice(
+                index,
+                1,
+                withSessionId({
+                    ...mergeChargeSessionEvidence(local, raw),
+                    id: localId,
+                }),
+            );
+            continue;
+        }
         merged.push(withSessionId({ ...local, id: localId }));
     }
 
     return merged.sort((a, b) => timestampValue(b.start) - timestampValue(a.start));
+
 }
 
 /**
@@ -405,9 +473,20 @@ export function buildChargeSessions({
         const derivedMaximum = startSoc !== null && capacity !== null
             ? maximumPowerFromSoc(soc, interval.start, interval.end, startSoc, capacity)
             : null;
-        const maximumPower = recordedMaximum !== null && recordedMaximum > 0
+        let maximumPower = recordedMaximum !== null && recordedMaximum > 0
             ? recordedMaximum
             : derivedMaximum;
+        const qualityFlags = [...validated.quality_flags];
+        const maximumEstimated = recordedMaximum === null;
+        if (
+            maximumEstimated
+            && Number.isFinite(maximumPower)
+            && Number.isFinite(averagePower)
+            && maximumPower < averagePower
+        ) {
+            maximumPower = null;
+            qualityFlags.push("estimated_max_below_average_suppressed");
+        }
 
         return {
             id: chargeSessionId(new Date(interval.start).toISOString()),
@@ -420,9 +499,10 @@ export function buildChargeSessions({
             energy_kwh: energy,
             average_power_kw: averagePower,
             maximum_power_kw: maximumPower,
+            maximum_power_kw_estimated: maximumEstimated,
             charge_type: chargeTypeForInterval(modes, interval.start, interval.end),
             estimated: energy !== null,
-            quality_flags: validated.quality_flags,
+            quality_flags: qualityFlags,
             rejected_soc_samples: validated.rejected.length,
         };
     });
