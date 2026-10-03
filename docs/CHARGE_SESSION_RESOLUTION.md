@@ -71,6 +71,12 @@ A reused upstream timestamp is **not** sufficient proof that two later
 observations are the same payload. When the same metric changes again, SV
 retains a new sample even if Stellantis reused the same source timestamp.
 
+The same distinction applies when rendering a persisted curve. The stored SOC
+timeline uses the HA/SV observation timestamp first. The vehicle source
+timestamp is only a fallback for older records that have no observation time.
+Otherwise a frozen source timestamp can place every recent SOC point outside
+its real charge interval and make an existing curve appear empty.
+
 Closely spaced updates from different mapped charging metrics may be coalesced
 as one payload fan-out. This prevents duplicate points without collapsing a
 real hour-long charging progression.
