@@ -60,6 +60,9 @@ def _compact_curve_samples(samples: Any, limit: int = 24) -> list[dict[str, Any]
             "source_time": sample.get("source_time")
             or sample.get("time")
             or sample.get("received_at"),
+            "received_at": sample.get("received_at"),
+            "power_observed_at": sample.get("power_observed_at")
+            or sample.get("received_at"),
             "soc": sample.get("soc"),
             "residual_kwh": sample.get("residual_kwh"),
             "capacity_kwh": sample.get("capacity_kwh"),
