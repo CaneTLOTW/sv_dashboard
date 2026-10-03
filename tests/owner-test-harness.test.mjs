@@ -169,10 +169,14 @@ test("owner selector keeps direct Strategy insertion but only after explicit URL
   assert.match(installer, /ownerTestSelector,\\n        hero/);
 });
 
-test("owner cache token changes when installer behavior changes", () => {
+test("owner cache token changes for harness and patched product inputs", () => {
   assert.match(installer, /def _owner_token\(source: Path\)/);
-  assert.match(installer, /digest\.update\(source\.read_bytes\(\)\)/);
-  assert.match(installer, /digest\.update\(Path\(__file__\)\.read_bytes\(\)\)/);
+  assert.match(installer, /"frontend\.js"/);
+  assert.match(installer, /"sv_dashboard\.js"/);
+  assert.match(installer, /"const\.py"/);
+  assert.match(installer, /"manifest\.json"/);
+  assert.match(installer, /for path in inputs:/);
+  assert.match(installer, /digest\.update\(path\.read_bytes\(\)\)/);
 });
 
 test("owner installer runs end-to-end against a temporary beta.40 runtime", () => {
