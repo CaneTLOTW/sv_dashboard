@@ -1,10 +1,22 @@
 # Changelog
 
-## Unreleased
+## 0.6.0-beta.40 canonical trip/charge stabilization candidate
 
-- Resolves completed-trip SOC, electric/fuel range and fuel-consumption fields independently using provenance and strongly matched local trip-boundary evidence; preserves the untouched Stellantis payload for audit.
-- Captures restart-safe mapped electric autonomy, residual battery energy and per-entity source/HA timestamps at trip boundaries. Direct server electric energy remains preferred; local residual/SOC-capacity results are explicitly marked estimated.
-- Keeps older local metric stores valid without inventing historical electric range, and preserves strict direct-telemetry requirements for dual-energy rolling consumption.
+- Finishes the canonical Trip History field resolver: physical server-trip identity remains authoritative, while SOC, electric range, fuel level/range and consumption boundaries are resolved independently from provenance-ranked local evidence.
+- Restricts strong trip-boundary overrides to genuine Stellantis/upstream source timestamps close to the canonical server boundary. Home Assistant update time, receipt time and untimestamped legacy values remain fallback evidence only and cannot overwrite an existing server value.
+- Adds a canonical charge-session evidence resolver so one physical charging interval stays one session even when local/Recorder/REST representations disagree about SOC, energy, power or type.
+- Merges completed-charge fields independently with known-beats-unknown semantics, preserving richer Recorder/curve evidence instead of allowing a sparse finalization row to erase start SOC, energy, average power or charge type.
+- Handles the real DS N°4 24→96 plus later 24→99 completion sequence as one physical AC session; conflicting end-SOC evidence no longer creates duplicate Charge History rows.
+- Separates vehicle measurement/source time from Home Assistant observation time for charge samples. A frozen Stellantis timestamp can no longer collapse later real SOC/residual changes into one sample; only bounded cross-entity payload fan-out is coalesced.
+- Keeps live charge power conservative: recent changed observations can use an explicitly marked HA-time fallback when source time is frozen, but retrospective average power is never exposed as instantaneous current power and upstream charging-rate km/h is never relabeled as kW.
+- Enriches degraded active-charge metadata from later trustworthy same-session evidence, so transient `No`/Unknown charging mode does not remain the final charge type when Slow/Quick evidence later exists.
+- Preserves exact-vs-sample charge-boundary provenance and marks sample-boundary energy as partial evidence rather than pretending it was measured at the physical plug-in/off edge.
+- Suppresses an estimated maximum charge power when it is internally impossible (`max < average`) instead of fabricating a corrected maximum.
+- Makes charge-start notifications truthfully distinguish an upstream Stellantis charge-end ETA from a locally estimated ETA and no longer renders transient `No` as a user-facing charge type.
+- Makes scheduled wake-up during charging observation-aware: recent HA-observed charging telemetry suppresses a redundant 5-minute wake-up while stale recovery remains available.
+- Keeps the beta.39 Recorder-backed Vehicle diagnostics feature intact and updates its documentation for the new charge observation/source-time contract.
+- Makes the local owner QA harness opt-in: the normal generated dashboard stays production-like, while `?sv_owner_harness=1` or a valid `sv_owner_fixture` explicitly enables the local selector/context.
+- Bumps package/frontend generation to beta.40 and cache-busts the changed Charge History module; unchanged frontend modules retain their prior validated content keys.
 
 ## 0.6.0-beta.39 recorder-backed vehicle diagnostics candidate
 
