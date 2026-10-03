@@ -780,7 +780,15 @@ class ServerHistoryManager:
             if not isinstance(session, dict):
                 continue
             key = cls._archive_session_key(session)
-            previous = merged.get(key)
+            previous_key = key if key in merged else next(
+                (
+                    candidate_key
+                    for candidate_key, candidate in merged.items()
+                    if same_physical_charge(candidate, session)
+                ),
+                None,
+            )
+            previous = merged.get(previous_key) if previous_key else None
             if previous:
                 preferred, supplementary = (
                     (session, previous)
@@ -788,12 +796,14 @@ class ServerHistoryManager:
                     else (previous, session)
                 )
                 combined = merge_charge_evidence(preferred, supplementary)
+                if previous_key != key:
+                    merged.pop(previous_key, None)
             else:
                 combined = dict(session)
                 combined["samples"] = cls._merge_session_samples(
                     [], session.get("samples", [])
                 )
-            merged[key] = combined
+            merged[cls._archive_session_key(combined)] = combined
         return sorted(
             merged.values(),
             key=lambda session: str(session.get("start_time") or session.get("id") or ""),
