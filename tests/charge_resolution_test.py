@@ -158,6 +158,39 @@ def test_sparse_preferred_is_enriched_field_by_field_from_rich_same_session():
     assert merged["has_charge_curve"] is True
 
 
+def test_later_finished_boundary_enriches_earlier_preferred_representation():
+    intermediate = {
+        "source": "ha_live",
+        "start_time": "2026-10-02T19:54:00+00:00",
+        "end_time": "2026-10-03T01:35:00+00:00",
+        "duration_seconds": 20460,
+        "soc_start": 24,
+        "soc_end": 96,
+        "energy_kwh": 10.51,
+        "average_power_kw": 1.85,
+        "charge_type": "AC",
+    }
+    finished = {
+        "source": "ha_recorder",
+        "start_time": "2026-10-02T19:54:00+00:00",
+        "end_time": "2026-10-03T01:36:00+00:00",
+        "duration_seconds": 20520,
+        "soc_start": 24,
+        "soc_end": 99,
+        "energy_kwh": 10.95,
+        "average_power_kw": 1.92,
+        "charge_type": "AC",
+    }
+
+    merged = MODULE.merge_charge_evidence(intermediate, finished)
+
+    assert merged["end_time"] == finished["end_time"]
+    assert merged["soc_end"] == 99
+    assert merged["energy_kwh"] == 10.95
+    assert merged["average_power_kw"] == 1.92
+    assert merged["field_conflicts"]["soc_end"]["resolution"] == "later_boundary_selected"
+
+
 def test_preferred_finished_boundary_beats_earlier_intermediate_soc():
     finished = {
         "source": "ha_live",
