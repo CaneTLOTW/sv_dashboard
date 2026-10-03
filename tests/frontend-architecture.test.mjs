@@ -42,6 +42,11 @@ test("Home Assistant registers one SV frontend resource", () => {
   assert.match(frontend, /import\("\.\/vehicle-audit-card\.js\?v=0\.6\.0-beta\.28"\)/);
 });
 
+test("static asset discovery does not block the Home Assistant event loop", () => {
+  assert.match(init, /await hass\.async_add_executor_job\(/);
+  assert.match(init, /static_dir\.glob\("\*\.js"\)/);
+});
+
 test("dependency preflight never delays Strategy registration", () => {
   assert.match(frontend, /customElements\.whenDefined\(tag\)/);
   assert.match(frontend, /DEPENDENCY_GRACE_MS = 10000/);
