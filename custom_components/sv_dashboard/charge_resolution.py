@@ -283,13 +283,55 @@ def merge_charge_evidence(
     field_sources = dict(preferred.get("field_sources") or {})
     conflicts = dict(preferred.get("field_conflicts") or {})
 
+    preferred_end = _time(preferred.get("end_time") or preferred.get("end"))
+    supplementary_end = _time(
+        supplementary.get("end_time") or supplementary.get("end")
+    )
+    supplementary_has_later_boundary = bool(
+        preferred_end is not None
+        and supplementary_end is not None
+        and supplementary_end > preferred_end
+        and (supplementary_end - preferred_end).total_seconds()
+        <= _CHARGE_END_MATCH_SECONDS
+    )
+    later_boundary_fields = {
+        "end_time",
+        "charging_duration_seconds",
+        "duration_seconds",
+        "soc_end",
+        "energy_kwh",
+        "battery_energy_added_kwh",
+        "average_power_kw",
+    }
+
     for field in _SUMMARY_FIELDS:
         preferred_value = result.get(field)
         supplementary_value = supplementary.get(field)
         preferred_known = charge_value_is_known(field, preferred_value)
         supplementary_known = charge_value_is_known(field, supplementary_value)
 
-        if not preferred_known and supplementary_known:
+        use_supplementary = bool(
+            supplementary_known
+            and (
+                not preferred_known
+                or (
+                    supplementary_has_later_boundary
+                    and field in later_boundary_fields
+                )
+            )
+        )
+        if use_supplementary:
+            if (
+                preferred_known
+                and supplementary_has_later_boundary
+                and field in later_boundary_fields
+                and preferred_value != supplementary_value
+            ):
+                conflicts[field] = {
+                    "preferred": preferred_value,
+                    "supplementary": supplementary_value,
+                    "resolution": "later_boundary_selected",
+                }
             result[field] = (
                 normalize_charge_type(supplementary_value)
                 if field == "charge_type"
