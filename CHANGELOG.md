@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.6.0-beta.40 canonical trip/charge stabilization candidate
+## 0.6.0-beta.40 canonical trip/charge stabilization prerelease
 
 - Finishes the canonical Trip History field resolver: physical server-trip identity remains authoritative, while SOC, electric range, fuel level/range and consumption boundaries are resolved independently from provenance-ranked local evidence.
 - Restricts strong trip-boundary overrides to genuine Stellantis/upstream source timestamps close to the canonical server boundary. Home Assistant update time, receipt time and untimestamped legacy values remain fallback evidence only and cannot overwrite an existing server value.
@@ -21,6 +21,7 @@
 - Moves static JavaScript asset discovery off the Home Assistant event loop to remove the beta.40 owner-runtime blocking-I/O warning during integration setup.
 - Classifies **Remaining battery energy** as Home Assistant `energy_storage` rather than cumulative `energy`, keeping its `measurement` state class valid for instantaneous stored battery energy.
 - Bumps package/frontend generation to beta.40 and cache-busts the changed Charge History module; unchanged frontend modules retain their prior validated content keys.
+- Published as immutable GitHub/HACS prerelease `v0.6.0-beta.40` from owner-validated product SHA `8926df0b439989a99d29e60c71d75c0f7590478a`; owner backend/runtime, browser UI and subsequent natural trip/charge use are accepted, while the external DS N°4 beta.40 follow-up remains pending.
 
 ## 0.6.0-beta.39 recorder-backed vehicle diagnostics candidate
 
