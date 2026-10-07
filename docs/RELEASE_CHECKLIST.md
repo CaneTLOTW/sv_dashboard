@@ -6,6 +6,7 @@ This checklist complements `BRANCH_AND_DEPLOYMENT_WORKFLOW.md`. The exact valida
 
 Before starting or closing release work:
 
+- [ ] after the first accepted promotion, the GitHub default branch is `main`;
 - [ ] implementation/documentation changes are on `develop`;
 - [ ] `main` is an ancestor of `develop`;
 - [ ] there are no independent main-only feature/fix commits;
@@ -37,7 +38,7 @@ For prerelease validation:
 - [ ] the tester records the displayed installed/available versions and, when relevant, a screenshot of the Home Assistant update notification;
 - [ ] a HACS-generated external release-link 404 is tracked separately from package/runtime health; HACS 2.0.x currently constructs that link without GitHub's required `/tag/` segment (see #41).
 
-Before the first stable release, explicitly review the repository default-branch/release-channel policy so unaccepted `develop` commits cannot be mistaken for the stable update channel. Stable tags/releases must come from the accepted `main` SHA; prerelease tags may come from an exact validated `develop` candidate used for external acceptance.
+Before the first stable release, verify the repository default branch is `main` so unaccepted `develop` commits cannot be mistaken for the stable update channel. Stable tags/releases must come from the accepted `main` SHA; prerelease tags may come from an exact validated `develop` candidate used for external acceptance.
 
 ## 3. Repository validation
 
