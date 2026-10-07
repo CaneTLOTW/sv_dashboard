@@ -3,6 +3,8 @@
 This document defines the focused runtime acceptance scope for the exact
 `0.6.0-beta.40` candidate after source/CI validation.
 
+> **Status — 2026-10-07:** owner backend/runtime, browser UI and natural trip/charge use are accepted. The immutable GitHub/HACS prerelease `v0.6.0-beta.40` is published from product SHA `8926df0b439989a99d29e60c71d75c0f7590478a`, and the accepted repository state has been fast-forwarded to `main`. External DS N°4 beta.40 confirmation remains pending. The acceptance criteria below are retained as the tester/runbook contract, not as a statement that publication is still pending.
+
 The candidate must be an immutable exact `develop` SHA. Runtime acceptance
 must record that SHA and version. Do not test against a moving branch checkout.
 
@@ -80,7 +82,7 @@ For charging wake-up:
 
 ## 2. External DS N°4 gate
 
-After owner acceptance, publish the exact accepted SHA as immutable GitHub
+Publication is complete: the exact owner-validated product SHA is available as the immutable GitHub/HACS
 prerelease `v0.6.0-beta.40`.
 
 The external tester should update directly from beta.36 to beta.40, restart
