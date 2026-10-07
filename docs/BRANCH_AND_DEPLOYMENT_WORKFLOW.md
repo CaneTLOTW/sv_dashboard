@@ -7,6 +7,8 @@ SV Dashboard uses two long-lived branches:
 - `develop` — integration, validation and acceptance branch;
 - `main` — last explicitly accepted publishable state.
 
+After the first accepted promotion, the GitHub repository **default branch is `main`**. `develop` remains long-lived but must not be the default/public fallback once it can contain unaccepted work.
+
 A designated Home Assistant instance may run an exact `develop` commit for acceptance. That does not make the commit a stable/public release.
 
 ## Agent responsibility split
@@ -187,6 +189,7 @@ Unless an explicit branch-recovery task requires otherwise:
 Before beginning or closing substantial work verify:
 
 ```text
+GitHub default branch: main
 main ancestor of develop: YES
 main-only product commits: 0
 develop status: equal to main OR ahead of main
