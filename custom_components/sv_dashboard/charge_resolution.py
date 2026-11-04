@@ -129,6 +129,18 @@ def charge_samples_same_payload(
     if delta > fanout_seconds:
         return False
 
+    # A distinct percentage is a real charging progression even when the
+    # upstream timestamp is frozen and HA receives two changes within 10s.
+    # Merge only entity fan-out that did not change an observed SOC value.
+    previous_soc = _number(previous.get("soc"))
+    current_soc = _number(current.get("soc"))
+    if (
+        previous_soc is not None
+        and current_soc is not None
+        and previous_soc != current_soc
+    ):
+        return False
+
     # Runtime samples record which mapped HA metric triggered this timeline
     # point. A second update from the same metric is a new observation even if
     # Stellantis reused the same source timestamp within the fan-out window.
