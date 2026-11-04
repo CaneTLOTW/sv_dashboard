@@ -2,6 +2,7 @@
 
 ## 0.7.1 — candidate: canonical trip-history sync recovery (NOT YET PUBLISHED)
 
+- Repairs the 0 kWh canonical-history regression discovered during owner UI acceptance: one-to-one matched and internally corroborated local SOC/capacity energy estimates may now replace a contradictory direct zero or fill unavailable electric-trip energy. Every such estimate is marked estimated and given explicit source/conflict provenance; genuine unmatched zeros and positive direct measurements retain priority. The old local 43 km overnight composite is not accepted as evidence. See [#128](https://github.com/CaneTLOTW/sv_dashboard/issues/128). This is a candidate pending local owner acceptance, **not a released repair**.
 - Fixes a Python `UnboundLocalError` in canonical trip field resolution: `start_soc`/`end_soc` are now always initialized before electric-energy provenance is branched, including when the server has a legitimate direct `0 kWh` energy measurement.
 - Prevents one zero-energy trip from failing the entire server-history canonical rebuild and forcing the dashboard into legacy Recorder fallback (which contained uncorrected 3.6× trip speeds and a spurious 43-km overnight composite).
 - Adds regression tests for direct zero-electric telemetry without local observations, electric-only trips and dual-energy / Hybrid classifications; preserves the zero-value semantics and raw server evidence.

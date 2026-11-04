@@ -382,6 +382,92 @@ def test_direct_zero_electric_with_fuel_and_soc_drop_keeps_hybrid_classification
     assert result["trip_type"] == "hybrid"
 
 
+def test_server_zero_is_overridden_only_by_correlated_persisted_soc_energy():
+    raw, local = _scenario()
+    before = deepcopy(raw)
+    raw["energyConsumptions"].append({"type": "Electric", "consumption": 0})
+    local["energy_kwh"] = 1.2  # 70->67 % * 40 kWh from the local trip
+    result = _rebuild(raw, local)
+
+    assert result["local_evidence_match"]["matched"] is True
+    assert result["energy_kwh"] == 1.2
+    assert result["energy_per_100_km"] == 57.14
+    assert result["energy_estimated"] is True
+    assert result["energy_source"] == "sv_matched_local_soc_capacity_estimate"
+    assert result["field_sources"]["energy_kwh"] == result["energy_source"]
+    assert result["field_conflicts"]["energy_kwh"] == {
+        "server": 0,
+        "local": 1.2,
+        "resolution": "corroborated_local_soc_estimate",
+    }
+    assert "server_zero_conflicts_with_local_soc_estimate" in result["quality_flags"]
+    assert raw["energyConsumptions"][-1]["consumption"] == 0
+    assert result["raw_server"] == raw
+    assert before["energyConsumptions"] != raw["energyConsumptions"]
+
+
+def test_positive_server_energy_stays_authoritative_even_with_local_soc_estimate():
+    raw, local = _scenario()
+    raw["energyConsumptions"].append({"type": "Electric", "consumption": 900})
+    local["energy_kwh"] = 1.2
+    result = _rebuild(raw, local)
+    assert result["energy_kwh"] == 0.9
+    assert result["energy_estimated"] is False
+    assert result["energy_source"] == "stellantis_trip.energy_consumptions"
+    assert "energy_kwh" not in result["field_conflicts"]
+
+
+def test_server_zero_without_corrob_local_evidence_stays_zero():
+    raw, local = _scenario()
+    raw["energyConsumptions"].append({"type": "Electric", "consumption": 0})
+    local["energy_kwh"] = 3.8  # inconsistent with 70->67% * 40kWh
+    result = _rebuild(raw, local)
+    assert result["energy_kwh"] == 0
+    assert result["energy_estimated"] is False
+    assert "energy_kwh" not in result["field_conflicts"]
+
+    local["energy_kwh"] = 1.2
+    local["start_soc"] = 67
+    local["end_soc"] = 67
+    equal_soc = _rebuild(raw, local)
+    assert equal_soc["energy_kwh"] == 0
+
+    unmatched = deepcopy(local)
+    unmatched["start_time"] = "2026-09-30T10:09:18Z"
+    unmatched["start_soc"], unmatched["end_soc"] = 70, 67
+    no_match = _rebuild(raw, unmatched)
+    assert no_match["energy_kwh"] == 0
+    assert no_match["local_evidence_match"]["matched"] is False
+
+
+def test_missing_server_energy_uses_matched_local_estimate_only_after_trustworthy_match():
+    raw, local = _scenario()
+    local["energy_kwh"] = 1.2
+    for edge in ("start", "end"):
+        local["boundary_evidence"][edge].pop("residual_energy_kwh")
+    result = _rebuild(raw, local)
+    assert result["energy_kwh"] == 1.2
+    assert result["energy_estimated"] is True
+    assert result["energy_source"] == "resolved_trip_soc_capacity_estimate"
+
+    # No local match => do not invent any electric energy.
+    local["end_time"] = "2026-10-03T10:19:10Z"
+    no_match = _rebuild(raw, local)
+    assert no_match["energy_kwh"] is None
+
+
+def test_bad_local_trip_composite_cannot_override_a_server_zero():
+    raw, local = _scenario()
+    raw["energyConsumptions"].append({"type": "Electric", "consumption": 0})
+    local["energy_kwh"] = 1.2
+    local["distance_km"] = 43
+    local["duration_seconds"] = 52103
+    local["end_time"] = "2026-10-02T00:37:41Z"
+    no_match = _rebuild(raw, local)
+    assert no_match["energy_kwh"] == 0
+    assert no_match["local_evidence_match"]["matched"] is False
+
+
 def test_soc_capacity_estimate_is_marked_and_provenanced_when_residual_is_absent():
     raw, local = _scenario()
     _set_pair(raw, "startEnergies", "Electric", "level", [70, 67])

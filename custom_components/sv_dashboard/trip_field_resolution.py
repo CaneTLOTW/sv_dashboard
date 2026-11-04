@@ -356,6 +356,39 @@ def _resolve_pair(
             _field_source(trip, field, "unknown")
 
 
+def _corroborated_local_soc_energy(local: dict[str, Any] | None) -> float | None:
+    """Return only a persisted, physically corroborated *estimated* local energy.
+
+    A local row is passed here only after time/odometer/distance/duration
+    matching to one canonical trip. Do not create an estimate from an unmatched
+    trip, equal SOC, stale capacity, or an arbitrary energy_kwh number.
+    """
+    if not isinstance(local, dict) or not _valid_local_trip(local):
+        return None
+    energy = _number(local.get("energy_kwh"))
+    soc_start = _number(local.get("start_soc"))
+    soc_end = _number(local.get("end_soc"))
+    capacity = _number(local.get("capacity_kwh"))
+    distance = _number(local.get("distance_km"))
+    if (
+        energy is None or energy <= 0
+        or soc_start is None or soc_end is None or not (0 <= soc_end < soc_start <= 100)
+        or capacity is None or not (0 < capacity <= 200)
+        or distance is None or distance <= 1
+    ):
+        return None
+    expected = round((soc_start - soc_end) * capacity / 100, 3)
+    # Persisted local trip energy comes from this SOC/capacity relation. Small
+    # float/rounding differences are fine; unrelated or inconsistent values
+    # must not override the server's 0 kWh or fill absent telemetry.
+    if abs(energy - expected) > max(0.005, expected * 0.02):
+        return None
+    if energy / distance * 100 > 120:
+        return None
+    return round(energy, 3)
+
+
+
 def resolve_trip_fields(trip: dict[str, Any], local: dict[str, Any] | None = None) -> dict[str, Any]:
     """Return a per-field canonical copy with explicit source/conflict metadata."""
     resolved = dict(trip)
@@ -435,6 +468,11 @@ def resolve_trip_fields(trip: dict[str, Any], local: dict[str, Any] | None = Non
     start_soc = _number(resolved.get("soc_start"))
     end_soc = _number(resolved.get("soc_end"))
 
+    # Only the one-to-one, physically matched local trip may provide a
+    # previously persisted SOC/capacity estimate. Never reuse an unrelated
+    # Recorder event or interpret an unknown energy value as zero.
+    local_energy_estimate = _corroborated_local_soc_energy(local)
+
     raw = resolved.get("raw_server") if isinstance(resolved.get("raw_server"), dict) else {}
     electric_entries = raw.get("energyConsumptions")
     direct_electric = None
@@ -445,11 +483,33 @@ def resolve_trip_fields(trip: dict[str, Any], local: dict[str, Any] | None = Non
                 if raw_consumption is not None and raw_consumption >= 0:
                     direct_electric = round(raw_consumption / 1000, 3)
                 break
-    if direct_electric is not None:
+    if direct_electric is not None and (
+        direct_electric > 0 or local_energy_estimate is None
+    ):
+        # A positive direct server measurement wins. Genuine zero is retained
+        # when no strongly matched local SOC estimate contradicts it.
         resolved["energy_kwh"] = direct_electric
         resolved["energy_estimated"] = False
         resolved["energy_source"] = "stellantis_trip.energy_consumptions"
         resolved["field_sources"]["energy_kwh"] = "stellantis_trip.energyConsumptions.Electric.consumption"
+    elif direct_electric == 0 and local_energy_estimate is not None:
+        # Some upstream trips supply a placeholder Electric consumption=0,
+        # despite corroborated local SOC loss for that same physical journey.
+        # Do not silently call this measured energy; expose the conflict and
+        # the derived provenance. Raw server evidence remains untouched.
+        resolved["energy_kwh"] = local_energy_estimate
+        resolved["energy_estimated"] = True
+        resolved["energy_source"] = "sv_matched_local_soc_capacity_estimate"
+        resolved["field_sources"]["energy_kwh"] = "sv_matched_local_soc_capacity_estimate"
+        resolved["field_conflicts"]["energy_kwh"] = {
+            "server": 0,
+            "local": local_energy_estimate,
+            "resolution": "corroborated_local_soc_estimate",
+        }
+        resolved["quality_flags"] = list(dict.fromkeys([
+            *(resolved.get("quality_flags") or []),
+            "server_zero_conflicts_with_local_soc_estimate",
+        ]))
     else:
         energy = None
         energy_source = "unknown"
@@ -507,6 +567,9 @@ def resolve_trip_fields(trip: dict[str, Any], local: dict[str, Any] | None = Non
         ):
             energy = round((start_soc - end_soc) * capacity / 100, 3)
             energy_source = "resolved_trip_soc_capacity_estimate"
+        if energy is None and local_energy_estimate is not None:
+            energy = local_energy_estimate
+            energy_source = "sv_matched_local_soc_capacity_estimate"
         resolved["energy_kwh"] = energy
         resolved["energy_estimated"] = energy is not None
         resolved["energy_source"] = energy_source
