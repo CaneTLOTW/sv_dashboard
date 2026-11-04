@@ -366,8 +366,14 @@ def _corroborated_local_soc_energy(local: dict[str, Any] | None) -> float | None
     if not isinstance(local, dict) or not _valid_local_trip(local):
         return None
     energy = _number(local.get("energy_kwh"))
-    soc_start = _number(local.get("start_soc"))
-    soc_end = _number(local.get("end_soc"))
+    # Persisted metrics trips use soc_start/soc_end; legacy boundary rows
+    # use start_soc/end_soc. Keep each pair together to avoid mixed evidence.
+    if "soc_start" in local or "soc_end" in local:
+        soc_start = _number(local.get("soc_start"))
+        soc_end = _number(local.get("soc_end"))
+    else:
+        soc_start = _number(local.get("start_soc"))
+        soc_end = _number(local.get("end_soc"))
     capacity = _number(local.get("capacity_kwh"))
     distance = _number(local.get("distance_km"))
     if (
