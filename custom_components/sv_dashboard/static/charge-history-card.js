@@ -699,7 +699,13 @@ class CodexStellantisChargeCurveBrowserCardV1 extends LitElement {
     }
 
     async _loadHistory() {
-        if (!this._hass || !this._config || this._loading) return;
+        if (!this._hass || !this._config) return;
+        if (this._loading) {
+            // The setter has already seen this entity update. Queue one
+            // follow-up instead of permanently losing it during a WS read.
+            this._refreshPending = true;
+            return;
+        }
         this._loading = true;
         this._error = null;
         try {
@@ -803,6 +809,10 @@ class CodexStellantisChargeCurveBrowserCardV1 extends LitElement {
             this._error = error?.message ?? String(error);
         } finally {
             this._loading = false;
+            if (this._refreshPending) {
+                this._refreshPending = false;
+                void this._loadHistory();
+            }
         }
     }
 
