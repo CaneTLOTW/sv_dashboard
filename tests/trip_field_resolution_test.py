@@ -349,7 +349,9 @@ def test_direct_zero_electric_energy_keeps_canonical_rebuild_ready():
     assert result["energy_kwh"] == 0
     assert result["energy_estimated"] is False
     assert result["energy_source"] == "stellantis_trip.energy_consumptions"
-    assert result["trip_type"] == "unknown"
+    # Strong local boundary evidence proves a SOC drop even when the direct
+    # energy measurement legitimately reports zero.
+    assert result["trip_type"] == "ev"
     assert result["raw_server"] == raw
     assert raw_before["energyConsumptions"] != raw["energyConsumptions"]
 
