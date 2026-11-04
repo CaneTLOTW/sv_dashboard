@@ -22,7 +22,7 @@ The four frontend dependencies must also be loaded as Lovelace JavaScript module
 
 1. Open **HACS → Integrations → Custom repositories**.
 2. Add `CaneTLOTW/sv_dashboard` as category **Integration**.
-3. **Stable release temporarily withdrawn:** `v0.7.0` is no longer publicly offered as a stable release due to a confirmed trip-energy regression ([#128](https://github.com/CaneTLOTW/sv_dashboard/issues/128)). Wait for the explicitly published final `v0.7.1` before installing a new stable release; never install moving `develop` as a workaround. Historical prerelease builds remain available only for explicit test instructions.
+3. Install **[v0.7.1 Final](https://github.com/CaneTLOTW/sv_dashboard/releases/tag/v0.7.1)** through the normal HACS Integration stable channel (no prerelease setting required). The previous v0.7.0 release was withdrawn due to canonical trip-energy regression [#128](https://github.com/CaneTLOTW/sv_dashboard/issues/128). Never install moving `develop` as an external update.
 4. Download **SV Dashboard**.
 5. Restart Home Assistant.
 6. Open **Settings → Devices & services → Add integration**.
@@ -153,4 +153,4 @@ Check Recorder retention and include filters. SV Dashboard cannot recreate Recor
 
 Install updates through HACS. Restart Home Assistant when release notes require it and refresh browser/app cache after frontend changes.
 
-The previous stable `v0.7.0` was unpublished on 2026-11-04 because of a canonical trip-energy regression. Await final `v0.7.1`; older `v0.6.0-beta.40` remains a historical prerelease. Independent charging and external DS N°4 Hybrid validation are still pending.
+Stable `v0.7.1` restores canonical trip-history synchronization and matched SOC energy estimates; see [#128](https://github.com/CaneTLOTW/sv_dashboard/issues/128). The previous `v0.7.0` release was unpublished. Older `v0.6.0-beta.40` remains a historical prerelease. Independent active-charging and external DS N°4 Hybrid validation are still pending.
