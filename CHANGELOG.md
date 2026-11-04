@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased — charging curve SOC axis and live browser freshness
+## 0.7.0 — stable release: live charge curves, trip speed units and upstream history (2026-11-04)
+
+Stable publication authorized by the maintainer after source and GitHub CI validation. **New 0.7.0 behavior has not yet passed an owner live/runtime acceptance round; external DS N°4 Hybrid feedback also remains pending.** Known owner trip-boundary anomaly: overlapping 04 Nov trips around 08:18, including a 14 h 28 min duration, still needs sanitized raw evidence. The stable channel is not proof that these issues are resolved. The immutable beta.40 prerelease remains available for comparison.
+
+### Live charging curve SOC axis and browser freshness
 
 - Prevents missing `residual_kwh` and missing `soc` values from becoming invented 0% points through JavaScript `Number(null)`; observed SOC stays authoritative when a residual source is absent or contradictory.
 - Suppresses vertical, constant-SOC stored-power paths, allowing existing SOC-timeline reconstruction or explicit insufficient-data feedback rather than an invalid curve.
@@ -9,18 +13,18 @@
 - Adds regressions for observed 63–67% and 61–71% sessions, contradictory zero residuals, missing SOC, and the in-flight refresh guard; cache-busts the charge browser module.
 - No new recording points are invented. Real-vehicle acceptance is still needed to assess upstream SOC/reporting frequency and raw sample persistence.
 
-## Unreleased — upstream trip-history UTC filter compatibility
+### Upstream trip-history UTC filter compatibility
 
 - Normalizes incremental history `since` values to an explicit UTC `YYYY-MM-DDTHH:MM:SSZ` timestamp at the shared native/legacy upstream transport boundary; prevents the unescaped `+` timezone offset from being decoded as a space by Stellantis Vehicles ≤2026.10.3 (upstream PR #706).
 - Preserves the original two-hour incremental overlap, pagination, full sync and credential/session ownership; no upstream code modifications or new product settings.
 - Adds transport regressions for UTC/positive offsets, Berlin summer/winter and autumn DST fold, missing offsets, native pagination and legacy encoded query strings.
-- Associated compatibility work: [#123](https://github.com/CaneTLOTW/sv_dashboard/issues/123). No release or runtime acceptance claimed.
+- Associated compatibility work: [#123](https://github.com/CaneTLOTW/sv_dashboard/issues/123). Source CI accepted; runtime acceptance for the stable release remains pending.
 
-## Unreleased — completed-trip average speed mixed-unit compatibility
+### Completed-trip average speed mixed-unit compatibility
 
 - Stops assuming Stellantis `kinetic.avgSpeed` is universally m/s. Uses completed-trip distance/duration to validate m/s versus km/h, preventing the 3.6× error reported by the e-208/ë-C3 community.
 - Preserves validated `stellantis_mps` / `stellantis_kmh` provenance through canonical history and odometer repair; ambiguous or contradictory source units fall back to the independently derived speed with explicit quality flags.
-- Adds regression coverage for real sanitized DS4 m/s and reported Peugeot km/h patterns, invalid distances, ambiguous units and missing boundaries. No version bump, package release or main promotion in this change.
+- Adds regression coverage for real sanitized DS4 m/s and reported Peugeot km/h patterns, invalid distances, ambiguous units and missing boundaries. Included in the 0.7.0 release together with live charging and UTC safeguards.
 
 ## 0.6.0-beta.40 canonical trip/charge stabilization prerelease
 

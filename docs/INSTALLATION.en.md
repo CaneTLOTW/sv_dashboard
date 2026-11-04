@@ -22,7 +22,7 @@ The four frontend dependencies must also be loaded as Lovelace JavaScript module
 
 1. Open **HACS → Integrations → Custom repositories**.
 2. Add `CaneTLOTW/sv_dashboard` as category **Integration**.
-3. During beta testing, enable the repository's **Pre-release** option and install the exact published prerelease requested by the test issue. The current published beta is **`v0.6.0-beta.40`**. Do not use a moving `develop` commit as an external test target.
+3. For stable updates, install **`v0.7.0`** through HACS without enabling **Pre-release**. Enable Pre-release only if a specific older beta test explicitly requests a prerelease. Never install a moving development commit as an external test target.
 4. Download **SV Dashboard**.
 5. Restart Home Assistant.
 6. Open **Settings → Devices & services → Add integration**.
@@ -153,4 +153,4 @@ Check Recorder retention and include filters. SV Dashboard cannot recreate Recor
 
 Install updates through HACS. Restart Home Assistant when release notes require it and refresh browser/app cache after frontend changes.
 
-During beta testing, keep **Pre-release** enabled and use the exact semantic prerelease named by the active validation issue. Development is validated on exact `develop` SHAs; accepted repository states are promoted to `main` by fast-forward only. `v0.6.0-beta.40` is currently published as a prerelease and available through the HACS prerelease channel; no normal stable `v0.6.0` release has been published yet.
+Stable `v0.7.0` is intended for the normal HACS channel. Older `v0.6.0-beta.40` remains a historical test prerelease. New-version real-vehicle testing of the live curve and the DS N°4 Hybrid behavior is still pending.

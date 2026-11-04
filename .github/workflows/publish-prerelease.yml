@@ -1,4 +1,4 @@
-name: Publish prerelease
+name: Publish release
 
 on:
   push:
@@ -9,9 +9,9 @@ on:
   workflow_dispatch:
     inputs:
       request_file:
-        description: "Path to a release request JSON file"
+        description: "Path to an immutable beta or stable release request JSON"
         required: true
-        default: ".github/release-requests/v0.6.0-beta.40.json"
+        default: ".github/release-requests/v0.7.0.json"
         type: string
 
 permissions:
@@ -24,7 +24,7 @@ concurrency:
 
 jobs:
   publish:
-    name: Validate exact SHA and publish prerelease
+    name: Validate exact SHA and publish release
     runs-on: ubuntu-latest
     steps:
       - name: Checkout release-control commit
@@ -77,8 +77,10 @@ jobs:
               raise SystemExit(f"Tag/version mismatch: {tag!r} vs {version!r}")
           if not re.fullmatch(r"[0-9a-f]{40}", sha):
               raise SystemExit(f"Expected exact 40-character commit SHA, got {sha!r}")
-          if prerelease is not True:
-              raise SystemExit("This workflow only publishes prereleases")
+          if not isinstance(prerelease, bool):
+              raise SystemExit("prerelease must be a JSON boolean")
+          if not prerelease and not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version):
+              raise SystemExit("Stable releases must use X.Y.Z without prerelease suffix")
           if not title:
               raise SystemExit("Release title must not be empty")
 
@@ -86,6 +88,7 @@ jobs:
           print(f"version={version}")
           print(f"sha={sha}")
           print(f"title={title}")
+          print(f"prerelease={str(prerelease).lower()}")
           PY
 
       - name: Require absent tag and release
@@ -131,11 +134,15 @@ jobs:
         env:
           SHA: ${{ steps.request.outputs.sha }}
           VERSION: ${{ steps.request.outputs.version }}
+          PRERELEASE: ${{ steps.request.outputs.prerelease }}
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$SHA"
-          git fetch origin develop
+          git fetch origin develop main
           git merge-base --is-ancestor "$SHA" origin/develop
+          if [[ "$PRERELEASE" == "false" ]]; then
+            test "$(git rev-parse origin/main)" = "$SHA" || { echo "Stable release must target exact main HEAD" >&2; exit 1; }
+          fi
           python3 - <<'PY'
           import json
           import os
@@ -166,16 +173,21 @@ jobs:
             exit 1
           fi
 
-      - name: Publish immutable GitHub prerelease
+      - name: Publish immutable GitHub release
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.request.outputs.tag }}
           SHA: ${{ steps.request.outputs.sha }}
           TITLE: ${{ steps.request.outputs.title }}
+          PRERELEASE: ${{ steps.request.outputs.prerelease }}
         run: |
           set -euo pipefail
-          gh release create "$TAG"             --repo "$GITHUB_REPOSITORY"             --target "$SHA"             --title "$TITLE"             --notes-file "$RUNNER_TEMP/release-notes.md"             --prerelease
+          if [[ "$PRERELEASE" == "true" ]]; then
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --target "$SHA" --title "$TITLE" --notes-file "$RUNNER_TEMP/release-notes.md" --prerelease
+          else
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --target "$SHA" --title "$TITLE" --notes-file "$RUNNER_TEMP/release-notes.md" --latest
+          fi
 
       - name: Verify published release target
         shell: bash
@@ -190,4 +202,6 @@ jobs:
             tag_sha="$(git ls-remote --tags origin "refs/tags/$TAG" | awk '{print $1}')"
           fi
           test "$tag_sha" = "$SHA"
-          gh release view "$TAG"             --repo "$GITHUB_REPOSITORY"             --json tagName,isPrerelease,isDraft,url             --jq '.'
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json tagName,isPrerelease,isDraft,url --jq '.'
+          test "$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq '.isDraft')" = "false"
+          test "$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isPrerelease --jq '.isPrerelease')" = "${{ steps.request.outputs.prerelease }}"

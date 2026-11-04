@@ -4,19 +4,19 @@
 
 SV Dashboard is a HACS custom integration that builds a vehicle-focused Home Assistant dashboard on top of [Stellantis Vehicles](https://github.com/andreadegiovine/homeassistant-stellantis-vehicles).
 
-> **Current beta:** SV Dashboard is the successor to `CaneTLOTW/e_c3_dashboard`. The published HACS/GitHub prerelease is **`v0.6.0-beta.40`**. Owner backend/runtime, browser UI and several days of natural trip/charge use are accepted. The external DS N°4 beta.40 follow-up remains pending. `main` and `develop` are currently aligned on the accepted repository state; the immutable beta.40 prerelease itself remains pinned to the owner-validated product SHA `8926df0b439989a99d29e60c71d75c0f7590478a`.
+> **Current release:** [v0.7.0](https://github.com/CaneTLOTW/sv_dashboard/releases/tag/v0.7.0) — stable HACS channel. The 0.7.0 source includes mixed-unit trip-speed detection, UTC history queries, and a corrected live SOC-based charge curve. **Source/CI validation passed, but the new version has not yet been validated on the owner's actual vehicle or by the external DS N°4 tester.** The old v0.6.0-beta.40 remains an immutable test baseline.
 
 [![Open the SV Dashboard repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=CaneTLOTW&repository=sv_dashboard&category=integration)
 
 Install this repository as an **Integration**, not as a standalone Lovelace-card repository.
 
-### Beta updates through HACS
+### Updates through HACS
 
-While SV Dashboard is distributed only as GitHub **prereleases**, beta testers should enable the per-repository **Pre-release** switch for SV Dashboard in HACS. The current published beta is **`v0.6.0-beta.40`**. With the Pre-release switch disabled, HACS may not advertise the semantic beta tag and can instead follow repository/default-branch behavior.
+The current stable version is **v0.7.0**, intended for the normal HACS Integration channel: **Pre-release is not required**. After HACS refreshes its repository metadata, install the update, restart Home Assistant and refresh your browser/app cache to load the new Python and frontend code.
 
-HACS 2.0.x also currently builds the external update/release link without GitHub's required `/tag/` path segment. A 404 from that particular HACS-generated link does not mean the SV Dashboard package failed to install; use the canonical GitHub release page (`/releases/tag/<tag>`) instead. This upstream behavior is tracked in [issue #41](https://github.com/CaneTLOTW/sv_dashboard/issues/41).
+Older beta versions such as `v0.6.0-beta.40` remain available when HACS **Pre-release** is enabled. Install a published tag for external testing rather than a moving development branch.
 
-Once a stable SV Dashboard release exists, normal stable users should not need to enable HACS prereleases.
+HACS has previously generated malformed release links lacking GitHub's required `/tag/` segment. A broken external link does not itself prove that HACS installation failed; use the canonical release link above. Historical reference: [#41](https://github.com/CaneTLOTW/sv_dashboard/issues/41).
 
 ## What it provides
 
@@ -52,7 +52,7 @@ Real-world SV Dashboard validation is intentionally tracked separately from expe
 | Brand / vehicle | SV status |
 | --- | --- |
 | Citroën ë-C3 CC21 | **Confirmed owner validation** — beta.40 backend/runtime, browser UI and natural trip/charge operation accepted; end-of-trip odometer behavior documented |
-| DS N°4 MY2026 PHEV | **Active external beta** — `v0.6.0-beta.40` published for the focused Hybrid/French retest by `@chmtc94`; latest external beta.40 confirmation still pending |
+| DS N°4 MY2026 PHEV | **External validation pending** — tester last checked beta.36; no beta.40 or v0.7.0 real DS N°4 acceptance reported |
 | DS4 E-Tense Hybrid 225 MY2022 | **Historical tester evidence** — richer legacy payload retained for cross-generation comparison |
 | Peugeot | **Expected / upstream-supported** — real SV vehicle test pending |
 | Opel | **Expected / upstream-supported** — real SV vehicle test pending |
@@ -211,7 +211,7 @@ CI currently checks:
 - Hassfest
 - HACS repository validation
 
-Promotion to `main` is fast-forward only after the exact candidate has passed CI and the required acceptance gates. For beta.40, owner backend/runtime, browser UI and natural trip/charge use passed; `main` and `develop` are now aligned on the accepted repository state. The immutable `v0.6.0-beta.40` prerelease remains pinned to its validated product SHA for HACS/external testing. A normal stable `v0.6.0` tag/release has not yet been published.
+Promotion to `main` is fast-forward only after the exact candidate has passed CI and the required acceptance gates. For beta.40, owner backend/runtime, browser UI and natural trip/charge use passed; `main` and `develop` are now aligned on the accepted repository state. The immutable `v0.6.0-beta.40` prerelease remains pinned to its validated product SHA for HACS/external testing. Stable `v0.7.0` is the next release; the exact immutable tag is authoritative, with new real-vehicle acceptance still pending.
 
 ## License and trademarks
 
