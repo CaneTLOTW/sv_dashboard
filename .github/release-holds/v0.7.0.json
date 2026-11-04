@@ -1,0 +1,9 @@
+{
+  "tag": "v0.7.0",
+  "release_id": 433950518,
+  "sha": "b601008dfade5fc3c96d5a3988688fce5af1e289",
+  "reason": "Known canonical trip energy / kWh per 100 km regression (issue #128)",
+  "issue": "https://github.com/CaneTLOTW/sv_dashboard/issues/128",
+  "action": "unpublish_as_draft",
+  "requested_at": "2026-11-04"
+}

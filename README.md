@@ -4,7 +4,7 @@
 
 SV Dashboard is a HACS custom integration that builds a vehicle-focused Home Assistant dashboard on top of [Stellantis Vehicles](https://github.com/andreadegiovine/homeassistant-stellantis-vehicles).
 
-> **Current release:** [v0.7.0](https://github.com/CaneTLOTW/sv_dashboard/releases/tag/v0.7.0) — stable HACS channel. The 0.7.0 source includes mixed-unit trip-speed detection, UTC history queries, and a corrected live SOC-based charge curve. **Source/CI validation passed, but the new version has not yet been validated on the owner's actual vehicle or by the external DS N°4 tester.** The old v0.6.0-beta.40 remains an immutable test baseline.
+> **Stable release temporarily withdrawn (2026-11-04).** The public `v0.7.0` release was unpublished after a canonical trip-history energy/consumption regression was confirmed during owner acceptance. The tag remains intact for traceability. The corrected **v0.7.1 is not yet a public release**; its owner runtime tests are still in progress. Follow [issue #128](https://github.com/CaneTLOTW/sv_dashboard/issues/128) for updates. Historical `v0.6.0-beta.40` remains a prerelease test baseline.
 
 [![Open the SV Dashboard repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=CaneTLOTW&repository=sv_dashboard&category=integration)
 
@@ -12,7 +12,7 @@ Install this repository as an **Integration**, not as a standalone Lovelace-card
 
 ### Updates through HACS
 
-The current stable version is **v0.7.0**, intended for the normal HACS Integration channel: **Pre-release is not required**. After HACS refreshes its repository metadata, install the update, restart Home Assistant and refresh your browser/app cache to load the new Python and frontend code.
+**Stable channel temporarily paused:** `v0.7.0` was unpublished following a confirmed canonical-trip electric-energy display regression ([#128](https://github.com/CaneTLOTW/sv_dashboard/issues/128)). A reviewed `v0.7.1` is under owner acceptance and is **not published yet**. Please do not manually install the moving `develop` branch as a workaround. Already installed versions are not automatically removed or rolled back by GitHub's release withdrawal.
 
 Older beta versions such as `v0.6.0-beta.40` remain available when HACS **Pre-release** is enabled. Install a published tag for external testing rather than a moving development branch.
 

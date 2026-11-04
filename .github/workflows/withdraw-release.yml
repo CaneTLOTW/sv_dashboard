@@ -1,0 +1,74 @@
+name: Withdraw affected stable release
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - ".github/release-holds/*.json"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: withdraw-release-v0-7-0
+  cancel-in-progress: false
+
+jobs:
+  withdraw:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout control request
+        uses: actions/checkout@v4
+
+      - name: Validate exact release hold request
+        env:
+          REQUEST_PATH: .github/release-holds/v0.7.0.json
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          data = json.loads(Path(os.environ["REQUEST_PATH"]).read_text())
+          required = {
+              "tag": "v0.7.0",
+              "release_id": 433950518,
+              "sha": "b601008dfade5fc3c96d5a3988688fce5af1e289",
+              "action": "unpublish_as_draft",
+          }
+          for key, expected in required.items():
+              if data.get(key) != expected:
+                  raise SystemExit(f"Release hold mismatch in {key}")
+          PY
+
+      - name: Retain tag and notes, unpublish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: b601008dfade5fc3c96d5a3988688fce5af1e289
+          RELEASE_ID: "433950518"
+          TAG: v0.7.0
+        run: |
+          set -euo pipefail
+          api="/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID"
+          tag_ref="$(gh api "/repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" --jq '.object.sha')"
+          test "$tag_ref" = "$TARGET_SHA"
+          current_tag="$(gh api "$api" --jq '.tag_name')"
+          current_sha="$(gh api "$api" --jq '.target_commitish')"
+          test "$current_tag" = "$TAG"
+          test "$current_sha" = "$TARGET_SHA"
+          if [[ "$(gh api "$api" --jq '.draft')" == "true" ]]; then
+            echo "Release already unpublished; tag preserved"
+            exit 0
+          fi
+          test "$(gh api "$api" --jq '.prerelease')" = "false"
+          gh api "$api" --jq '.body' > "$RUNNER_TEMP/previous-notes.md"
+          {
+            printf '%s\n\n' '> **Release withdrawn on 2026-11-04.** A regression in canonical trip-history electric energy and kWh/100 km was found during real-vehicle acceptance. Please await the tested final **v0.7.1** release; details: https://github.com/CaneTLOTW/sv_dashboard/issues/128 . Existing installations are not automatically changed by this withdrawal.'
+            cat "$RUNNER_TEMP/previous-notes.md"
+          } > "$RUNNER_TEMP/withdrawn-notes.md"
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft \
+            --title "v0.7.0 — withdrawn (trip-energy regression)" \
+            --notes-file "$RUNNER_TEMP/withdrawn-notes.md"
+          test "$(gh api "$api" --jq '.draft')" = "true"
+          test "$(gh api "$api" --jq '.tag_name')" = "$TAG"
+          test "$(gh api "/repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" --jq '.object.sha')" = "$TARGET_SHA"
+          echo "Release draft verified, tag remains unchanged. Stable v0.7.1 remains unpublished."
