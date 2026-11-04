@@ -17,6 +17,7 @@ SV never creates or retains its own Stellantis HTTP session.
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from importlib import import_module
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlsplit
@@ -322,13 +323,33 @@ async def _request_native_trips_page(
         return await request(vehicle, since=since, page_token=page_token)
 
 
+def _utc_history_since(since: str | datetime | None) -> str | None:
+    """Normalize the trip-history lower bound to unambiguous UTC for upstream.
+
+    In Stellantis Vehicles <= 2026.10.3, get_vehicle_trips concatenates the
+    provided value directly into a query string. An ISO 8601 `+HH:MM` offset
+    is therefore decoded as a space. A UTC `Z` suffix avoids this upstream
+    issue without requiring a private/authenticated transport fallback.
+    Reject timezone-naive input rather than silently shifting the window.
+    """
+    if since is None:
+        return None
+    parsed = datetime.fromisoformat(since) if isinstance(since, str) else since
+    if not isinstance(parsed, datetime):
+        raise TypeError("history since must be a datetime or ISO timestamp")
+    if parsed.utcoffset() is None:
+        raise ValueError("history since must include a timezone")
+    return parsed.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 async def async_fetch_historical_trips(
     client: Any,
     vehicle: Any,
     *,
-    since: str | None = None,
+    since: str | datetime | None = None,
 ) -> dict[str, list[dict[str, Any]]]:
     """Fetch/dedupe history, preferring the public upstream transport API."""
+    since = _utc_history_since(since)
     native_request = getattr(client, "get_vehicle_trips", None)
     parts = _transport_parts(client)
     if not callable(native_request) and parts is None:
