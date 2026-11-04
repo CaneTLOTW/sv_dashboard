@@ -101,3 +101,33 @@ test("live 63→67% with five observed timestamps produces four power intervals"
     assert.deepEqual(result.points.filter((_, index) => index % 2 === 1).map(p => p.soc), [64,65,66,67]);
     assert.ok(result.points.every(point => Math.abs(point.power_kw - 5.052) < 0.001));
 });
+
+test("ongoing SOC session is rendered from the bounded live sensor sample timeline", () => {
+    const start = source.indexOf("function activeChargeSession(");
+    const end = source.indexOf("function deriveServerChargeDisplay(", start);
+    assert.ok(start >= 0 && end > start, "live helper is available");
+    const activeChargeSession = vm.runInNewContext(
+        source.slice(start, end) + "\nactiveChargeSession;",
+        { chargeSessionId: time => time },
+    );
+    const samples = [63, 64, 65, 66, 67].map((soc, index) => ({
+        soc,
+        received_at: new Date(Date.parse("2026-11-04T13:00:00Z") + 300000 * index).toISOString(),
+    }));
+    const ongoing = activeChargeSession({
+        start_time: "2026-11-04T13:00:00Z",
+        soc_start: 63,
+        samples,
+        charge_type: "AC",
+        capacity_kwh: 42.1,
+    });
+    assert.equal(ongoing.active, true);
+    assert.equal(ongoing.soc_start, 63);
+    assert.equal(ongoing.soc_end, 67);
+    assert.equal(ongoing.samples.length, 5);
+    assert.ok(Math.abs(ongoing.energy_kwh - 1.684) < 1e-8);
+
+    const browser = source.slice(source.indexOf("class CodexStellantisChargeCurveBrowserCardV1"));
+    assert.match(browser, /if \(active\?\.start_time && Array\.isArray\(this\._sessions\)\)/);
+    assert.match(browser, /this\._upsertLiveCharge\(active\)/);
+});
