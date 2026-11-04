@@ -69,3 +69,13 @@ test("one unchanged SOC cannot be misrepresented as a vertical power-over-SOC cu
 test("package entry cache-busts the corrected charge chart module", () => {
     assert.match(frontend, /charge-history-card\.js\?v=0\.6\.0-beta\.40-curve2/);
 });
+
+test("in-flight Recorder query queues a follow-up when SOC changes during load", () => {
+    const browser = source.slice(source.indexOf("class CodexStellantisChargeCurveBrowserCardV1"));
+    const start = browser.indexOf("async _loadHistory() {");
+    const end = browser.indexOf("    _selectSession(event)", start);
+    const loader = browser.slice(start, end);
+    assert.match(loader, /if \(this\._loading\)\s*\{\s*\/\/[^\n]*\n[^\n]*\n\s*this\._refreshPending = true;/);
+    assert.match(loader, /this\._refreshPending = false;\s*void this\._loadHistory\(\)/);
+    assert.doesNotMatch(loader, /this\._loading\) return;/);
+});
