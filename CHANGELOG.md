@@ -4,7 +4,8 @@
 
 - Prevents missing `residual_kwh` and missing `soc` values from becoming invented 0% points through JavaScript `Number(null)`; observed SOC stays authoritative when a residual source is absent or contradictory.
 - Suppresses vertical, constant-SOC stored-power paths, allowing existing SOC-timeline reconstruction or explicit insufficient-data feedback rather than an invalid curve.
-- Coalesces changes arriving during a charge browser history query and performs one follow-up load, instead of permanently losing the most recent live charge update.
+- Updates an ongoing charge directly from the history sensor's bounded, freshly received SOC samples without a full 90-day Recorder fetch on each SOC step; coalesces changes arriving during the initial history query for one follow-up load.
+- Preserves distinct SOC percentages even when Stellantis reuses a source timestamp within a short multi-entity update fan-out window.
 - Adds regressions for observed 63–67% and 61–71% sessions, contradictory zero residuals, missing SOC, and the in-flight refresh guard; cache-busts the charge browser module.
 - No new recording points are invented. Real-vehicle acceptance is still needed to assess upstream SOC/reporting frequency and raw sample persistence.
 
