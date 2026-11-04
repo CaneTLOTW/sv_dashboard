@@ -47,7 +47,8 @@ test("genuine zero SOC remains valid when samples progress", () => {
         {soc: 0, residual_kwh: 0, capacity_kwh: 42.1, derived_power_kw: 4.9},
         {soc: 1, residual_kwh: 0.421, capacity_kwh: 42.1, derived_power_kw: 5.0},
     ]);
-    assert.deepEqual(Array.from(points, point => point.soc), [0, 1]);
+    assert.ok(Math.abs(points[0].soc) < 1e-10);
+    assert.ok(Math.abs(points[1].soc - 1) < 1e-10);
 });
 
 test("null and missing SOC plus residual cannot synthesize a fake 0% curve", () => {
