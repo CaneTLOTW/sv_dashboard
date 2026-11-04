@@ -38,7 +38,7 @@ Presence alone is not enough for calculations. The following behaviors were obse
 
 - **Confirmed from sanitized DS4 historical fixture:** `kinetic.avgSpeed=3.12` for 2.9 km in 929 s corresponds to **m/s** (11.23 km/h), not 3.12 km/h.
 - **Reported publicly for Peugeot e-208 MY2024 and MY2020:** upstream integration Issue [#703](https://github.com/andreadegiovine/homeassistant-stellantis-vehicles/issues/703) describes API values already in **km/h** (21 km in 1,598 s, reported 47.31; multiplying by 3.6 displays 170.32). This is reporter evidence, not an independently captured raw payload for every model.
-- **Reported for Citroën ë-C3:** legacy Dashboard [#42](https://github.com/CaneTLOTW/e_c3_dashboard/issues/42) and cross-reference to upstream #703. Exact raw payload units have not yet been captured for this car.
+- **Reported for Citroën ë-C3:** legacy Dashboard report #42 (linked from [SV PR #122](https://github.com/CaneTLOTW/sv_dashboard/pull/122)) and cross-reference to upstream #703. Exact raw payload units have not yet been captured for this car.
 - **Canonical policy:** match physical trip distance/time first; validate raw `kinetic.avgSpeed` interpreted as either km/h or m/s against independently derived km/h, without model-name branching. Preserve selected `speed_source`, fall back to distance/duration when ambiguous or inconsistent, and refuse unverified units if the physical timing evidence is absent.
 
 ## Architectural consequence: canonical metric strategies
