@@ -339,6 +339,47 @@ def test_direct_server_electric_energy_wins_over_local_estimates():
     assert result["energy_source"] == "stellantis_trip.energy_consumptions"
 
 
+def test_direct_zero_electric_energy_keeps_canonical_rebuild_ready():
+    """A valid direct 0 kWh measurement must not cause UnboundLocalError."""
+    raw, local = _scenario()
+    raw_before = deepcopy(raw)
+    raw["energyConsumptions"].append({"type": "Electric", "consumption": 0})
+    result = _rebuild(raw, local)
+
+    assert result["energy_kwh"] == 0
+    assert result["energy_estimated"] is False
+    assert result["energy_source"] == "stellantis_trip.energy_consumptions"
+    assert result["trip_type"] == "unknown"
+    assert result["raw_server"] == raw
+    assert raw_before["energyConsumptions"] != raw["energyConsumptions"]
+
+
+def test_direct_zero_electric_soc_drop_remains_ev_without_estimated_energy():
+    raw, _local = _scenario()
+    _set_pair(raw, "startEnergies", "Electric", "level", [70, 67])
+    raw["energyConsumptions"].append({"type": "Electric", "consumption": 0})
+    result = _rebuild(raw, None)
+
+    assert (result["soc_start"], result["soc_end"]) == (70, 67)
+    assert result["energy_kwh"] == 0
+    assert result["energy_estimated"] is False
+    assert result["trip_type"] == "ev"
+    assert result["local_evidence_match"]["matched"] is False
+
+
+def test_direct_zero_electric_with_fuel_and_soc_drop_keeps_hybrid_classification():
+    raw, _local = _scenario()
+    _set_pair(raw, "startEnergies", "Electric", "level", [70, 67])
+    raw["energyConsumptions"].append({"type": "Electric", "consumption": 0})
+    raw["energyConsumptions"][0].update({"consumption": 200, "avgConsumption": 400})
+    result = _rebuild(raw, None)
+
+    assert result["energy_kwh"] == 0
+    assert result["fuel_consumption_l"] == 2
+    assert result["energy_estimated"] is False
+    assert result["trip_type"] == "hybrid"
+
+
 def test_soc_capacity_estimate_is_marked_and_provenanced_when_residual_is_absent():
     raw, local = _scenario()
     _set_pair(raw, "startEnergies", "Electric", "level", [70, 67])

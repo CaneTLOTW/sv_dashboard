@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.1 — candidate: canonical trip-history sync recovery (NOT YET PUBLISHED)
+
+- Fixes a Python `UnboundLocalError` in canonical trip field resolution: `start_soc`/`end_soc` are now always initialized before electric-energy provenance is branched, including when the server has a legitimate direct `0 kWh` energy measurement.
+- Prevents one zero-energy trip from failing the entire server-history canonical rebuild and forcing the dashboard into legacy Recorder fallback (which contained uncorrected 3.6× trip speeds and a spurious 43-km overnight composite).
+- Adds regression tests for direct zero-electric telemetry without local observations, electric-only trips and dual-energy / Hybrid classifications; preserves the zero-value semantics and raw server evidence.
+- **Candidate only:** must be installed and validated at exact `develop` SHA in owner Home Assistant before promotion or a stable 0.7.1 release. The separate upstream charging-state/live-curve inconsistency is not claimed resolved; see Issue #127.
+
 ## 0.7.0 — stable release: live charge curves, trip speed units and upstream history (2026-11-04)
 
 Stable publication authorized by the maintainer after source and GitHub CI validation. **New 0.7.0 behavior has not yet passed an owner live/runtime acceptance round; external DS N°4 Hybrid feedback also remains pending.** Known owner trip-boundary anomaly: overlapping 04 Nov trips around 08:18, including a 14 h 28 min duration, still needs sanitized raw evidence. The stable channel is not proof that these issues are resolved. The immutable beta.40 prerelease remains available for comparison.

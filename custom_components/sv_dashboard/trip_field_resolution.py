@@ -429,6 +429,12 @@ def resolve_trip_fields(trip: dict[str, Any], local: dict[str, Any] | None = Non
         else:
             _field_source(resolved, "fuel_consumption_l_100km", "unknown")
 
+    # SOC is needed for trip classification regardless of whether an exact
+    # energy-consumption measurement is present. A direct 0 kWh report must
+    # not skip initialization and abort the whole server-history rebuild.
+    start_soc = _number(resolved.get("soc_start"))
+    end_soc = _number(resolved.get("soc_end"))
+
     raw = resolved.get("raw_server") if isinstance(resolved.get("raw_server"), dict) else {}
     electric_entries = raw.get("energyConsumptions")
     direct_electric = None
@@ -481,7 +487,6 @@ def resolve_trip_fields(trip: dict[str, Any], local: dict[str, Any] | None = Non
                 if start_value is not None and end_value is not None and start_value > end_value:
                     energy = round(start_value - end_value, 3)
                     energy_source = "sv_local_trip_residual_energy_delta"
-        start_soc, end_soc = _number(resolved.get("soc_start")), _number(resolved.get("soc_end"))
         capacity = _number(resolved.get("capacity_kwh"))
         if capacity is None and local is not None:
             capacity = _number(local.get("capacity_kwh"))
