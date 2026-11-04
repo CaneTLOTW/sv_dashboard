@@ -69,6 +69,30 @@ def test_same_source_timestamp_only_coalesces_bounded_entity_fanout():
     assert MODULE.charge_samples_same_payload(fanout, later) is False
 
 
+def test_short_fanout_window_never_swallows_real_percent_change():
+    initial = _sample(
+        "2026-11-04T13:15:00+00:00",
+        63,
+        trigger_metric=None,
+    )
+    next_soc = _sample(
+        "2026-11-04T13:15:04+00:00",
+        64,
+        trigger_metric="soc",
+    )
+    assert MODULE.charge_samples_same_payload(initial, next_soc) is False
+
+    # Conversely, a residual-energy entity update with unchanged SOC remains
+    # a single co-timestamp fan-out rather than fabricating two observations.
+    residual_fanout = _sample(
+        "2026-11-04T13:15:04+00:00",
+        63,
+        residual=27.0,
+        trigger_metric="residual",
+    )
+    assert MODULE.charge_samples_same_payload(initial, residual_fanout) is True
+
+
 def test_frozen_source_time_does_not_collapse_real_soc_progression():
     rows = MODULE.merge_charge_samples(
         [],

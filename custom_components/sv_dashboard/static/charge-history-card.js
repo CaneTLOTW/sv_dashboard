@@ -17,16 +17,26 @@ function storedPowerCurve(samples, fallbackCapacity = null) {
             : Number.isFinite(fallback) && fallback > 0
                 ? fallback
                 : null;
-        const residual = Number(sample?.residual_kwh);
-        const rawSoc = Number(sample?.soc);
-        let soc = Number.isFinite(rawSoc) ? rawSoc : null;
-        if (capacity !== null && Number.isFinite(residual) && residual >= 0) {
+        // Number(null) is 0: an unavailable residual must never override an
+        // observed 63-67% SOC with 0%, collapsing the graph to x=0.
+        const rawSocValue = sample?.soc;
+        const rawSoc = rawSocValue === null || rawSocValue === undefined || rawSocValue === ""
+            ? null : Number(rawSocValue);
+        let soc = rawSoc !== null && Number.isFinite(rawSoc) && rawSoc >= 0 && rawSoc <= 100
+            ? rawSoc : null;
+        const residualValue = sample?.residual_kwh;
+        const residual = residualValue === null || residualValue === undefined || residualValue === ""
+            ? null : Number(residualValue);
+        if (capacity !== null && residual !== null && Number.isFinite(residual) && residual >= 0) {
             const residualSoc = residual / capacity * 100;
-            if (Number.isFinite(residualSoc) && residualSoc >= 0 && residualSoc <= 100) {
+            // Residual energy gives sub-percent precision only when it agrees
+            // with a real SOC reading. Some vehicles report 0 as a sentinel.
+            if (Number.isFinite(residualSoc) && residualSoc >= 0 && residualSoc <= 100
+                && (soc === null || Math.abs(residualSoc - soc) <= 5)) {
                 soc = residualSoc;
             }
         }
-        if (!Number.isFinite(soc)) continue;
+        if (soc === null) continue;
         const timestamp = Date.parse(sample?.power_observed_at || sample?.received_at || sample?.source_time || sample?.time || "");
         points.push({
             timestamp: Number.isFinite(timestamp) ? timestamp : null,
@@ -34,7 +44,48 @@ function storedPowerCurve(samples, fallbackCapacity = null) {
             power_kw: power,
         });
     }
-    return points.length >= 2 ? points : [];
+    // Power over SOC needs actual horizontal SOC progression; constant
+    // readings should use the existing fallback or show "not enough points".
+    if (points.length < 2) return [];
+    const values = points.map((point) => point.soc);
+    return Math.max(...values) - Math.min(...values) >= 0.1 ? points : [];
+}
+
+function activeChargeSession(activeCharge, fallbackCapacity = null) {
+    if (!activeCharge?.start_time) return null;
+    const samples = (Array.isArray(activeCharge.samples) ? activeCharge.samples : [])
+        .filter((sample) => sample?.soc !== null && sample?.soc !== undefined);
+    const startRaw = activeCharge.soc_start;
+    const startSoc = startRaw === null || startRaw === undefined ? null : Number(startRaw);
+    const observedStart = samples[0]?.soc === undefined ? null : Number(samples[0].soc);
+    const resolvedStartSoc = Number.isFinite(startSoc) ? startSoc : observedStart;
+    const lastSoc = samples.length ? Number(samples.at(-1).soc) : resolvedStartSoc;
+    const rawCapacity = Number(activeCharge.capacity_kwh);
+    const fallback = Number(fallbackCapacity);
+    const capacity = Number.isFinite(rawCapacity) && rawCapacity > 0
+        ? rawCapacity : Number.isFinite(fallback) && fallback > 0 ? fallback : null;
+    const end = new Date().toISOString();
+    const durationSeconds = (Date.parse(end) - Date.parse(activeCharge.start_time)) / 1000;
+    const energyKwh = Number.isFinite(resolvedStartSoc) && Number.isFinite(lastSoc) && capacity !== null
+        ? Math.max(0, (lastSoc - resolvedStartSoc) * capacity / 100)
+        : null;
+    return {
+        id: chargeSessionId(activeCharge.start_time),
+        start: activeCharge.start_time,
+        end,
+        duration_seconds: durationSeconds > 0 ? durationSeconds : null,
+        soc_start: Number.isFinite(resolvedStartSoc) ? resolvedStartSoc : null,
+        soc_end: Number.isFinite(lastSoc) ? lastSoc : null,
+        capacity_kwh: capacity,
+        energy_kwh: energyKwh,
+        average_power_kw: energyKwh !== null && durationSeconds > 0
+            ? energyKwh / (durationSeconds / 3600) : null,
+        charge_type: activeCharge.charge_type || "—",
+        samples,
+        has_charge_curve: samples.length >= 2,
+        estimated: true,
+        active: true,
+    };
 }
 
 function deriveServerChargeDisplay(charge, fallbackCapacity = null) {
@@ -637,8 +688,26 @@ class CodexStellantisChargeCurveBrowserCardV1 extends LitElement {
         const updateKey = this._entityIds().map((entityId) => hass.states[entityId]?.last_updated ?? "").join("|");
         if (updateKey !== this._lastUpdated) {
             this._lastUpdated = updateKey;
-            this._loadHistory();
+            const active = this._config.server_entity
+                ? hass.states[this._config.server_entity]?.attributes?.active_charge
+                : null;
+            if (active?.start_time && Array.isArray(this._sessions)) {
+                // An active charge already publishes a bounded SOC timeline on
+                // the history sensor. Refresh it immediately, without re-reading
+                // 90 days of Recorder for each received percentage.
+                this._upsertLiveCharge(active);
+            } else {
+                this._loadHistory();
+            }
         }
+    }
+
+    _upsertLiveCharge(active) {
+        const session = activeChargeSession(active, this._config?.fallback_capacity_kwh);
+        if (!session) return;
+        const others = (this._sessions || []).filter((row) => row.id !== session.id);
+        this._sessions = [session, ...others].slice(0, Number(this._config.max_sessions));
+        this._applyStoredSelection();
     }
 
     _entityIds() {
@@ -685,7 +754,13 @@ class CodexStellantisChargeCurveBrowserCardV1 extends LitElement {
     }
 
     async _loadHistory() {
-        if (!this._hass || !this._config || this._loading) return;
+        if (!this._hass || !this._config) return;
+        if (this._loading) {
+            // The setter has already seen this entity update. Queue one
+            // follow-up instead of permanently losing it during a WS read.
+            this._refreshPending = true;
+            return;
+        }
         this._loading = true;
         this._error = null;
         try {
@@ -743,40 +818,13 @@ class CodexStellantisChargeCurveBrowserCardV1 extends LitElement {
                     mergedSessions.push(serverSession);
                 }
             }
-            const activeCharge = serverState?.attributes?.active_charge;
-            const activeSamples = Array.isArray(activeCharge?.samples)
-                ? activeCharge.samples.filter((sample) => sample?.soc !== null && sample?.soc !== undefined)
-                : [];
-            if (activeCharge?.start_time && activeSamples.length >= 2) {
-                const start = activeCharge.start_time;
-                const end = new Date().toISOString();
-                const startSoc = Number(activeCharge.soc_start);
-                const endSoc = Number(activeSamples.at(-1)?.soc);
-                const capacity = Number(activeCharge.capacity_kwh) > 0
-                    ? Number(activeCharge.capacity_kwh)
-                    : Number(this._config.fallback_capacity_kwh);
-                const energy = Number.isFinite(startSoc) && Number.isFinite(endSoc)
-                    ? Math.max(0, (endSoc - startSoc) * capacity / 100)
-                    : null;
-                const duration = (Date.parse(end) - Date.parse(start)) / 1000;
-                const activeSession = {
-                    id: chargeSessionId(start),
-                    start,
-                    end,
-                    duration_seconds: duration,
-                    soc_start: Number.isFinite(startSoc) ? startSoc : null,
-                    soc_end: Number.isFinite(endSoc) ? endSoc : null,
-                    capacity_kwh: capacity,
-                    energy_kwh: energy,
-                    average_power_kw: energy !== null && duration > 0 ? energy / (duration / 3600) : null,
-                    charge_type: activeCharge.charge_type || "—",
-                    samples: activeSamples,
-                    has_charge_curve: true,
-                    estimated: true,
-                    active: true,
-                };
-                const activeIndex = mergedSessions.findIndex((session) => session.id === activeSession.id);
-                if (activeIndex >= 0) mergedSessions[activeIndex] = { ...mergedSessions[activeIndex], ...activeSession };
+            const activeSession = activeChargeSession(
+                serverState?.attributes?.active_charge,
+                this._config.fallback_capacity_kwh,
+            );
+            if (activeSession) {
+                const index = mergedSessions.findIndex((row) => row.id === activeSession.id);
+                if (index >= 0) mergedSessions[index] = activeSession;
                 else mergedSessions.push(activeSession);
             }
             mergedSessions.sort((left, right) => Date.parse(right.start) - Date.parse(left.start));
@@ -789,6 +837,10 @@ class CodexStellantisChargeCurveBrowserCardV1 extends LitElement {
             this._error = error?.message ?? String(error);
         } finally {
             this._loading = false;
+            if (this._refreshPending) {
+                this._refreshPending = false;
+                void this._loadHistory();
+            }
         }
     }
 
