@@ -35,6 +35,7 @@ from .const import (
 )
 from .charge_policy import allow_soc_only_charge_reconstruction
 from .trip_repair import local_trip_backfill_quality, repair_trip_odometer_continuity
+from .trip_speed import resolve_trip_speed
 from .trip_field_resolution import resolve_canonical_trip_fields
 from .entity_identity import vehicle_vin
 from .history_reconcile import (
@@ -250,21 +251,8 @@ def normalize_trip(
 
     kinetic = raw.get("kinetic") if isinstance(raw.get("kinetic"), dict) else {}
     raw_avg_speed = _number(kinetic.get("avgSpeed", kinetic.get("averageSpeed")))
-    # The verified SV API emits avgSpeed in m/s.  Treat outliers as absent
-    # and fall back to distance/duration instead of displaying a wrong unit.
-    api_speed_kmh = raw_avg_speed * 3.6 if raw_avg_speed is not None else None
-    fallback_speed_kmh = (
-        distance / (duration / 3600)
-        if distance is not None and duration and duration > 0
-        else None
-    )
-    speed_from_api = api_speed_kmh is not None and 0 <= api_speed_kmh <= _MAX_TRIP_SPEED_KMH
-    fallback_speed_valid = (
-        fallback_speed_kmh is not None
-        and 0 <= fallback_speed_kmh <= _MAX_TRIP_SPEED_KMH
-    )
-    average_speed_kmh = api_speed_kmh if speed_from_api else (
-        fallback_speed_kmh if fallback_speed_valid else None
+    average_speed_kmh, api_speed_kmh, speed_source, speed_flags = resolve_trip_speed(
+        raw_avg_speed, distance, duration, max_speed_kmh=_MAX_TRIP_SPEED_KMH
     )
     valid_for_statistics, quality_flags = _trip_quality(
         distance,
@@ -273,10 +261,8 @@ def normalize_trip(
         end_mileage,
         average_speed_kmh,
     )
-    if api_speed_kmh is not None and not speed_from_api:
-        quality_flags.append("source_speed_outlier_fallback_used")
-    if fallback_speed_kmh is not None and not fallback_speed_valid:
-        quality_flags.append("derived_speed_outlier")
+    quality_flags.extend(speed_flags)
+    if "derived_speed_outlier" in speed_flags:
         valid_for_statistics = False
     if start_mileage == 0 and (end_mileage or 0) > 0:
         quality_flags.append("zero_start_odometer_sentinel")
@@ -328,7 +314,7 @@ def normalize_trip(
         "average_speed_kmh": round(average_speed_kmh, 1) if average_speed_kmh is not None else None,
         "average_speed": round(average_speed_kmh, 1) if average_speed_kmh is not None else None,
         "raw_average_speed_kmh": round(api_speed_kmh, 1) if api_speed_kmh is not None else None,
-        "speed_source": "stellantis_mps" if speed_from_api else "distance_duration_fallback",
+        "speed_source": speed_source,
         "valid_for_statistics": valid_for_statistics,
         "quality_flags": quality_flags,
         "raw_start_position": raw.get("startPosition"),
