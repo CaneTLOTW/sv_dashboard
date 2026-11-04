@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — upstream trip-history UTC filter compatibility
+
+- Normalizes incremental history `since` values to an explicit UTC `YYYY-MM-DDTHH:MM:SSZ` timestamp at the shared native/legacy upstream transport boundary; prevents the unescaped `+` timezone offset from being decoded as a space by Stellantis Vehicles ≤2026.10.3 (upstream PR #706).
+- Preserves the original two-hour incremental overlap, pagination, full sync and credential/session ownership; no upstream code modifications or new product settings.
+- Adds transport regressions for UTC/positive offsets, Berlin summer/winter and autumn DST fold, missing offsets, native pagination and legacy encoded query strings.
+- Associated compatibility work: [#123](https://github.com/CaneTLOTW/sv_dashboard/issues/123). No release or runtime acceptance claimed.
+
 ## Unreleased — completed-trip average speed mixed-unit compatibility
 
 - Stops assuming Stellantis `kinetic.avgSpeed` is universally m/s. Uses completed-trip distance/duration to validate m/s versus km/h, preventing the 3.6× error reported by the e-208/ë-C3 community.
