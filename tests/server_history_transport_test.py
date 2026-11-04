@@ -6,7 +6,9 @@ import asyncio
 import importlib.util
 import sys
 import types
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 from urllib.parse import parse_qs, urlsplit
 
 
@@ -141,8 +143,8 @@ def test_native_transport_is_preferred_and_paginates():
 
     assert [item["id"] for item in result["trips"]] == ["a", "b", "c"]
     assert client.calls == [
-        (vehicle, since, None),
-        (vehicle, since, "one"),
+        (vehicle, "2026-09-01T00:00:00Z", None),
+        (vehicle, "2026-09-01T00:00:00Z", "one"),
     ]
 
 
@@ -193,10 +195,61 @@ def test_since_pagination_dedupe_and_cycle_guard():
     assert [item["id"] for item in result["trips"]] == ["a", "b", "c", "d"]
     assert len(client.urls) == 3
     first_query = parse_qs(urlsplit(client.urls[0]).query)
-    assert first_query["timestamps"] == ["2026-09-01T00:00:00+00:00/"]
+    assert first_query["timestamps"] == ["2026-09-01T00:00:00Z/"]
+    assert "+" not in client.urls[0]
+    assert "%2B" not in client.urls[0]
     assert first_query["distance"] == ["0.1-"]
     assert parse_qs(urlsplit(client.urls[1]).query)["pageToken"] == ["one"]
     assert all(headers["Authorization"] == "Bearer [filtered]" for headers in client.headers)
+
+
+def test_history_since_is_utc_and_dst_safe():
+    """The same local wall time can represent two different UTC instants."""
+    berlin = ZoneInfo("Europe/Berlin")
+    winter = datetime(2026, 1, 15, 12, 34, tzinfo=berlin)
+    summer = datetime(2026, 7, 15, 12, 34, tzinfo=berlin)
+    fall_first = datetime(2026, 10, 25, 2, 30, tzinfo=berlin, fold=0)
+    fall_second = datetime(2026, 10, 25, 2, 30, tzinfo=berlin, fold=1)
+
+    assert MODULE._utc_history_since(winter) == "2026-01-15T11:34:00Z"
+    assert MODULE._utc_history_since(summer) == "2026-07-15T10:34:00Z"
+    assert MODULE._utc_history_since(fall_first) == "2026-10-25T00:30:00Z"
+    assert MODULE._utc_history_since(fall_second) == "2026-10-25T01:30:00Z"
+    assert MODULE._utc_history_since("2026-10-25T02:30:00+01:00") == "2026-10-25T01:30:00Z"
+    assert MODULE._utc_history_since("2026-03-29T03:30:00+02:00") == "2026-03-29T01:30:00Z"
+    assert MODULE._utc_history_since("2026-09-01T00:00:00Z") == "2026-09-01T00:00:00Z"
+    assert MODULE._utc_history_since(None) is None
+
+
+def test_history_since_rejects_naive_timestamps():
+    for invalid in ("2026-10-25T02:30:00", datetime(2026, 10, 25, 2, 30)):
+        try:
+            MODULE._utc_history_since(invalid)
+        except ValueError as error:
+            assert "timezone" in str(error)
+        else:
+            raise AssertionError("timezone-naive history window must fail closed")
+
+
+def test_native_transport_receives_utc_z_even_for_non_utc_offset():
+    client = NativeOnlyClient([one_page("utc")])
+    vehicle = {"vehicle_id": "vehicle-1"}
+    result = asyncio.run(MODULE.async_fetch_historical_trips(
+        client, vehicle, since="2026-11-01T03:15:00+01:00"
+    ))
+    assert [item["id"] for item in result["trips"]] == ["utc"]
+    assert client.calls == [(vehicle, "2026-11-01T02:15:00Z", None)]
+
+
+def test_legacy_transport_uses_same_canonical_utc_filter():
+    install_fake_upstream_constants()
+    client = FakeClient([one_page("legacy")])
+    result = asyncio.run(MODULE.async_fetch_historical_trips(
+        client, {"vehicle_id": "vehicle-1"}, since="2026-07-15T12:34:00+02:00"
+    ))
+    assert [item["id"] for item in result["trips"]] == ["legacy"]
+    assert parse_qs(urlsplit(client.urls[0]).query)["timestamps"] == ["2026-07-15T10:34:00Z/"]
+    assert "+" not in client.urls[0]
 
 
 def test_stranded_closed_session_is_cleared_before_request():
@@ -342,6 +395,10 @@ if __name__ == "__main__":
     test_native_transport_is_preferred_and_paginates()
     test_native_transport_wins_over_legacy_private_helpers()
     test_since_pagination_dedupe_and_cycle_guard()
+    test_history_since_is_utc_and_dst_safe()
+    test_history_since_rejects_naive_timestamps()
+    test_native_transport_receives_utc_z_even_for_non_utc_offset()
+    test_legacy_transport_uses_same_canonical_utc_filter()
     test_stranded_closed_session_is_cleared_before_request()
     test_closed_connector_uses_upstream_cleanup_before_recreation()
     test_closed_connector_race_retries_exactly_once()
