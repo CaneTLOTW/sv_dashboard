@@ -51,6 +51,43 @@ function storedPowerCurve(samples, fallbackCapacity = null) {
     return Math.max(...values) - Math.min(...values) >= 0.1 ? points : [];
 }
 
+function activeChargeSession(activeCharge, fallbackCapacity = null) {
+    if (!activeCharge?.start_time) return null;
+    const samples = (Array.isArray(activeCharge.samples) ? activeCharge.samples : [])
+        .filter((sample) => sample?.soc !== null && sample?.soc !== undefined);
+    const startRaw = activeCharge.soc_start;
+    const startSoc = startRaw === null || startRaw === undefined ? null : Number(startRaw);
+    const observedStart = samples[0]?.soc === undefined ? null : Number(samples[0].soc);
+    const resolvedStartSoc = Number.isFinite(startSoc) ? startSoc : observedStart;
+    const lastSoc = samples.length ? Number(samples.at(-1).soc) : resolvedStartSoc;
+    const rawCapacity = Number(activeCharge.capacity_kwh);
+    const fallback = Number(fallbackCapacity);
+    const capacity = Number.isFinite(rawCapacity) && rawCapacity > 0
+        ? rawCapacity : Number.isFinite(fallback) && fallback > 0 ? fallback : null;
+    const end = new Date().toISOString();
+    const durationSeconds = (Date.parse(end) - Date.parse(activeCharge.start_time)) / 1000;
+    const energyKwh = Number.isFinite(resolvedStartSoc) && Number.isFinite(lastSoc) && capacity !== null
+        ? Math.max(0, (lastSoc - resolvedStartSoc) * capacity / 100)
+        : null;
+    return {
+        id: chargeSessionId(activeCharge.start_time),
+        start: activeCharge.start_time,
+        end,
+        duration_seconds: durationSeconds > 0 ? durationSeconds : null,
+        soc_start: Number.isFinite(resolvedStartSoc) ? resolvedStartSoc : null,
+        soc_end: Number.isFinite(lastSoc) ? lastSoc : null,
+        capacity_kwh: capacity,
+        energy_kwh: energyKwh,
+        average_power_kw: energyKwh !== null && durationSeconds > 0
+            ? energyKwh / (durationSeconds / 3600) : null,
+        charge_type: activeCharge.charge_type || "—",
+        samples,
+        has_charge_curve: samples.length >= 2,
+        estimated: true,
+        active: true,
+    };
+}
+
 function deriveServerChargeDisplay(charge, fallbackCapacity = null) {
     const observed = charge.quality === "observed";
     const configuredFallback = Number(fallbackCapacity);
@@ -651,8 +688,26 @@ class CodexStellantisChargeCurveBrowserCardV1 extends LitElement {
         const updateKey = this._entityIds().map((entityId) => hass.states[entityId]?.last_updated ?? "").join("|");
         if (updateKey !== this._lastUpdated) {
             this._lastUpdated = updateKey;
-            this._loadHistory();
+            const active = this._config.server_entity
+                ? hass.states[this._config.server_entity]?.attributes?.active_charge
+                : null;
+            if (active?.start_time && Array.isArray(this._sessions)) {
+                // An active charge already publishes a bounded SOC timeline on
+                // the history sensor. Refresh it immediately, without re-reading
+                // 90 days of Recorder for each received percentage.
+                this._upsertLiveCharge(active);
+            } else {
+                this._loadHistory();
+            }
         }
+    }
+
+    _upsertLiveCharge(active) {
+        const session = activeChargeSession(active, this._config?.fallback_capacity_kwh);
+        if (!session) return;
+        const others = (this._sessions || []).filter((row) => row.id !== session.id);
+        this._sessions = [session, ...others].slice(0, Number(this._config.max_sessions));
+        this._applyStoredSelection();
     }
 
     _entityIds() {
@@ -763,40 +818,13 @@ class CodexStellantisChargeCurveBrowserCardV1 extends LitElement {
                     mergedSessions.push(serverSession);
                 }
             }
-            const activeCharge = serverState?.attributes?.active_charge;
-            const activeSamples = Array.isArray(activeCharge?.samples)
-                ? activeCharge.samples.filter((sample) => sample?.soc !== null && sample?.soc !== undefined)
-                : [];
-            if (activeCharge?.start_time && activeSamples.length >= 2) {
-                const start = activeCharge.start_time;
-                const end = new Date().toISOString();
-                const startSoc = Number(activeCharge.soc_start);
-                const endSoc = Number(activeSamples.at(-1)?.soc);
-                const capacity = Number(activeCharge.capacity_kwh) > 0
-                    ? Number(activeCharge.capacity_kwh)
-                    : Number(this._config.fallback_capacity_kwh);
-                const energy = Number.isFinite(startSoc) && Number.isFinite(endSoc)
-                    ? Math.max(0, (endSoc - startSoc) * capacity / 100)
-                    : null;
-                const duration = (Date.parse(end) - Date.parse(start)) / 1000;
-                const activeSession = {
-                    id: chargeSessionId(start),
-                    start,
-                    end,
-                    duration_seconds: duration,
-                    soc_start: Number.isFinite(startSoc) ? startSoc : null,
-                    soc_end: Number.isFinite(endSoc) ? endSoc : null,
-                    capacity_kwh: capacity,
-                    energy_kwh: energy,
-                    average_power_kw: energy !== null && duration > 0 ? energy / (duration / 3600) : null,
-                    charge_type: activeCharge.charge_type || "—",
-                    samples: activeSamples,
-                    has_charge_curve: true,
-                    estimated: true,
-                    active: true,
-                };
-                const activeIndex = mergedSessions.findIndex((session) => session.id === activeSession.id);
-                if (activeIndex >= 0) mergedSessions[activeIndex] = { ...mergedSessions[activeIndex], ...activeSession };
+            const activeSession = activeChargeSession(
+                serverState?.attributes?.active_charge,
+                this._config.fallback_capacity_kwh,
+            );
+            if (activeSession) {
+                const index = mergedSessions.findIndex((row) => row.id === activeSession.id);
+                if (index >= 0) mergedSessions[index] = activeSession;
                 else mergedSessions.push(activeSession);
             }
             mergedSessions.sort((left, right) => Date.parse(right.start) - Date.parse(left.start));
