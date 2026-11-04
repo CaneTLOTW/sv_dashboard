@@ -17,16 +17,26 @@ function storedPowerCurve(samples, fallbackCapacity = null) {
             : Number.isFinite(fallback) && fallback > 0
                 ? fallback
                 : null;
-        const residual = Number(sample?.residual_kwh);
-        const rawSoc = Number(sample?.soc);
-        let soc = Number.isFinite(rawSoc) ? rawSoc : null;
-        if (capacity !== null && Number.isFinite(residual) && residual >= 0) {
+        // Number(null) is 0: an unavailable residual must never override an
+        // observed 63-67% SOC with 0%, collapsing the graph to x=0.
+        const rawSocValue = sample?.soc;
+        const rawSoc = rawSocValue === null || rawSocValue === undefined || rawSocValue === ""
+            ? null : Number(rawSocValue);
+        let soc = rawSoc !== null && Number.isFinite(rawSoc) && rawSoc >= 0 && rawSoc <= 100
+            ? rawSoc : null;
+        const residualValue = sample?.residual_kwh;
+        const residual = residualValue === null || residualValue === undefined || residualValue === ""
+            ? null : Number(residualValue);
+        if (capacity !== null && residual !== null && Number.isFinite(residual) && residual >= 0) {
             const residualSoc = residual / capacity * 100;
-            if (Number.isFinite(residualSoc) && residualSoc >= 0 && residualSoc <= 100) {
+            // Residual energy gives sub-percent precision only when it agrees
+            // with a real SOC reading. Some vehicles report 0 as a sentinel.
+            if (Number.isFinite(residualSoc) && residualSoc >= 0 && residualSoc <= 100
+                && (soc === null || Math.abs(residualSoc - soc) <= 5)) {
                 soc = residualSoc;
             }
         }
-        if (!Number.isFinite(soc)) continue;
+        if (soc === null) continue;
         const timestamp = Date.parse(sample?.power_observed_at || sample?.received_at || sample?.source_time || sample?.time || "");
         points.push({
             timestamp: Number.isFinite(timestamp) ? timestamp : null,
@@ -34,7 +44,11 @@ function storedPowerCurve(samples, fallbackCapacity = null) {
             power_kw: power,
         });
     }
-    return points.length >= 2 ? points : [];
+    // Power over SOC needs actual horizontal SOC progression; constant
+    // readings should use the existing fallback or show "not enough points".
+    if (points.length < 2) return [];
+    const values = points.map((point) => point.soc);
+    return Math.max(...values) - Math.min(...values) >= 0.1 ? points : [];
 }
 
 function deriveServerChargeDisplay(charge, fallbackCapacity = null) {
