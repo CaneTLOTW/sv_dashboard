@@ -293,7 +293,11 @@ def repair_trip_odometer_continuity(
         original_end = end
         original_distance = _number(trip.get("distance_km"))
         raw_speed = _number(trip.get("raw_average_speed_kmh"))
-        source_speed_usable = raw_speed is not None and 0 <= raw_speed <= _MAX_TRIP_SPEED_KMH
+        source_speed_usable = (
+            trip.get("speed_source") in ("stellantis_mps", "stellantis_kmh")
+            and raw_speed is not None
+            and 0 <= raw_speed <= _MAX_TRIP_SPEED_KMH
+        )
         repaired_speed = raw_speed if source_speed_usable else derived_speed
 
         trip["source_start_mileage_km"] = original_start
@@ -307,7 +311,9 @@ def repair_trip_odometer_continuity(
         trip["distance_km"] = candidate_distance
         trip["average_speed_kmh"] = round(repaired_speed, 1) if repaired_speed is not None else None
         trip["average_speed"] = round(repaired_speed, 1) if repaired_speed is not None else None
-        trip["speed_source"] = "stellantis_mps" if source_speed_usable else "odometer_continuity_fallback"
+        trip["speed_source"] = (
+            trip.get("speed_source") if source_speed_usable else "odometer_continuity_fallback"
+        )
 
         energy = _number(trip.get("energy_kwh"))
         consumption = round(energy / candidate_distance * 100, 2) if energy is not None else None

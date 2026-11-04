@@ -6,6 +6,10 @@ const source = fs.readFileSync(
   new URL("../custom_components/sv_dashboard/server_history.py", import.meta.url),
   "utf8",
 );
+const speedResolver = fs.readFileSync(
+  new URL("../custom_components/sv_dashboard/trip_speed.py", import.meta.url),
+  "utf8",
+);
 const sensors = fs.readFileSync(
   new URL("../custom_components/sv_dashboard/sensor.py", import.meta.url),
   "utf8",
@@ -16,8 +20,9 @@ const tripCard = fs.readFileSync(
 );
 
 test("trip normalization refuses impossible distance/time speed fallbacks", () => {
-  assert.match(source, /fallback_speed_valid/);
-  assert.match(source, /derived_speed_outlier/);
+  assert.match(source, /resolve_trip_speed\(/);
+  assert.match(speedResolver, /source_speed_outlier_fallback_used/);
+  assert.match(speedResolver, /derived_speed_outlier/);
   assert.match(source, /valid_for_statistics = False/);
   assert.match(source, /zero_start_odometer_sentinel/);
   assert.match(source, /repair_trip_odometer_continuity\(trips, local_trips\)/);

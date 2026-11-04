@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — completed-trip average speed mixed-unit compatibility
+
+- Stops assuming Stellantis `kinetic.avgSpeed` is universally m/s. Uses completed-trip distance/duration to validate m/s versus km/h, preventing the 3.6× error reported by the e-208/ë-C3 community.
+- Preserves validated `stellantis_mps` / `stellantis_kmh` provenance through canonical history and odometer repair; ambiguous or contradictory source units fall back to the independently derived speed with explicit quality flags.
+- Adds regression coverage for real sanitized DS4 m/s and reported Peugeot km/h patterns, invalid distances, ambiguous units and missing boundaries. No version bump, package release or main promotion in this change.
+
 ## 0.6.0-beta.40 canonical trip/charge stabilization prerelease
 
 - Finishes the canonical Trip History field resolver: physical server-trip identity remains authoritative, while SOC, electric range, fuel level/range and consumption boundaries are resolved independently from provenance-ranked local evidence.

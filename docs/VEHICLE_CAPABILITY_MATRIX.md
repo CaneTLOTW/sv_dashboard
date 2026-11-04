@@ -34,6 +34,13 @@ Presence alone is not enough for calculations. The following behaviors were obse
 | DS N°4, MY2026 | `ignition=StartUp` during both dedicated test drives | **Live.** First drive: 2369.1 → 2369.3 → 2369.9 → 2370.7 → 2371.3 km while `StartUp`; second drive: 2371.6 → 2371.9 → 2372.4 → 2373.0 → 2373.9 → 2374.4 → 2374.8 km while `StartUp`. | **Unavailable:** the live field is absent, not merely zero/unavailable. | `Inactive → Active` after opening/entering; remained Active through both drives and a final Start/Stop; returned Inactive only after leaving/closing. This does **not** support interpreting `Active` as a triggered theft alarm. | `odometer=live`; `fuel_instant=absent`; alarm semantics vehicle-specific/unresolved |
 | DS4 E-Tense Hybrid 225, MY2022 | `ignition=StartUp` plus `kinetic.moving` and speed | **Live.** Supplied drive log shows 63683.5 → 63685.2 → 63687.1 km during the first drive and 63689.2 → 63690.7 → 63692.2 → 63694.1 → 63695.4 km during the second. | **Present but untrusted for live display:** `instant=0.0` while vehicle is moving at nonzero speed. | Active throughout supplied window; semantics not established from this sample alone. | `odometer=live`; `fuel_instant=present_untrusted` |
 
+## Completed-trip speed units (2026-11-04 evidence)
+
+- **Confirmed from sanitized DS4 historical fixture:** `kinetic.avgSpeed=3.12` for 2.9 km in 929 s corresponds to **m/s** (11.23 km/h), not 3.12 km/h.
+- **Reported publicly for Peugeot e-208 MY2024 and MY2020:** upstream integration Issue [#703](https://github.com/andreadegiovine/homeassistant-stellantis-vehicles/issues/703) describes API values already in **km/h** (21 km in 1,598 s, reported 47.31; multiplying by 3.6 displays 170.32). This is reporter evidence, not an independently captured raw payload for every model.
+- **Reported for Citroën ë-C3:** legacy Dashboard report #42 (linked from [SV PR #122](https://github.com/CaneTLOTW/sv_dashboard/pull/122)) and cross-reference to upstream #703. Exact raw payload units have not yet been captured for this car.
+- **Canonical policy:** match physical trip distance/time first; validate raw `kinetic.avgSpeed` interpreted as either km/h or m/s against independently derived km/h, without model-name branching. Preserve selected `speed_source`, fall back to distance/duration when ambiguous or inconsistent, and refuse unverified units if the physical timing evidence is absent.
+
 ## Architectural consequence: canonical metric strategies
 
 SV Dashboard must not make the generated dashboard branch on model names. Instead, each user-facing metric should have a **canonical strategy** with explicit availability, provenance and quality.
