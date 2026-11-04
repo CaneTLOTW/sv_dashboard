@@ -564,5 +564,26 @@ def run():
     print(f"{len(tests)} trip field resolution tests passed")
 
 
+
+
+def test_server_zero_recovers_energy_from_persisted_metrics_soc_fields():
+    raw, local = _scenario()
+    raw["energyConsumptions"].append({"type": "Electric", "consumption": 0})
+    local["soc_start"] = local.pop("start_soc")
+    local["soc_end"] = local.pop("end_soc")
+    local["energy_kwh"] = 1.2
+    before = deepcopy(local)
+    result = _rebuild(raw, local)
+    assert result["energy_kwh"] == 1.2
+    assert result["energy_estimated"] is True
+    assert result["energy_source"] == "sv_matched_local_soc_capacity_estimate"
+    assert result["energy_per_100_km"] == 57.14
+    assert local == before
+    local["soc_end"] = local["soc_start"]
+    assert _rebuild(raw, local)["energy_kwh"] == 0
+    local.pop("soc_end")
+    assert _rebuild(raw, local)["energy_kwh"] == 0
+
+
 if __name__ == "__main__":
     run()
