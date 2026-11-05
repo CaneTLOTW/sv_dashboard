@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from decimal import Decimal, ROUND_HALF_UP
 import math
 from typing import Any
 
@@ -49,6 +50,11 @@ def _number(value: Any) -> float | None:
     except (TypeError, ValueError):
         return None
     return result if math.isfinite(result) else None
+
+
+def _consumption_per_100_km(energy: float, distance: float) -> float:
+    value = Decimal(str(energy)) * Decimal("100") / Decimal(str(distance))
+    return float(value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
 
 def _time(value: Any) -> datetime | None:
@@ -394,6 +400,47 @@ def _corroborated_local_soc_energy(local: dict[str, Any] | None) -> float | None
     return round(energy, 3)
 
 
+def _server_soc_capacity_energy(trip: dict[str, Any]) -> float | None:
+    """Estimate energy only from a valid server trip and its historic capacity.
+
+    This fallback is deliberately narrower than the local-trip path: both SOC
+    boundaries must come directly from the server, and capacity must be a
+    recorder sample selected for the trip time (never a current/live value).
+    """
+    if trip.get("valid_for_statistics") is not True:
+        return None
+    if trip.get("confidence") != "high":
+        return None
+    if trip.get("capacity_source") != "recorder_capacity_sample":
+        return None
+    start_time, end_time = _time(trip.get("start_time")), _time(trip.get("end_time"))
+    duration = _number(trip.get("duration_seconds"))
+    distance = _number(trip.get("distance_km"))
+    start_mileage = _number(trip.get("start_mileage_km"))
+    end_mileage = _number(trip.get("end_mileage_km"))
+    capacity = _number(trip.get("capacity_kwh"))
+    start_soc, end_soc = _number(trip.get("soc_start")), _number(trip.get("soc_end"))
+    sources = trip.get("field_sources") if isinstance(trip.get("field_sources"), dict) else {}
+    if (
+        start_time is None or end_time is None or end_time <= start_time
+        or duration is None or duration <= 0 or duration > 24 * 60 * 60
+        or abs((end_time - start_time).total_seconds() - duration) > max(120, duration * 0.1)
+        or distance is None or not (1 < distance <= 1000)
+        or start_mileage is None or end_mileage is None or start_mileage <= 0
+        or abs((end_mileage - start_mileage) - distance) > 2
+        or capacity is None or not (0 < capacity <= 200)
+        or start_soc is None or end_soc is None or not (0 <= end_soc < start_soc <= 100)
+        or start_soc - end_soc < 2
+        or not str(sources.get("soc_start", "")).startswith("stellantis_trip.")
+        or not str(sources.get("soc_end", "")).startswith("stellantis_trip.")
+    ):
+        return None
+    energy = round((start_soc - end_soc) * capacity / 100, 3)
+    if energy <= 0 or energy / distance * 100 > 120:
+        return None
+    return energy
+
+
 
 def resolve_trip_fields(trip: dict[str, Any], local: dict[str, Any] | None = None) -> dict[str, Any]:
     """Return a per-field canonical copy with explicit source/conflict metadata."""
@@ -489,9 +536,7 @@ def resolve_trip_fields(trip: dict[str, Any], local: dict[str, Any] | None = Non
                 if raw_consumption is not None and raw_consumption >= 0:
                     direct_electric = round(raw_consumption / 1000, 3)
                 break
-    if direct_electric is not None and (
-        direct_electric > 0 or local_energy_estimate is None
-    ):
+    if direct_electric is not None and direct_electric > 0:
         # A positive direct server measurement wins. Genuine zero is retained
         # when no strongly matched local SOC estimate contradicts it.
         resolved["energy_kwh"] = direct_electric
@@ -516,6 +561,27 @@ def resolve_trip_fields(trip: dict[str, Any], local: dict[str, Any] | None = Non
             *(resolved.get("quality_flags") or []),
             "server_zero_conflicts_with_local_soc_estimate",
         ]))
+    elif direct_electric == 0:
+        historic_soc_estimate = _server_soc_capacity_energy(resolved)
+        if historic_soc_estimate is not None:
+            resolved["energy_kwh"] = historic_soc_estimate
+            resolved["energy_estimated"] = True
+            resolved["energy_source"] = "stellantis_trip_soc_capacity_estimate"
+            resolved["field_sources"]["energy_kwh"] = resolved["energy_source"]
+            resolved["field_conflicts"]["energy_kwh"] = {
+                "server": 0,
+                "soc_capacity_estimate": historic_soc_estimate,
+                "resolution": "valid_server_soc_with_historic_capacity",
+            }
+            resolved["quality_flags"] = list(dict.fromkeys([
+                *(resolved.get("quality_flags") or []),
+                "server_zero_conflicts_with_server_soc_capacity_estimate",
+            ]))
+        else:
+            resolved["energy_kwh"] = 0
+            resolved["energy_estimated"] = False
+            resolved["energy_source"] = "stellantis_trip.energy_consumptions"
+            resolved["field_sources"]["energy_kwh"] = "stellantis_trip.energyConsumptions.Electric.consumption"
     else:
         energy = None
         energy_source = "unknown"
@@ -583,7 +649,7 @@ def resolve_trip_fields(trip: dict[str, Any], local: dict[str, Any] | None = Non
 
     distance = _number(resolved.get("distance_km"))
     energy = _number(resolved.get("energy_kwh"))
-    consumption = round(energy / distance * 100, 2) if energy is not None and distance and distance > 0 else None
+    consumption = _consumption_per_100_km(energy, distance) if energy is not None and distance and distance > 0 else None
     resolved["consumption_kwh_100km"] = consumption
     resolved["energy_per_100_km"] = consumption
     resolved["consumption_estimated"] = bool(resolved.get("energy_estimated"))

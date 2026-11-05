@@ -132,7 +132,7 @@ def _set_local_pair(local, evidence_field, legacy_start, legacy_end, values):
             observation["value"] = value
 
 
-def _rebuild(raw, local=None, capacity=40):
+def _rebuild(raw, local=None, capacity=40, capacity_source="fixture_capacity"):
     manager = object.__new__(MODULE.ServerHistoryManager)
     manager.data = {
         "server_trips_raw": [deepcopy(raw)],
@@ -143,7 +143,7 @@ def _rebuild(raw, local=None, capacity=40):
         "legacy_live_snapshot": None,
     }
     manager.metrics = types.SimpleNamespace(data={"trips": [deepcopy(local)] if local else [], "charges": []})
-    manager._capacity_for_trip = lambda _raw: (capacity, "fixture_capacity") if capacity else (None, None)
+    manager._capacity_for_trip = lambda _raw: (capacity, capacity_source) if capacity else (None, None)
     manager._hydrate_observed_sessions = lambda rows: rows
     manager._annotate_legacy_trip_matches = lambda _trips: None
     manager._update_archive_metadata = lambda: None
@@ -438,6 +438,183 @@ def test_server_zero_without_corrob_local_evidence_stays_zero():
     no_match = _rebuild(raw, unmatched)
     assert no_match["energy_kwh"] == 0
     assert no_match["local_evidence_match"]["matched"] is False
+
+
+def test_server_zero_uses_time_qualified_historic_capacity_when_no_local_trip_matches():
+    raw, _local = _scenario()
+    _set_pair(raw, "startEnergies", "Electric", "level", [70, 67])
+    raw["energyConsumptions"].append({"type": "Electric", "consumption": 0})
+
+    result = _rebuild(
+        raw, None, capacity=40, capacity_source="recorder_capacity_sample"
+    )
+
+    assert result["energy_kwh"] == 1.2
+    assert result["energy_estimated"] is True
+    assert result["energy_source"] == "stellantis_trip_soc_capacity_estimate"
+    assert result["field_sources"]["energy_kwh"] == result["energy_source"]
+    assert result["field_conflicts"]["energy_kwh"] == {
+        "server": 0,
+        "soc_capacity_estimate": 1.2,
+        "resolution": "valid_server_soc_with_historic_capacity",
+    }
+    assert "server_zero_conflicts_with_server_soc_capacity_estimate" in result["quality_flags"]
+    assert result["raw_server"]["energyConsumptions"][-1]["consumption"] == 0
+
+
+def test_reference_server_trips_use_their_own_historic_soc_energy_without_splitting_local_aggregate():
+    cases = (
+        ("2026-11-03T16:49:04Z", "2026-11-03T17:11:36Z", 20, 100, 89, 4.587, 22.94),
+        ("2026-11-04T06:48:53Z", "2026-11-04T07:17:49Z", 23, 89, 77, 5.004, 21.76),
+    )
+    results = []
+    for start, end, distance, soc_start, soc_end, expected_energy, expected_rate in cases:
+        raw, _local = _scenario()
+        raw["startedAt"], raw["stoppedAt"] = start, end
+        raw["duration"] = int(
+            (MODULE._parse_time(end) - MODULE._parse_time(start)).total_seconds()
+        )
+        raw["distance"] = distance
+        raw["startMileage"] = 25000
+        _set_pair(raw, "startEnergies", "Electric", "level", [soc_start, soc_end])
+        raw["energyConsumptions"].append({"type": "Electric", "consumption": 0})
+
+        result = _rebuild(
+            raw, None, capacity=41.7, capacity_source="recorder_capacity_sample"
+        )
+        results.append(result)
+        assert result["energy_kwh"] == expected_energy
+        assert result["consumption_kwh_100km"] == expected_rate
+        assert result["energy_estimated"] is True
+        assert result["energy_source"] == "stellantis_trip_soc_capacity_estimate"
+        assert result["raw_server"]["distance"] == distance
+        assert result["raw_server"]["energyConsumptions"][-1]["consumption"] == 0
+
+    assert (results[0]["soc_start"], results[0]["soc_end"]) == (100, 89)
+    assert (results[1]["soc_start"], results[1]["soc_end"]) == (89, 77)
+    assert sum(row["distance_km"] for row in results) == 43
+    assert sum(row["energy_kwh"] for row in results) == 9.591
+
+
+def test_server_soc_estimate_rejects_missing_duplicated_untrusted_or_incomplete_boundaries():
+    raw, _local = _scenario()
+    _set_pair(raw, "startEnergies", "Electric", "level", [70, 67])
+    raw["energyConsumptions"].append({"type": "Electric", "consumption": 0})
+
+    def estimate(candidate):
+        return _rebuild(
+            candidate, None, capacity=40, capacity_source="recorder_capacity_sample"
+        )
+
+    missing_start = deepcopy(raw)
+    missing_start["startEnergies"] = [row for row in missing_start["startEnergies"] if row["type"] != "Electric"]
+    assert estimate(missing_start)["energy_kwh"] == 0
+
+    duplicated = deepcopy(raw)
+    _set_pair(duplicated, "startEnergies", "Electric", "level", [70, 70])
+    assert estimate(duplicated)["energy_kwh"] == 0
+
+    invalid_soc = deepcopy(raw)
+    _set_pair(invalid_soc, "startEnergies", "Electric", "level", [101, 67])
+    assert estimate(invalid_soc)["energy_kwh"] == 0
+
+    incomplete = deepcopy(raw)
+    incomplete["done"] = False
+    assert estimate(incomplete)["energy_kwh"] == 0
+
+    no_odometer = deepcopy(raw)
+    no_odometer.pop("startMileage", None)
+    assert estimate(no_odometer)["energy_kwh"] == 0
+
+
+def test_current_capacity_is_not_accepted_as_historical_capacity_for_trip_estimate():
+    raw, _local = _scenario()
+    _set_pair(raw, "startEnergies", "Electric", "level", [70, 67])
+    raw["energyConsumptions"].append({"type": "Electric", "consumption": 0})
+    manager = object.__new__(MODULE.ServerHistoryManager)
+    manager.data = {"recorder_capacity_samples_archive": []}
+    manager.metrics = None
+    manager.entity_mapping = {"battery_capacity": "sensor.current_capacity"}
+    manager.hass = types.SimpleNamespace(
+        states=types.SimpleNamespace(
+            get=lambda _entity: types.SimpleNamespace(state="41.7")
+        )
+    )
+
+    capacity, source = manager._capacity_for_trip(raw)
+    normalized = MODULE.normalize_trip(raw, capacity, source)
+    canonical = MODULE.resolve_canonical_trip_fields([normalized], None)[0]
+
+    assert capacity == 41.7
+    assert source == "upstream_capacity_entity"
+    assert canonical["energy_kwh"] == 0
+    assert canonical["energy_estimated"] is False
+
+
+def test_server_soc_capacity_fallback_rejects_non_historic_capacity_and_weak_soc_drop():
+    raw, _local = _scenario()
+    _set_pair(raw, "startEnergies", "Electric", "level", [70, 67])
+    raw["energyConsumptions"].append({"type": "Electric", "consumption": 0})
+
+    non_historic = _rebuild(raw, None, capacity=40)
+    assert non_historic["energy_kwh"] == 0
+    assert non_historic["energy_estimated"] is False
+
+    stale_historic = _rebuild(
+        raw, None, capacity=40, capacity_source="recorder_capacity_sample_stale"
+    )
+    assert stale_historic["energy_kwh"] == 0
+    assert stale_historic["energy_estimated"] is False
+
+    _set_pair(raw, "startEnergies", "Electric", "level", [70, 69])
+    weak_delta = _rebuild(
+        raw, None, capacity=40, capacity_source="recorder_capacity_sample"
+    )
+    assert weak_delta["energy_kwh"] == 0
+    assert weak_delta["energy_estimated"] is False
+
+
+def test_historic_capacity_lookup_keeps_older_samples_and_ignores_future_samples():
+    manager = object.__new__(MODULE.ServerHistoryManager)
+    manager.data = {
+        "recorder_capacity_samples_archive": [
+            {"time": "2026-09-01T10:00:00Z", "capacity_kwh": 42},
+            {"time": "2026-10-01T10:00:00Z", "capacity_kwh": 39},
+            {"time": "2026-10-02T10:00:00Z", "capacity_kwh": 38},
+        ]
+    }
+
+    assert manager._historical_capacity("2026-10-01T10:00:00Z") == 39
+    assert manager._historical_capacity("2026-10-20T10:00:00Z") == 38
+
+
+def test_trip_capacity_selection_accepts_fourteen_day_boundary_but_not_stale_or_future():
+    raw, _local = _scenario()
+
+    def manager_with(samples):
+        manager = object.__new__(MODULE.ServerHistoryManager)
+        manager.data = {"recorder_capacity_samples_archive": samples}
+        manager.metrics = None
+        manager.entity_mapping = {}
+        manager.hass = types.SimpleNamespace(
+            states=types.SimpleNamespace(get=lambda _entity: None)
+        )
+        return manager
+
+    exact_boundary = manager_with([
+        {"time": "2026-09-17T10:09:16Z", "capacity_kwh": 40}
+    ])
+    assert exact_boundary._capacity_for_trip(raw) == (40, "recorder_capacity_sample")
+
+    stale = manager_with([
+        {"time": "2026-09-17T10:09:15Z", "capacity_kwh": 40}
+    ])
+    assert stale._capacity_for_trip(raw) == (40, "recorder_capacity_sample_stale")
+
+    future_only = manager_with([
+        {"time": "2026-10-01T10:09:17Z", "capacity_kwh": 40}
+    ])
+    assert future_only._capacity_for_trip(raw) == (None, None)
 
 
 def test_missing_server_energy_uses_matched_local_estimate_only_after_trustworthy_match():
