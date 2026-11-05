@@ -4,7 +4,7 @@
 
 SV Dashboard is a HACS custom integration that builds a vehicle-focused Home Assistant dashboard on top of [Stellantis Vehicles](https://github.com/andreadegiovine/homeassistant-stellantis-vehicles).
 
-> **Current stable release: [v0.7.1](https://github.com/CaneTLOTW/sv_dashboard/releases/tag/v0.7.1).** Corrects the server-trip sync failure and recovers matched SOC-derived energy / kWh per 100 km with explicit estimated provenance. Owner HA acceptance: 159 canonical trips, 114 corroborated estimates. The previous v0.7.0 release was withdrawn; its Git tag remains for traceability. The separate live-charging-state/curve issue remains open in [#127](https://github.com/CaneTLOTW/sv_dashboard/issues/127).
+> **Current stable release: [v0.7.2](https://github.com/CaneTLOTW/sv_dashboard/releases/tag/v0.7.2).** Restores evidence-qualified server SOC / historical-capacity energy estimates when a completed trip's upstream electric consumption is zero, while preserving the matched-local estimates recovered in v0.7.1. Owner Home Assistant validation: 161 canonical trips, 116 existing local SOC estimates preserved and four additional server-SOC fallbacks. All reconstructed kWh are identified as estimates. The separate live-charging-state/curve issue remains open in [#127](https://github.com/CaneTLOTW/sv_dashboard/issues/127).
 
 [![Open the SV Dashboard repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=CaneTLOTW&repository=sv_dashboard&category=integration)
 
@@ -12,7 +12,7 @@ Install this repository as an **Integration**, not as a standalone Lovelace-card
 
 ### Updates through HACS
 
-**Stable channel restored at v0.7.1:** install [v0.7.1](https://github.com/CaneTLOTW/sv_dashboard/releases/tag/v0.7.1) through HACS (Integration; prerelease not required). Restart Home Assistant to load the Python integration, then refresh the browser/app. The withdrawn v0.7.0 Git tag remains available for traceability; it is not the recommended install. Do not install moving `develop` as a workaround.
+**Stable channel: v0.7.2.** Install [v0.7.2](https://github.com/CaneTLOTW/sv_dashboard/releases/tag/v0.7.2) through HACS (Integration; prerelease not required). Restart Home Assistant to load the Python integration, then refresh the browser/app. The withdrawn v0.7.0 Git tag remains available for traceability; do not install moving `develop` as a workaround.
 
 Older beta versions such as `v0.6.0-beta.40` remain available when HACS **Pre-release** is enabled. Install a published tag for external testing rather than a moving development branch.
 

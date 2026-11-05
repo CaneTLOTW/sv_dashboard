@@ -25,8 +25,8 @@ const diagnosticsBackend = read("vehicle_diagnostics.py");
 
 test("Home Assistant registers one SV frontend resource", () => {
   assert.match(constants, /FRONTEND_URL = "\/sv_dashboard\/frontend\.js"/);
-  assert.match(constants, /FRONTEND_VERSION = "0\.7\.1"/);
-  assert.equal(manifest.version, "0.7.1");
+  assert.match(constants, /FRONTEND_VERSION = "0\.7\.2"/);
+  assert.equal(manifest.version, "0.7.2");
   assert.match(constants, /FRONTEND_RESOURCE_URLS = \(FRONTEND_URL,\)/);
   // 0.7.0 refreshes the package resource and Charge History; unchanged internal modules retain prior content keys.
   assert.match(frontend, /import\("\.\/vehicle-overview-card\.js\?v=0\.6\.0-beta\.38"\)/);

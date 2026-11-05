@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.2 — stable: evidence-qualified server-SOC energy recovery (2026-11-05)
+
+- Restores **SOC×historical battery-capacity estimates** for high-confidence completed server trips whose direct upstream electric consumption is zero and which lack a fully corroborated one-to-one local trip match. Explicitly labels all recovered results as estimates, preserving the upstream zero, raw telemetry, source and conflict provenance.
+- Ensures the historical capacity sample predates the trip and is no more than **14 days old**; live capacity is not treated as proof of historical energy. Rejects weak or inconsistent SOC boundaries, incomplete/invalid trips and implausible energy per 100 km.
+- Keeps measured positive upstream kWh authoritative and retains the matched-local SOC estimates recovered in v0.7.1. Neither the erroneous overnight local composite nor fabricated electricity figures are reintroduced.
+- **Owner acceptance:** automatically synchronized **161 canonical trips**; **116 existing matched-local SOC estimates** retained, four trips used the new server-SOC fallback. Specifically confirmed 03 Nov 20 km = **4.587 kWh / 22.94 kWh/100 km**, 04 Nov 23 km = **5.004 kWh / 21.76 kWh/100 km**, and 02 Nov 23 km = **5.421 kWh / 23.57 kWh/100 km**. Browser confirmation: prior 0-kWh rows are no longer displayed in the checked trip history. These remain estimates, not independent meter measurements.
+- Owner test: [Issue #130](https://github.com/CaneTLOTW/sv_dashboard/issues/130#issuecomment-6659166270), source [PR #131](https://github.com/CaneTLOTW/sv_dashboard/pull/131), merged SHA `1218ba7fc4355845f907f0460cf5082b18f9f6f6` validated in CI. Separate intermittent live-charging-state/curve issue [#127](https://github.com/CaneTLOTW/sv_dashboard/issues/127) remains unresolved and outside this release.
+
 ## 0.7.1 — stable: canonical trip history and measured-vs-estimated energy (2026-11-04)
 
 - Repairs the 0 kWh canonical-history regression discovered during owner UI acceptance: one-to-one matched and internally corroborated local SOC/capacity energy estimates may now replace a contradictory direct zero or fill unavailable electric-trip energy. Every such estimate is marked estimated and given explicit source/conflict provenance; genuine unmatched zeros and positive direct measurements retain priority. The old local 43 km overnight composite is not accepted as evidence. See [#128](https://github.com/CaneTLOTW/sv_dashboard/issues/128). The correction was verified against the owner's running Home Assistant installation; [#128](https://github.com/CaneTLOTW/sv_dashboard/issues/128) documents the results.
