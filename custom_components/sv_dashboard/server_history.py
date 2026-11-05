@@ -69,6 +69,7 @@ _MIN_TRIP_DISTANCE_KM = 1.0
 _MAX_TRIP_DISTANCE_KM = 1000.0
 _MAX_TRIP_DURATION_SECONDS = 24 * 60 * 60
 _MAX_TRIP_SPEED_KMH = 300.0
+_MAX_HISTORIC_CAPACITY_AGE = timedelta(days=14)
 _MATCH_TOLERANCE = timedelta(minutes=10)
 
 
@@ -1004,9 +1005,15 @@ class ServerHistoryManager:
         self._update_archive_metadata()
 
     def _capacity_for_trip(self, raw: dict[str, Any]) -> tuple[float | None, str | None]:
-        historic = self._historical_capacity(raw.get("startedAt"))
-        if historic is not None:
-            return historic, "recorder_capacity_sample"
+        historic, sample_time = self._historical_capacity_sample(raw.get("startedAt"))
+        if historic is not None and sample_time is not None:
+            event_time = _parse_time(raw.get("startedAt"))
+            source = (
+                "recorder_capacity_sample"
+                if event_time is not None and event_time - _MAX_HISTORIC_CAPACITY_AGE <= sample_time
+                else "recorder_capacity_sample_stale"
+            )
+            return historic, source
         # A matching local live trip may have captured the event capacity.
         raw_start = _parse_time(raw.get("startedAt"))
         raw_end = _parse_time(raw.get("stoppedAt"))
@@ -1044,9 +1051,13 @@ class ServerHistoryManager:
         return None, None
 
     def _historical_capacity(self, timestamp: Any) -> float | None:
+        capacity, _sample_time = self._historical_capacity_sample(timestamp)
+        return capacity
+
+    def _historical_capacity_sample(self, timestamp: Any) -> tuple[float | None, datetime | None]:
         event_time = _parse_time(timestamp)
         if event_time is None:
-            return None
+            return None, None
         candidates = []
         for sample in self.data.get("recorder_capacity_samples_archive", self.data.get("recorder_capacity_samples", [])):
             if not isinstance(sample, dict):
@@ -1055,7 +1066,10 @@ class ServerHistoryManager:
             capacity = _number(sample.get("capacity_kwh"))
             if sample_time and capacity is not None and capacity > 0 and sample_time <= event_time:
                 candidates.append((sample_time, capacity))
-        return _capacity(max(candidates, key=lambda item: item[0])[1]) if candidates else None
+        if not candidates:
+            return None, None
+        sample_time, capacity = max(candidates, key=lambda item: item[0])
+        return _capacity(capacity), sample_time
 
     def _rebuild_canonical(self) -> None:
         self.data["recorder_observed_charges_archive"] = self._hydrate_observed_sessions(
