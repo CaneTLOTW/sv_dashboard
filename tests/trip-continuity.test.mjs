@@ -132,3 +132,27 @@ print(json.dumps({"ids":[x["id"] for x in out],"distance":sum(x["distance_km"] f
 `);
   assert.deepEqual(JSON.parse(output), {ids:["normal","next","short"],distance:30,excluded:[{id:"replay",duplicate_of:"normal",reason:"short_overlapping_odometer_replay"}]});
 });
+
+
+test("a unique local trip may fill an exact odometer gap but a composite cannot", () => {
+  const output = runPython(String.raw`
+import importlib.util, json, sys
+spec = importlib.util.spec_from_file_location("trip_repair", sys.argv[1])
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+def row(id,start,end,seconds,a,b):
+    return {"id":id,"start_time":"2026-01-01T"+start+"+00:00","end_time":"2026-01-01T"+end+"+00:00","duration_seconds":seconds,"start_mileage":a,"end_mileage":b,"distance_km":b-a,"valid_for_statistics":True}
+before=row("a","10:00:00","10:10:00",600,1000,1010)
+after=row("b","11:00:00","11:15:00",900,1028,1040)
+good=row("local","10:30:00","10:50:00",1200,1010,1028)
+good["energy_kwh"]=3
+bad=row("composite","10:30:00","10:50:00",1200,1010,1050)
+out=mod.recover_local_odometer_gaps([before,after],[good,bad])
+assert len(out)==1
+assert mod.recover_local_odometer_gaps([before,after],[bad])==[]
+assert mod.recover_local_odometer_gaps([before,after],[good,{**good,"id":"ambiguous"}])==[]
+assert mod.recover_local_odometer_gaps([before,out[0],after],[good])==[]
+print(json.dumps({"distance":out[0]["distance_km"],"source":out[0]["source"],"estimated":out[0]["energy_estimated"],"server_id":out[0]["server_id"]}))
+`);
+  assert.deepEqual(JSON.parse(output), {distance:18,source:"sv_local_gap_recovery",estimated:true,server_id:null});
+});

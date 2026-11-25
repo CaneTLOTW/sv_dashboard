@@ -40,10 +40,10 @@ export function tripFilterTime(trip) {
 export function insertOdometerGapRows(trips, { toleranceKm = 1, maxGapKm = 1000 } = {}) {
     const ordered = Array.isArray(trips) ? [...trips] : [];
     const result = [];
+    let previous = null;
 
     for (let index = 0; index < ordered.length; index += 1) {
         const current = ordered[index];
-        const previous = index > 0 ? ordered[index - 1] : null;
 
         if (previous && usableAnchor(previous) && usableAnchor(current)) {
             const previousEnd = endMileage(previous);
@@ -86,6 +86,7 @@ export function insertOdometerGapRows(trips, { toleranceKm = 1, maxGapKm = 1000 
             }
         }
         result.push(current);
+        if (usableAnchor(current)) previous = current;
     }
     return result;
 }

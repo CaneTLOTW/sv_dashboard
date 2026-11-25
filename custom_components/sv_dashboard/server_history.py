@@ -36,6 +36,7 @@ from .const import (
 from .charge_policy import allow_soc_only_charge_reconstruction
 from .trip_repair import (
     local_trip_backfill_quality, partition_replayed_trips, repair_trip_odometer_continuity,
+    recover_local_odometer_gaps,
 )
 from .trip_speed import resolve_trip_speed
 from .trip_field_resolution import resolve_canonical_trip_fields
@@ -1140,9 +1141,14 @@ class ServerHistoryManager:
                 add_observed(normalized, prefer_new=True)
         windows = reconstruct_charge_windows(all_trips)
         canonical_charges = merge_charges(windows, list(observed_by_id.values()))
+        recovered = recover_local_odometer_gaps(all_trips, local_trips)
         self.data["canonical_trips"] = all_trips
         self.data["canonical_charges"] = canonical_charges
-        self.data["trips"] = [trip for trip in all_trips if _is_real_trip(trip)]
+        self.data["recovered_local_trips"] = recovered
+        self.data["trips"] = sorted(
+            [trip for trip in [*all_trips, *recovered] if _is_real_trip(trip)],
+            key=_trip_sort_key,
+        )
         self.data["charges"] = canonical_charges
         self._update_archive_metadata()
 

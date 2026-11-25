@@ -81,3 +81,14 @@ test("gap filtering uses an adjacent real-trip boundary without inventing an eve
   assert.equal(tripFilterTime(gap), "2026-09-15T10:33:10Z");
   assert.equal(semanticTripTime(gap), null);
 });
+
+
+test("invalid rows are not used as odometer anchors between two valid trips", () => {
+  const rows = insertOdometerGapRows([
+    {id:"a",start_mileage:100,distance_km:10,valid_for_statistics:true},
+    {id:"bad",start_mileage:110,distance_km:200,valid_for_statistics:false},
+    {id:"b",start_mileage:128,distance_km:5,valid_for_statistics:true},
+  ]);
+  assert.equal(rows.filter(r=>r.reconstructed_gap).length,1);
+  assert.equal(rows.find(r=>r.reconstructed_gap).distance_km,18);
+});

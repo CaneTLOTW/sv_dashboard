@@ -513,6 +513,7 @@ class CodexStellantisTripHistoryCardV4 extends LitElement {
                                     <div class="trip-details-content">
                                         ${reconstructed ? html`<span class="quality-warning">${text.reconstructedGap}</span>` : nothing}
                                         ${invalid ? html`<span class="quality-warning">${text.invalidServerTrip}</span>` : nothing}
+                                        ${trip.attributes?.source === "sv_local_gap_recovery" ? html`<span class="quality-warning">${text.localGapRecovery}</span>` : nothing}
                                         <span><strong>${dashboardText.mileage}:</strong> ${this._formatMileage(trip.attributes?.start_mileage)} → ${this._formatMileage(this._endMileage(trip))}</span>
                                         ${(trip.attributes?.soc_start !== null && trip.attributes?.soc_start !== undefined) || (trip.attributes?.soc_end !== null && trip.attributes?.soc_end !== undefined) ? html`<span><strong>${text.socStart} / ${text.socEnd}:</strong> ${this._value(trip.attributes?.soc_start)} % → ${this._value(trip.attributes?.soc_end)} %</span>` : nothing}
                                         ${trip.attributes?.energy_kwh !== null && trip.attributes?.energy_kwh !== undefined ? html`<span><strong>${text.energy}:</strong> ${this._value(trip.attributes?.energy_kwh)} kWh</span>` : nothing}

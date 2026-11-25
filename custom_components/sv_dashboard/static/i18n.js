@@ -55,6 +55,30 @@ for (const [language, label] of Object.entries(TRIP_HISTORY_GAP_TEXT)) {
   }
 }
 
+const LOCAL_GAP_LABELS = {
+  "de": "Aus lokaler Fahrterfassung wiederhergestellt",
+  "en": "Recovered from local trip observations",
+  "fr": "Trajet récupéré à partir des observations locales",
+  "it": "Viaggio recuperato dai dati locali",
+  "es": "Trayecto recuperado de los datos locales",
+  "pt": "Viagem recuperada dos dados locais",
+  "nl": "Rit hersteld uit lokale waarnemingen",
+  "da": "Tur gendannet fra lokale observationer",
+  "nb": "Tur gjenopprettet fra lokale observasjoner",
+  "sv": "Resa återställd från lokala observationer",
+  "fi": "Matka palautettu paikallisista havainnoista",
+  "pl": "Przejazd odtworzony z danych lokalnych",
+  "cs": "Jízda obnovena z místních údajů",
+  "sk": "Jazda obnovená z miestnych údajov",
+  "hu": "Helyi adatokból helyreállított út",
+  "ro": "Călătorie recuperată din datele locale",
+  "sl": "Vožnja obnovljena iz lokalnih podatkov",
+  "hr": "Vožnja obnovljena iz lokalnih podataka"
+};
+for (const [language, label] of Object.entries(LOCAL_GAP_LABELS)) {
+  FRONTEND_TEXT.tripHistory[language].localGapRecovery = label;
+}
+
 // Public Home Assistant card-picker names are intentionally owned by the
 // shared i18n layer. Keep the compact universal overview clearly distinct from
 // the wide Battery + Fuel / Dual-Energy overview in every supported language.

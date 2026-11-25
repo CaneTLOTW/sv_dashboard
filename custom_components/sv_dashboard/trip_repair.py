@@ -399,3 +399,101 @@ def repair_trip_odometer_continuity(
         previous_end = candidate_end
 
     return ordered
+
+
+
+def recover_local_odometer_gaps(
+    server_trips: list[dict[str, Any]],
+    local_trips: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Recover only uniquely corroborated, complete gaps; never split composites.
+
+    The local observation must fit entirely between two positive, valid server
+    trips and exactly bridge both odometer boundaries (within rounding noise).
+    Retain the local identity/provenance and do not claim a server trip ID.
+    """
+    positive = [
+        row for row in sorted(server_trips, key=_trip_sort_key)
+        if (_number(row.get("distance_km")) or 0) > 0
+    ]
+    anchors = [row for row in positive if row.get("valid_for_statistics") is True]
+    recovered: list[dict[str, Any]] = []
+    used: set[str] = set()
+    for left, right in zip(anchors, anchors[1:]):
+        begin, finish = _time(left.get("end_time")), _time(right.get("start_time"))
+        lo, hi = _number(left.get("end_mileage")), _number(right.get("start_mileage"))
+        if (
+            begin is None or finish is None
+            or begin.utcoffset() is None or finish.utcoffset() is None
+            or finish <= begin or lo is None or hi is None or not 1 < hi - lo <= 1000
+        ):
+            continue
+        candidates = []
+        for local in local_trips:
+            local_id = str(local.get("id") or "")
+            start, end = _time(local.get("start_time")), _time(local.get("end_time"))
+            start_km, end_km = _number(local.get("start_mileage")), _number(local.get("end_mileage"))
+            duration, distance = _number(local.get("duration_seconds")), _number(local.get("distance_km"))
+            if (
+                not local_id or local_id in used
+                or not local_trip_backfill_quality(local)[0]
+                or start is None or end is None
+                or start.utcoffset() is None or end.utcoffset() is None
+                or not begin <= start < end <= finish
+                or start_km is None or end_km is None
+                or abs(start_km - lo) > 0.05 or abs(end_km - hi) > 0.05
+                or distance is None or abs(distance - (hi - lo)) > 0.1
+                or duration is None or duration <= 0
+                or abs(duration - (end - start).total_seconds()) > 5
+                or distance * 3600 / duration > _MAX_LOCAL_BACKFILL_SPEED_KMH
+            ):
+                continue
+            # Even an invalid non-replay server record can describe a real
+            # physical trip. Do not backfill through a conflicting interval.
+            overlap = False
+            for server in positive:
+                s, e = _time(server.get("start_time")), _time(server.get("end_time"))
+                if s is not None and e is not None and s.utcoffset() is not None and e.utcoffset() is not None:
+                    if s < end and start < e:
+                        overlap = True
+                        break
+            if not overlap:
+                candidates.append(local)
+        if len(candidates) != 1:
+            continue
+        local = candidates[0]
+        used.add(str(local["id"]))
+        distance = round(hi - lo, 3)
+        duration = _number(local["duration_seconds"])
+        speed = round(distance * 3600 / duration, 1)
+        energy = _number(local.get("energy_kwh"))
+        if energy is not None and (energy < 0 or energy / distance > 1.5):
+            energy = None
+        row = {
+            **local,
+            "id": "local-gap:" + str(local["id"]),
+            "server_id": None,
+            "status": "complete",
+            "source": "sv_local_gap_recovery",
+            "sources": ["sv_local_trip", "server_odometer_continuity"],
+            "confidence": "medium",
+            "start_mileage": lo,
+            "start_mileage_km": lo,
+            "end_mileage": hi,
+            "end_mileage_km": hi,
+            "distance_km": distance,
+            "average_speed": speed,
+            "average_speed_kmh": speed,
+            "speed_source": "local_distance_duration",
+            "energy_kwh": energy,
+            "energy_estimated": energy is not None,
+            "energy_source": "sv_local_gap_estimate" if energy is not None else "unknown",
+            "energy_per_100_km": round(energy * 100 / distance, 2) if energy is not None else None,
+            "consumption_kwh_100km": round(energy * 100 / distance, 2) if energy is not None else None,
+            "consumption_estimated": energy is not None,
+            "valid_for_statistics": True,
+            "quality_flags": ["local_odometer_gap_recovered"],
+            "gap_evidence": {"previous_id": left.get("id"), "next_id": right.get("id"), "local_id": local["id"]},
+        }
+        recovered.append(row)
+    return recovered

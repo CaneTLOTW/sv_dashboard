@@ -32,7 +32,7 @@ const NAMESPACES = ["tripHistory", "chargeHistory", "vehicleOverview", "dashboar
 // These keys are intentionally composed in i18n.js from complete explicit
 // 18-language tables rather than duplicated across the regional source files.
 const CAPABILITY_EXCEPTIONS = {
-  tripHistory: new Set(["reconstructedGap"]),
+  tripHistory: new Set(["reconstructedGap", "localGapRecovery"]),
   dashboard: new Set([
     "periodicWakeup",
     "wakeupInterval",

@@ -108,6 +108,7 @@ def _compact_trip_row(trip: dict[str, Any]) -> dict[str, Any]:
             "valid_for_statistics",
             "quality_flags",
             "speed_source",
+            "source",
         )
     }
     row["server_id"] = str(trip.get("server_id") or trip.get("id") or "")[-20:]
@@ -140,6 +141,7 @@ _TRIP_ATTRIBUTE_COLUMNS = (
     "valid_for_statistics",
     "quality_flags",
     "speed_source",
+    "source",
 )
 
 
@@ -458,7 +460,9 @@ class SvServerTripHistorySensor(SvMetricSensor):
             {
                 "count": len(rows),
                 "raw_count": raw_count,
-                "zero_distance_count": max(0, raw_count - len(rows)),
+                "zero_distance_count": len(zero_rows),
+                "recovered_local_count": len(history.data.get("recovered_local_trips", [])) if status["server_history_ready"] else 0,
+                "quarantined_replay_count": len(history.data.get("quarantined_trip_replays", [])) if status["server_history_ready"] else 0,
                 "trip_columns": _TRIP_ATTRIBUTE_COLUMNS,
                 "trip_rows": rows,
                 "zero_trip_rows": zero_rows,
