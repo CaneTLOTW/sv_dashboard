@@ -276,3 +276,20 @@ assert.equal(
 );
 
 console.log("charge-history-core tests passed");
+
+test("confirmed continuous plug groups separate segments without changing curves or summing pause time", async () => {
+  const { groupPluggedChargeSessions } = await import(`data:text/javascript,${encodeURIComponent(source)}`);
+  const row = (id,start,end,energy,type="AC") => ({id,start:"2026-01-01T"+start+"Z",end:"2026-01-01T"+end+"Z",duration_seconds:(Date.parse("2026-01-01T"+end+"Z")-Date.parse("2026-01-01T"+start+"Z"))/1000,energy_kwh:energy,charge_type:type,quality:"observed",has_charge_curve:true});
+  const a=row("a","10:00:00","10:30:00",2), b=row("b","12:00:00","12:30:00",3);
+  const window={start:"2026-01-01T09:00:00Z",end:"2026-01-01T13:00:00Z",start_confirmed:true,end_confirmed:true};
+  const grouped=groupPluggedChargeSessions([a,b],[window]);
+  assert.equal(grouped.length,1);
+  assert.equal(grouped[0].energy_kwh,5);
+  assert.equal(grouped[0].duration_seconds,3600);
+  assert.equal(grouped[0].pause_seconds,5400);
+  assert.equal(grouped[0].plug_duration_seconds,14400);
+  assert.deepEqual(grouped[0].segments,[a,b]);
+  assert.equal(groupPluggedChargeSessions([a,b],[]).length,2);
+  assert.equal(groupPluggedChargeSessions([a,{...b,charge_type:"DC"}],[window]).length,2);
+  assert.equal(groupPluggedChargeSessions([a,{...b,start:"2026-01-01T10:20:00Z"}],[window]).length,2);
+});

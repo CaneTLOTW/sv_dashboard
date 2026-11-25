@@ -555,3 +555,55 @@ export function buildChargeSessions({
         };
     });
 }
+
+
+// Presentation-only grouping: retain canonical segment IDs and curve selections.
+export function groupPluggedChargeSessions(sessions = [], windows = []) {
+    const ordered = [...sessions].sort((a,b) => timestampValue(a.start) - timestampValue(b.start));
+    const result = [];
+    let pending = [];
+    let previousWindow = null;
+    const flush = () => {
+        if (pending.length < 2) result.push(...pending);
+        else {
+            const first = pending[0], last = pending.at(-1);
+            const duration = pending.reduce((sum, row) => sum + numericOrNull(row.duration_seconds), 0);
+            const energies = pending.map(row => numericOrNull(row.energy_kwh));
+            const energy = energies.every(n => n !== null && n >= 0) ? energies.reduce((sum,n) => sum+n, 0) : null;
+            const maxima = pending.map(row => numericOrNull(row.maximum_power_kw)).filter(n => n !== null);
+            const elapsed = (timestampValue(last.end) - timestampValue(first.start)) / 1000;
+            result.push({
+                ...first, id: "plug-group:" + first.id, end: last.end, end_time: last.end_time || last.end,
+                duration_seconds: duration, charging_duration_seconds: duration, elapsed_seconds: elapsed,
+                pause_seconds: Math.max(0, elapsed - duration),
+                plug_duration_seconds: previousWindow?.start_confirmed && previousWindow?.end_confirmed
+                    ? (timestampValue(previousWindow.end) - timestampValue(previousWindow.start)) / 1000 : null,
+                energy_kwh: energy, average_power_kw: energy !== null && duration > 0 ? energy * 3600 / duration : null,
+                maximum_power_kw: maxima.length ? Math.max(...maxima) : null,
+                soc_end: last.soc_end, charge_type: pending.map(row=>normalizeChargeType(row.charge_type)).find(Boolean) || "Unknown",
+                segments: pending, has_charge_curve: false,
+                samples: [],
+            });
+        }
+        pending = [];
+        previousWindow = null;
+    };
+    for (const row of ordered) {
+        const start = timestampValue(row.start), end = timestampValue(row.end);
+        const duration = numericOrNull(row.duration_seconds);
+        const window = row.quality === "observed" && Number.isFinite(start) && Number.isFinite(end)
+            && end > start && duration !== null && duration > 0
+            && duration <= (end-start)/1000 + 1
+            ? windows.find(w => timestampValue(w.start) <= start && end <= timestampValue(w.end))
+            : null;
+        if (!window) { flush(); result.push(row); continue; }
+        const last = pending.at(-1);
+        const mode = normalizeChargeType(row.charge_type);
+        const known = pending.map(r=>normalizeChargeType(r.charge_type)).find(Boolean);
+        if (last && (window !== previousWindow || start < timestampValue(last.end) || (mode && known && mode !== known))) flush();
+        previousWindow = window;
+        pending.push(row);
+    }
+    flush();
+    return result;
+}

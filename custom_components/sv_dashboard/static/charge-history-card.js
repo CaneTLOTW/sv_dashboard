@@ -1,5 +1,5 @@
 import { LitElement, html, css, nothing } from "./vendor-lit.js?v=0.6.0-beta.7";
-import { buildChargeCurve, buildChargeSessions, buildLocalChargeSessions, chargeSessionId, findChargeSession, mergeChargeSessionEvidence, mergeChargeSessions, samePhysicalChargeSession, storedSocHistoryStates } from "./charge-history-core.js?v=0.6.0-beta.40-curve1";
+import { buildChargeCurve, buildChargeSessions, buildLocalChargeSessions, chargeSessionId, findChargeSession, groupPluggedChargeSessions, mergeChargeSessionEvidence, mergeChargeSessions, samePhysicalChargeSession, storedSocHistoryStates } from "./charge-history-core.js?v=0.6.0-beta.40-curve1";
 import { localeFor, textFor } from "./i18n.js?v=0.6.0-beta.28";
 
 const SELECTION_QUERY_PARAM = "sv_charge";
@@ -144,6 +144,10 @@ class CodexStellantisChargeHistoryCardV1 extends LitElement {
         .charge-details td { padding: 0 0 10px; border-top: 0; white-space: normal; }
         .detail { padding: 9px 10px; border-left: 3px solid var(--primary-color); background: color-mix(in srgb, var(--primary-color) 7%, transparent); }
         .detail-grid { display: flex; flex-wrap: wrap; gap: 7px 16px; }
+        .segment-timeline { position: relative; height: 12px; margin-top: 10px; background: var(--divider-color); border-radius: 3px; overflow: hidden; }
+        .segment-timeline span { position: absolute; height: 100%; background: var(--primary-color); }
+        .segment-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-top: 6px; }
+        .segment-row button { margin: 0; }
         .detail-hint { display: block; margin-top: 8px; color: var(--secondary-text-color); }
         button { margin-top: 9px; padding: 7px 10px; border: 0; border-radius: 8px; color: var(--text-primary-color); background: var(--primary-color); font: inherit; cursor: pointer; }
     `;
@@ -207,9 +211,10 @@ class CodexStellantisChargeHistoryCardV1 extends LitElement {
                 ? serverState.attributes.charges
                 : null;
             if (Array.isArray(serverCharges)) {
-                this._sessions = serverCharges
-                    .map((charge) => deriveServerChargeDisplay(charge, this._config.fallback_capacity_kwh))
-                    .reverse()
+                this._sessions = groupPluggedChargeSessions(
+                    serverCharges.map((charge) => deriveServerChargeDisplay(charge, this._config.fallback_capacity_kwh)),
+                    serverState.attributes.plug_connection_windows || [],
+                ).reverse()
                     .slice(0, Number(this._config.max_sessions));
                 return;
             }
@@ -337,6 +342,20 @@ class CodexStellantisChargeHistoryCardV1 extends LitElement {
                     <span><strong>${text.standstill}:</strong> ${this._formatDuration(session.standstill_duration_seconds)}</span>
                 `}
             </div>
+            ${session.segments ? html`
+                <div class="detail-grid">
+                    <span><strong>${text.sessionSegments}:</strong> ${session.segments.length}</span>
+                    <span><strong>${text.sessionPauses}:</strong> ${this._formatDuration(session.pause_seconds)}</span>
+                    <span><strong>${text.sessionElapsed}:</strong> ${this._formatDuration(session.elapsed_seconds)}</span>
+                    <span><strong>${text.sessionPlugTime}:</strong> ${this._formatDuration(session.plug_duration_seconds)}</span>
+                </div>
+                <div class="segment-timeline" aria-label=${text.sessionSegments}>${session.segments.map(part => html`
+                    <span style=${"left:" + ((Date.parse(part.start)-Date.parse(session.start))/1000/session.elapsed_seconds*100) + "%;width:" + ((Date.parse(part.end)-Date.parse(part.start))/1000/session.elapsed_seconds*100) + "%"}></span>
+                `)}</div>
+                ${session.segments.map(part => html`<div class="segment-row"><span>${this._formatDate(part.start)}</span><span>${this._formatDuration(part.duration_seconds)}</span><span>${this._number(part.energy_kwh)} kWh</span>
+                    ${part.has_charge_curve ? html`<button @click=${event => { event.stopPropagation(); this._openSession(part); }}>${text.showCurve}</button>` : nothing}
+                </div>`)}
+            ` : nothing}
             ${observed && session.has_charge_curve ? html`<button @click=${(event) => { event.stopPropagation(); this._openSession(session); }}>${text.showCurve}</button>` : nothing}
             ${!observed ? html`<span class="detail-hint">${text.reconstructedHint}</span>` : nothing}
         </div>`;
@@ -363,7 +382,7 @@ class CodexStellantisChargeHistoryCardV1 extends LitElement {
                                     return html`<tr class="charge-row" tabindex="0" role="button" aria-expanded=${expanded}
                                     @click=${() => this._toggleSession(session)}
                                     @keydown=${(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); this._toggleSession(session); } }}>
-                                    <td>${this._formatDate(session.start)}</td>
+                                    <td>${session.segments ? html`<span aria-hidden="true">▸ </span>` : nothing}${this._formatDate(session.start)}</td>
                                     <td>${this._formatDuration(session.duration_seconds)}</td>
                                     <td>${this._number(session.energy_kwh)}</td>
                                     <td>${this._number(session.average_power_kw)}</td>

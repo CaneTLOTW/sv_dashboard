@@ -33,6 +33,7 @@ const NAMESPACES = ["tripHistory", "chargeHistory", "vehicleOverview", "dashboar
 // 18-language tables rather than duplicated across the regional source files.
 const CAPABILITY_EXCEPTIONS = {
   tripHistory: new Set(["reconstructedGap", "localGapRecovery"]),
+  chargeHistory: new Set(["sessionSegments", "sessionPauses", "sessionElapsed", "sessionPlugTime"]),
   dashboard: new Set([
     "periodicWakeup",
     "wakeupInterval",

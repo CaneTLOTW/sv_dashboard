@@ -79,6 +79,121 @@ for (const [language, label] of Object.entries(LOCAL_GAP_LABELS)) {
   FRONTEND_TEXT.tripHistory[language].localGapRecovery = label;
 }
 
+const PLUG_SESSION_LABELS = {
+  "de": [
+    "Ladeabschnitte",
+    "Ladepausen",
+    "Gesamtzeit",
+    "Anschlussdauer"
+  ],
+  "en": [
+    "Charge segments",
+    "Charging pauses",
+    "Elapsed time",
+    "Connected time"
+  ],
+  "fr": [
+    "Segments de charge",
+    "Pauses de charge",
+    "Temps écoulé",
+    "Durée de connexion"
+  ],
+  "it": [
+    "Segmenti di ricarica",
+    "Pause di ricarica",
+    "Tempo trascorso",
+    "Durata collegamento"
+  ],
+  "es": [
+    "Tramos de carga",
+    "Pausas de carga",
+    "Tiempo transcurrido",
+    "Tiempo conectado"
+  ],
+  "pt": [
+    "Segmentos de carga",
+    "Pausas de carga",
+    "Tempo decorrido",
+    "Tempo ligado"
+  ],
+  "nl": [
+    "Laadsegmenten",
+    "Laadpauzes",
+    "Verstreken tijd",
+    "Aansluitduur"
+  ],
+  "da": [
+    "Ladeafsnit",
+    "Ladepauser",
+    "Forløbet tid",
+    "Tilslutningstid"
+  ],
+  "nb": [
+    "Ladesegmenter",
+    "Ladepauser",
+    "Forløpt tid",
+    "Tilkoblingstid"
+  ],
+  "sv": [
+    "Laddningssegment",
+    "Laddningspauser",
+    "Förfluten tid",
+    "Anslutningstid"
+  ],
+  "fi": [
+    "Latausjaksot",
+    "Lataustauot",
+    "Kulunut aika",
+    "Kytkentäaika"
+  ],
+  "pl": [
+    "Odcinki ładowania",
+    "Przerwy ładowania",
+    "Czas całkowity",
+    "Czas podłączenia"
+  ],
+  "cs": [
+    "Úseky nabíjení",
+    "Pauzy nabíjení",
+    "Celkový čas",
+    "Doba připojení"
+  ],
+  "sk": [
+    "Úseky nabíjania",
+    "Prestávky nabíjania",
+    "Celkový čas",
+    "Čas pripojenia"
+  ],
+  "hu": [
+    "Töltési szakaszok",
+    "Töltési szünetek",
+    "Eltelt idő",
+    "Csatlakozási idő"
+  ],
+  "ro": [
+    "Segmente de încărcare",
+    "Pauze de încărcare",
+    "Timp scurs",
+    "Durată conectare"
+  ],
+  "sl": [
+    "Odseki polnjenja",
+    "Premori polnjenja",
+    "Pretekli čas",
+    "Čas priklopa"
+  ],
+  "hr": [
+    "Dijelovi punjenja",
+    "Stanke punjenja",
+    "Proteklo vrijeme",
+    "Vrijeme priključenja"
+  ]
+};
+for (const [language, labels] of Object.entries(PLUG_SESSION_LABELS)) {
+  const [sessionSegments, sessionPauses, sessionElapsed, sessionPlugTime] = labels;
+  Object.assign(FRONTEND_TEXT.chargeHistory[language], {sessionSegments, sessionPauses, sessionElapsed, sessionPlugTime});
+}
+
 // Public Home Assistant card-picker names are intentionally owned by the
 // shared i18n layer. Keep the compact universal overview clearly distinct from
 // the wide Battery + Fuel / Dual-Energy overview in every supported language.
