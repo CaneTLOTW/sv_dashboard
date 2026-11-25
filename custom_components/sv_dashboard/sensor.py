@@ -625,6 +625,7 @@ class SvServerChargeHistorySensor(SvMetricSensor):
             {
                 "count": len(rows),
                 "charges": rows,
+                "plug_connection_windows": getattr(history, "data", {}).get("confirmed_plug_windows", []) if status["server_history_ready"] else [],
                 "active_charge": active_payload,
                 "archive_observed_count": archive.get("observed_charge_count", 0),
                 "archive_oldest_observed_charge": archive.get("oldest_observed_charge"),

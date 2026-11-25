@@ -289,6 +289,35 @@ def test_valid_numeric_zero_is_not_treated_as_unknown():
     assert merged["charge_type"] == "AC"
 
 
+def test_confirmed_plug_windows_require_independent_evidence_and_split_unknown():
+    from datetime import datetime
+    at = lambda clock: datetime.fromisoformat("2026-01-01T" + clock + "+00:00")
+    rows = [(at("09:00:00"), "on"), (at("12:00:00"), "unavailable"),
+            (at("12:15:00"), "on"), (at("14:00:00"), "off"),
+            (at("15:00:00"), "on"), (at("16:00:00"), "off")]
+    out = MODULE.confirmed_plug_windows(rows, at("10:00:00"), at("17:00:00"))
+    assert len(out) == 3
+    assert out[0]["start"] == at("10:00:00").isoformat()
+    assert not out[0]["start_confirmed"] and not out[0]["end_confirmed"]
+    assert not out[1]["start_confirmed"] and out[1]["end_confirmed"]
+    assert out[2]["start_confirmed"] and out[2]["end_confirmed"]
+    driving = [{"start_time": at("15:10:00").isoformat(), "end_time": at("15:20:00").isoformat(),
+                "distance_km": 3, "valid_for_statistics": True}]
+    assert MODULE.plug_windows_without_driving(out, driving) == out[:2]
+
+
+def test_plug_archive_keeps_known_prefix_without_bridging_unknown():
+    from datetime import datetime
+    at = lambda clock: datetime.fromisoformat("2026-01-01T" + clock + "+00:00")
+    old = MODULE.confirmed_plug_windows([(at("08:00:00"), "off"), (at("09:00:00"), "on")], at("08:00:00"), at("13:00:00"))
+    new = MODULE.confirmed_plug_windows([(at("10:00:00"), "on"), (at("14:00:00"), "off")], at("12:00:00"), at("15:00:00"))
+    merged = MODULE.merge_plug_window_archive(old, new, at("12:00:00"))
+    assert len(merged) == 1 and merged[0]["start"] == at("09:00:00").isoformat()
+    assert merged[0]["start_confirmed"] and merged[0]["end_confirmed"]
+    clipped = MODULE.merge_plug_window_archive(old, [], at("12:00:00"))
+    assert clipped[0]["end"] == at("12:00:00").isoformat() and not clipped[0]["end_confirmed"]
+
+
 def run():
     tests = [value for name, value in globals().items() if name.startswith("test_")]
     for test in tests:

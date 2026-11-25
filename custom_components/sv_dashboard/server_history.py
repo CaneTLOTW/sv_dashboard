@@ -23,6 +23,9 @@ from homeassistant.util import dt as dt_util
 from .charge_resolution import (
     merge_charge_evidence,
     merge_charge_samples,
+    confirmed_plug_windows,
+    merge_plug_window_archive,
+    plug_windows_without_driving,
     normalize_charge_type,
     same_physical_charge,
 )
@@ -1150,6 +1153,9 @@ class ServerHistoryManager:
             key=_trip_sort_key,
         )
         self.data["charges"] = canonical_charges
+        self.data["confirmed_plug_windows"] = plug_windows_without_driving(
+            self.data.get("plug_connection_windows", []), self.data["trips"]
+        )
         self._update_archive_metadata()
 
     def _annotate_legacy_trip_matches(self, server_trips: list[dict[str, Any]]) -> None:
@@ -1664,17 +1670,18 @@ class ServerHistoryManager:
             self._latest_recorder_capacity_samples = self.data.get("recorder_capacity_samples", [])
             return self.data.get("recorder_observed_charges", [])
         entity_ids = [charging_entity, soc_entity]
-        for key in ("battery_capacity", "battery_charging_type"):
+        for key in ("battery_capacity", "battery_charging_type", "battery_plugged"):
             if entity_id := self.entity_mapping.get(key):
                 entity_ids.append(entity_id)
         try:
             hours = int(self.entry.options.get(OPTION_HISTORY_HOURS, DEFAULT_OPTIONS[OPTION_HISTORY_HOURS]))
-            start = dt_util.utcnow() - timedelta(hours=max(24, min(hours, 24 * 90)))
+            now = dt_util.utcnow()
+            start = now - timedelta(hours=max(24, min(hours, 24 * 90)))
             history = await get_instance(self.hass).async_add_executor_job(
                 recorder_history.get_significant_states,
                 self.hass,
                 start,
-                dt_util.utcnow(),
+                now,
                 entity_ids,
                 None,
                 True,
@@ -1686,6 +1693,15 @@ class ServerHistoryManager:
             return self.data.get("recorder_observed_charges", [])
 
         charging = self._state_rows(history.get(charging_entity, []))
+        plug_entity = self.entity_mapping.get("battery_plugged")
+        plug_rows = self._state_rows(history.get(plug_entity, [])) if plug_entity else []
+        if plug_rows:
+            coverage_start = max(start, plug_rows[0][0])
+            self.data["plug_connection_windows"] = merge_plug_window_archive(
+                self.data.get("plug_connection_windows", []),
+                confirmed_plug_windows(plug_rows, coverage_start, now),
+                coverage_start,
+            )
         soc = self._state_rows(history.get(soc_entity, []))
         capacity = self._state_rows(history.get(self.entity_mapping.get("battery_capacity"), []))
         self._latest_recorder_capacity_samples = [

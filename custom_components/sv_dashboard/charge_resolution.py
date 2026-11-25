@@ -443,3 +443,80 @@ def merge_charge_evidence(
     if conflicts:
         result["field_conflicts"] = conflicts
     return result
+
+
+def confirmed_plug_windows(
+    rows: list[tuple[datetime, Any]], start: datetime, end: datetime,
+) -> list[dict[str, Any]]:
+    """Build intervals of independently observed plug continuity.
+
+    Initial ON establishes coverage, not a physical plug-in edge.
+    Unknown/unavailable interrupts proof without implying unplugging.
+    """
+    if end <= start:
+        return []
+    windows: list[dict[str, Any]] = []
+    begin = None
+    confirmed = False
+    previous = None
+    for timestamp, value in sorted(rows, key=lambda item: item[0]):
+        if timestamp > end:
+            break
+        state = str(value).lower()
+        if state == "on":
+            if begin is None:
+                begin = max(timestamp, start)
+                confirmed = previous == "off" and timestamp >= start
+        elif begin is not None:
+            boundary = max(timestamp, start)
+            if boundary > begin:
+                windows.append({"start": begin.isoformat(), "end": boundary.isoformat(),
+                    "start_confirmed": confirmed, "end_confirmed": state == "off"})
+            begin = None
+        previous = state
+    if begin is not None and end > begin:
+        windows.append({"start": begin.isoformat(), "end": end.isoformat(),
+            "start_confirmed": confirmed, "end_confirmed": False})
+    return windows
+
+
+def merge_plug_window_archive(
+    previous: list[dict[str, Any]], current: list[dict[str, Any]], coverage_start: datetime,
+) -> list[dict[str, Any]]:
+    """Preserve archived proof; newer observations own overlapping coverage."""
+    fresh = [dict(window) for window in current]
+    older = []
+    for window in previous:
+        begin, finish = _time(window.get("start")), _time(window.get("end"))
+        if begin is None or finish is None or begin >= finish or begin >= coverage_start:
+            continue
+        if finish <= coverage_start:
+            older.append(window)
+        elif (fresh and _time(fresh[0].get("start")) == coverage_start
+              and not fresh[0].get("start_confirmed")):
+            # Both observations cover the seam as ON, without a new plug edge.
+            fresh[0]["start"] = window["start"]
+            fresh[0]["start_confirmed"] = bool(window.get("start_confirmed"))
+        else:
+            older.append({**window, "end": coverage_start.isoformat(), "end_confirmed": False})
+    return [*older, *fresh]
+
+
+def plug_windows_without_driving(
+    windows: list[dict[str, Any]], trips: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Do not trust a continuous plug status contradicted by known movement."""
+    intervals = []
+    for trip in trips:
+        if trip.get("valid_for_statistics") is True and (_number(trip.get("distance_km")) or 0) > 0:
+            start, end = _time(trip.get("start_time")), _time(trip.get("end_time"))
+            if start is not None and end is not None and start < end:
+                intervals.append((start, end))
+    valid = []
+    for window in windows:
+        begin, end = _time(window.get("start")), _time(window.get("end"))
+        if begin is not None and end is not None and begin < end and not any(
+            begin < finish and start < end for start, finish in intervals
+        ):
+            valid.append(window)
+    return valid
