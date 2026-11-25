@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.7.3-beta.1 — owner history and control acceptance candidate
+
+- Quarantine short overlapping odometer replays before canonical trip repair; retain raw server records and explicit exclusion provenance.
+- Recover only unique, complete local trips that exactly bridge adjacent valid server odometer anchors; retain unresolved gaps rather than importing overlapping composite journeys.
+- Treat the PSA maintenance endpoint as optional in the read-only vehicle API audit.
+- Archive independently observed cable connection windows from Recorder. Group non-overlapping, compatible charge segments within the same confirmed connection in Charge History only; retain individual curves and zero-energy observations.
+- Preserve the existing Live charging-card layout and refine its status text only when a previous positive segment and continuous connection are evidenced.
+- Use a shared, immediate climate-command guard in the EV Hero, respect mapped button availability, and distinguish requested commands from confirmed state transitions.
+- Owner runtime acceptance and current upstream validation remain required; this is not a stable release.
+
 ## 0.7.2 — stable: evidence-qualified server-SOC energy recovery (2026-11-05)
 
 - Restores **SOC×historical battery-capacity estimates** for high-confidence completed server trips whose direct upstream electric consumption is zero and which lack a fully corroborated one-to-one local trip match. Explicitly labels all recovered results as estimates, preserving the upstream zero, raw telemetry, source and conflict provenance.

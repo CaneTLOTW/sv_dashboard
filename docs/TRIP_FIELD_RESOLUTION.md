@@ -72,3 +72,8 @@ The sanitized regression fixture and resolver tests are in
 `tests/fixtures/trip-field-resolution.json` and
 `tests/trip_field_resolution_test.py`; the real-vehicle evidence is tracked in
 [#118](https://github.com/CaneTLOTW/sv_dashboard/issues/118).
+
+
+## Replay quarantine and local gap recovery (0.7.3-beta.1)
+
+Before continuity repair, normalized raw server rows are partitioned by the short overlapping replay signature (identical positive start odometer and distance, physically impossible speed, short interval overlapping a longer valid predecessor). Quarantined IDs and reasons remain in the Store; the source rows are not deleted. Genuine short drives are not discarded solely because of duration. The subsequent repair uses the surviving original rows. After server field resolution, an independently observed local trip may fill a gap only if it is a unique, plausible, non-overlapping complete observation between two valid server anchors, and its odometers and distance agree with both anchors. The recovered row is labeled local, not a server identity; its energy is an estimate. Unresolved gaps remain distance-only. Every rebuild starts from raw server and local data, so a later server publication supersedes a local recovery. The server-only GPS history remains server-only.

@@ -25,8 +25,8 @@ const diagnosticsBackend = read("vehicle_diagnostics.py");
 
 test("Home Assistant registers one SV frontend resource", () => {
   assert.match(constants, /FRONTEND_URL = "\/sv_dashboard\/frontend\.js"/);
-  assert.match(constants, /FRONTEND_VERSION = "0\.7\.2"/);
-  assert.equal(manifest.version, "0.7.2");
+  assert.match(constants, /FRONTEND_VERSION = "0\.7\.3-beta\.1"/);
+  assert.equal(manifest.version, "0.7.3-beta.1");
   assert.match(constants, /FRONTEND_RESOURCE_URLS = \(FRONTEND_URL,\)/);
   // Refresh modules importing the changed i18n catalog and updated history/Hero code.
   assert.match(frontend, /import\("\.\/vehicle-overview-card\.js\?v=0\.7\.3-beta\.1"\)/);

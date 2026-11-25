@@ -144,3 +144,8 @@ Tests live in:
 
 The corresponding release acceptance scope is
 [`BETA40_TEST_SCOPE.md`](BETA40_TEST_SCOPE.md).
+
+
+## Plug-continuity presentation (0.7.3-beta.1)
+
+The Recorder cable-connected binary sensor is independent of the charging activity signal. The backend archives intervals of observed cable continuity; unknown/unavailable terminates proof without implying unplugging. A retained initial ON establishes observed coverage but not the exact physical plug-in edge. Known movement contradicts a continuous connection window, so that window is excluded. The Charge History card groups separate compatible non-overlapping observed segments only inside the same evidenced connection. It sums the existing segment durations and known energy, retains individual curve navigation, distinguishes elapsed time from charging duration, and shows the total connection time only when both physical edges are observed. Existing Recorder-derived segment durations may include the existing short activity debounce; they are not precise EVSE measurements. Zero-energy observations are retained, not asserted to prove zero physical transfer. No interpolation across parent-session pauses or independent second charging dataset is introduced. The Live card keeps its established geometry and sub-buttons; only the status text may identify a pause after a positive completed charge in the current connection. Historic data without retained plug evidence remains ungrouped.

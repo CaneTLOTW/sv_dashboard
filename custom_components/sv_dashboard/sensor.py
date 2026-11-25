@@ -449,7 +449,7 @@ class SvServerTripHistorySensor(SvMetricSensor):
         history, status = _ready_server_history(self.metrics)
         server_trips = history.data.get("trips", []) if status["server_history_ready"] else []
         rows = [_packed_trip_row(trip) for trip in server_trips]
-        raw_count = len(history.data.get("canonical_trips", [])) if status["server_history_ready"] else 0
+        raw_count = len(history.data.get("server_trips_raw", [])) if status["server_history_ready"] else 0
         zero_rows = []
         if status["server_history_ready"]:
             for trip in history.data.get("canonical_trips", []):
