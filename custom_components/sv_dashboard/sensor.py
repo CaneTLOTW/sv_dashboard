@@ -466,6 +466,7 @@ class SvServerTripHistorySensor(SvMetricSensor):
                 "trip_columns": _TRIP_ATTRIBUTE_COLUMNS,
                 "trip_rows": rows,
                 "zero_trip_rows": zero_rows,
+                "monthly_consumption": history.data.get("monthly_consumption", []) if status["server_history_ready"] else [],
                 "source": status["server_history_source"],
                 **status,
             }

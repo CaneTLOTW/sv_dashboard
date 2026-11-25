@@ -37,6 +37,7 @@ from .const import (
     UPSTREAM_DOMAIN,
 )
 from .charge_policy import allow_soc_only_charge_reconstruction
+from .monthly_statistics import celsius, monthly_consumption, observe_trip_temperatures
 from .trip_repair import (
     local_trip_backfill_quality, partition_replayed_trips, repair_trip_odometer_continuity,
     recover_local_odometer_gaps,
@@ -1379,6 +1380,11 @@ class ServerHistoryManager:
             raw_by_id.update({item["id"]: item for item in incoming})
             self.data["server_trips_raw"] = sorted(raw_by_id.values(), key=_trip_sort_key)
             self._rebuild_canonical()
+            try:
+                await self._async_monthly_statistics()
+            except Exception as err:  # Optional statistics never invalidate canonical history.
+                _LOGGER.debug("Could not update SV monthly statistics: %s", err)
+                self.data["monthly_consumption"] = []
             if self.metrics:
                 await self.metrics.async_reconcile_canonical_mileage(
                     self.data.get("trips", [])
@@ -1656,6 +1662,32 @@ class ServerHistoryManager:
     def _text_at(rows: list[tuple[datetime, Any]], timestamp: datetime) -> str | None:
         value = next((value for time, value in reversed(rows) if time <= timestamp and str(value).strip()), None)
         return str(value) if value is not None else None
+
+    async def _async_monthly_statistics(self) -> None:
+        """Derive monthly aggregates from current canonical rows and optional Recorder evidence."""
+        trips = self.data.get("trips", [])
+        entity = self.entity_mapping.get("temperature")
+        archive = self.data.get("monthly_temperature_archive", {})
+        observations = []
+        if entity:
+            try:
+                now = dt_util.utcnow()
+                history = await get_instance(self.hass).async_add_executor_job(
+                    recorder_history.get_significant_states,
+                    self.hass, now - timedelta(days=90, minutes=15), now,
+                    [entity], None, False, False,
+                )
+                for state in history.get(entity, []):
+                    timestamp = self._state_time(state)
+                    attributes = state.attributes if hasattr(state, "attributes") else state.get("attributes", {})
+                    if timestamp is not None:
+                        observations.append((timestamp, celsius(self._state_value(state), (attributes or {}).get("unit_of_measurement"))))
+            except Exception as err:
+                _LOGGER.debug("Could not read SV ambient-temperature history: %s", err)
+                observations = []
+        archive = observe_trip_temperatures(trips, observations, archive)
+        self.data["monthly_temperature_archive"] = archive
+        self.data["monthly_consumption"] = monthly_consumption(trips, archive, self.hass.config.time_zone)
 
     async def _async_recorder_charges(self) -> list[dict[str, Any]]:
         """Rebuild observed historical sessions from local Recorder states.
