@@ -541,4 +541,28 @@ for (const [language, labels] of Object.entries(VEHICLE_DIAGNOSTICS_TEXT)) {
   };
 }
 
+const PACKAGE_LOAD_LABELS = {
+  "de": "SV-Module konnten nicht geladen werden. Browser neu laden und Ressourcen prüfen.",
+  "en": "SV modules could not load. Reload the browser and check resources.",
+  "fr": "Impossible de charger les modules SV. Rechargez le navigateur et vérifiez les ressources.",
+  "it": "Impossibile caricare i moduli SV. Ricaricare il browser e verificare le risorse.",
+  "es": "No se pudieron cargar los módulos SV. Recargue el navegador y revise los recursos.",
+  "pt": "Não foi possível carregar os módulos SV. Recarregue o navegador e verifique os recursos.",
+  "nl": "SV-modules konden niet worden geladen. Herlaad de browser en controleer de bronnen.",
+  "da": "SV-moduler kunne ikke indlæses. Genindlæs browseren og kontrollér ressourcerne.",
+  "nb": "SV-moduler kunne ikke lastes. Last nettleseren på nytt og sjekk ressursene.",
+  "sv": "SV-moduler kunde inte laddas. Ladda om webbläsaren och kontrollera resurserna.",
+  "fi": "SV-moduulien lataus epäonnistui. Lataa selain uudelleen ja tarkista resurssit.",
+  "pl": "Nie można załadować modułów SV. Odśwież przeglądarkę i sprawdź zasoby.",
+  "cs": "Moduly SV nelze načíst. Obnovte prohlížeč a zkontrolujte zdroje.",
+  "sk": "Moduly SV sa nepodarilo načítať. Obnovte prehliadač a skontrolujte zdroje.",
+  "hu": "Az SV-modulok nem tölthetők be. Frissítse a böngészőt és ellenőrizze az erőforrásokat.",
+  "ro": "Modulele SV nu s-au putut încărca. Reîncărcați browserul și verificați resursele.",
+  "sl": "Modulov SV ni bilo mogoče naložiti. Osvežite brskalnik in preverite vire.",
+  "hr": "SV moduli nisu učitani. Osvježite preglednik i provjerite resurse."
+};
+for (const [language, label] of Object.entries(PACKAGE_LOAD_LABELS)) {
+  FRONTEND_TEXT.dashboard[language].packageLoadFailed = label;
+}
+
 export { FRONTEND_TEXT, languageFor, localeFor, textFor };

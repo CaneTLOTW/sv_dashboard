@@ -269,3 +269,12 @@ test("vehicle information popup uses neutral attributes and HA-native relative t
   assert.match(strategy, /attribute: "brand", name: strings\.brand/);
   assert.doesNotMatch(strategy, /attribute: "powertrain", name: strings\.powertrain/);
 });
+
+
+test("Strategy registration is independent of package card import failures", () => {
+  assert.match(frontend, /const packageModules = Promise\.allSettled/);
+  assert.doesNotMatch(frontend, /await packageModules/);
+  assert.match(frontend, /window\.__svDashboardPackageReadiness = Promise\.race/);
+  assert.match(strategy, /const failed = await packages/);
+  assert.match(strategy, /strings\.packageLoadFailed/);
+});

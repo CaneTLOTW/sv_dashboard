@@ -71,6 +71,32 @@ function getMetricEntity(hass, entryId, metricKey) {
   })?.[0];
 }
 
+// Domain-qualified entities take precedence; legacy mappings are only
+// accepted for the matching domain. A number must never receive toggle.
+export function chargeLimitCards(mapped, strings, supportsCharging) {
+  if (!supportsCharging) return [];
+  const domain = (value, prefix) => typeof value === "string" && value.startsWith(prefix + ".");
+  const legacy = mapped.battery_charging_limit;
+  const number = [mapped.battery_charging_limit_number, legacy].find(value => domain(value, "number"));
+  const toggle = [mapped.battery_charging_limit_switch, legacy].find(value => domain(value, "switch"));
+  const cards = [];
+  if (number) cards.push({
+    type: "custom:bubble-card", card_type: "button", button_type: "slider",
+    entity: number, name: strings.chargeLimit, icon: "mdi:battery-charging-80",
+    show_state: true, force_icon: true,
+    tap_action: { action: "more-info" },
+    button_action: { tap_action: { action: "more-info" } },
+  });
+  if (toggle) cards.push({
+    type: "custom:bubble-card", card_type: "button", button_type: "switch",
+    entity: toggle, name: strings.chargeLimitEnabled, icon: "mdi:battery-lock",
+    show_state: true, force_icon: true, grid_options: { columns: 6 },
+    tap_action: { action: "toggle" },
+    button_action: { tap_action: { action: "toggle" } },
+  });
+  return cards;
+}
+
 class SvDashboardStrategy extends HTMLElement {
   static get configRequired() {
     return true;
@@ -90,6 +116,14 @@ class SvDashboardStrategy extends HTMLElement {
       : null;
     if (readiness && typeof readiness.then === "function") {
       await readiness;
+    }
+    const packages = typeof window !== "undefined" ? window.__svDashboardPackageReadiness : null;
+    if (packages && typeof packages.then === "function") {
+      const failed = await packages;
+      if (failed.length) {
+        const strings = t(hass);
+        return setupDashboard(hass, strings.setup, `## ${strings.packageLoadFailed}\n\n- ${failed.join("\n- ")}`);
+      }
     }
     const strategyConfig = config?.strategy?.options ?? config?.strategy ?? config ?? {};
     return SvDashboardStrategy.generate(strategyConfig, hass);
@@ -495,8 +529,7 @@ class SvDashboardStrategy extends HTMLElement {
       { type: "grid", cards: present([
         supportsCharging ? separator(strings.chargingRange, "mdi:battery-charging") : null,
         supportsCharging ? chargingCard : null,
-        supportsCharging && entity("battery_charging_limit_number") ? { type: "custom:bubble-card", card_type: "button", button_type: "slider", entity: entity("battery_charging_limit_number"), name: strings.chargeLimit, icon: "mdi:battery-charging-80", show_state: true, force_icon: true } : null,
-        supportsCharging && entity("battery_charging_limit_switch") ? { type: "custom:bubble-card", card_type: "button", button_type: "switch", entity: entity("battery_charging_limit_switch"), name: strings.chargeLimitEnabled, icon: "mdi:battery-lock", show_state: true, force_icon: true, grid_options: { columns: 6 } } : bubble("battery_charging_limit", strings.chargeLimit, "mdi:battery-lock", [], 6),
+        ...chargeLimitCards(mapped, strings, supportsCharging),
         supportsCharging ? bubble("battery_charging_start", strings.chargeStart, "mdi:clock-start", [], 6) : null,
         supportsCharging && entity("battery_charging") ? { type: "conditional", conditions: [{ condition: "state", entity: entity("battery_charging"), state: "on" }], card: { type: "custom:sv-dashboard-charge-curve-browser-card", title: strings.chargeCurve, charging_entity: entity("battery_charging"), soc_entity: entity("battery"), power_entity: currentChargePower, mode_entity: entity("battery_charging_type"), capacity_entity: entity("battery_capacity"), server_entity: serverChargeEntity, include_active: true, hours_to_show: historyHours, fallback_capacity_kwh: null }, grid_options: { columns: "full" } } : null,
       ]) },

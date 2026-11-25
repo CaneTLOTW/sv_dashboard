@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.3-beta.2 — acceptance candidate hardening
+
+- Explicitly use more-info for numeric charge-limit taps (including the icon) and retain slider drag; only switch entities can toggle. Protect legacy mappings and missing capabilities (#132).
+- Register the Strategy independently of internal card load completion; show a bounded localized module-load diagnostic if an import fails or stalls rather than preventing Strategy registration (#133). The reporter's specific environment still needs verification.
+- Synchronize all affected cache/version contracts and owner-installer test with the candidate. Keep actual SOC reconstruction regression assertions intact.
+
 ## 0.7.3-beta.1 — owner history and control acceptance candidate
 
 - Quarantine short overlapping odometer replays before canonical trip repair; retain raw server records and explicit exclusion provenance.

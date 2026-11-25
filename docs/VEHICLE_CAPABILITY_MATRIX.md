@@ -130,3 +130,9 @@ These are **behavior/profile properties**, not hard-coded model capabilities.
 - Owner ë-C3: no further odometer test is required unless a future upstream/API change materially changes behavior.
 
 Canonical external vehicle test thread: #2.
+
+
+## Citroën ë-C3 Aircross charge-limit controls (2026-11-08 report)
+
+- [#132](https://github.com/CaneTLOTW/sv_dashboard/issues/132): confirmed in the reporter's SV 0.7.2 / Stellantis Vehicles 2026.10.3 / Bubble Card 3.4.3 installation that separate numeric target and enable switch are exposed. The reporter observed a stop near 80% with HA charge limit enabled; native 80%-limit-off command timed out. Native command support remains unknown, not inferred from HA limit behavior. No model-specific runtime branching.
+- Bubble Card 3.4.3 slider default tap toggles non-sensor entities; SV sets explicit more-info for numeric controls and toggle only for a switch. Actual vehicle retest pending. The reporter also confirmed the optional-maintenance API audit failure predates upstream 2026.11.2.

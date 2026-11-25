@@ -86,7 +86,7 @@ installTransparentMapMarkerCompatibility();
  * for external HACS custom elements. Existing-but-still-loading cards therefore
  * no longer produce a false missing-dependency page during the first reload.
  */
-const packageModules = Promise.all([
+const packageModules = Promise.allSettled([
   import("./trip-history-card.js?v=0.7.3-beta.1"),
   import("./charge-history-card.js?v=0.7.3-beta.1"),
   import("./gps-history-card.js?v=0.6.0-beta.28"),
@@ -111,8 +111,29 @@ window.__svDashboardDependencyReadiness = Promise.all(
   REQUIRED_ELEMENTS.map(waitForElement),
 );
 
-await packageModules;
-window.customCards = (window.customCards || []).filter(
-  (card) => !INTERNAL_CARD_TYPES.has(card?.type),
-);
+// Register the Strategy independently of the card bundle. A rejected or
+// stalled card import must not turn into an opaque HA strategy timeout.
+const packageNames = [
+  "trip-history-card.js", "charge-history-card.js", "gps-history-card.js",
+  "vehicle-overview-card.js", "dual-energy-overview-card.js", "fuel-history-card.js",
+  "vehicle-audit-card.js", "vehicle-diagnostics-card.js",
+];
+let packageTimer;
+const packageResult = packageModules.then((results) => {
+  window.customCards = (window.customCards || []).filter(
+    (card) => !INTERNAL_CARD_TYPES.has(card?.type),
+  );
+  return results.flatMap((result, index) => {
+    if (result.status === "fulfilled") return [];
+    console.error("[SV Dashboard] card module failed:", packageNames[index], result.reason);
+    return [packageNames[index]];
+  });
+});
+window.__svDashboardPackageReadiness = Promise.race([
+  packageResult,
+  new Promise(resolve => {
+    packageTimer = setTimeout(() => resolve(["SV Dashboard modules (timeout)"]), DEPENDENCY_GRACE_MS);
+  }),
+]).finally(() => clearTimeout(packageTimer));
+
 await import("./sv_dashboard.js?v=0.7.3-beta.1");

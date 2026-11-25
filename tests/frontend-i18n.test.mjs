@@ -35,6 +35,7 @@ const CAPABILITY_EXCEPTIONS = {
   tripHistory: new Set(["reconstructedGap", "localGapRecovery"]),
   chargeHistory: new Set(["sessionSegments", "sessionPauses", "sessionElapsed", "sessionPlugTime"]),
   dashboard: new Set([
+    "packageLoadFailed",
     "climateUnavailable", "climatePending", "climateNotConfirmed", "climateLowSoc", "chargePaused",
     "periodicWakeup",
     "wakeupInterval",
