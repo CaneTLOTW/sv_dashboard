@@ -17,6 +17,139 @@ const CARD_TAG = "sv-dashboard-vehicle-overview-card";
 const EDITOR_TAG = "sv-dashboard-vehicle-overview-card-editor";
 const FRESH_VEHICLE_DATA_MS = 15 * 60 * 1000;
 const CLIMATE_COMMAND_GUARD_MS = 90 * 1000;
+const CLIMATE_TAG = "sv-dashboard-climate-control";
+
+// A single in-browser guard per vehicle survives a Hero remount and prevents
+// duplicate requests when the same vehicle is shown on two overview cards.
+const climateRequests = new Map();
+const climateListeners = new Set();
+
+function climateLiveState(value) {
+  const raw = String(value ?? "").toLowerCase();
+  if (["on","true","inprogress","running","enabled"].includes(raw)) return true;
+  if (["off","false","disabled","finished","stopped"].includes(raw)) return false;
+  return null;
+}
+
+function climateButtonAvailable(states, entityId) {
+  const value = states?.[entityId];
+  // HA buttons that have never been pressed normally have state "unknown".
+  return typeof entityId === "string" && entityId.startsWith("button.")
+    && Boolean(value) && String(value.state).toLowerCase() !== "unavailable";
+}
+
+function climateTransitionConfirmed(request, entity) {
+  if (!request || climateLiveState(entity?.state) !== request.expectedActive) return false;
+  const changed = Date.parse(entity?.last_changed || "");
+  return Number.isFinite(changed) && changed > request.baselineChanged;
+}
+
+function notifyClimateListeners() {
+  for (const listener of climateListeners) listener();
+}
+
+class SvDashboardClimateControl extends HTMLElement {
+  constructor() {
+    super();
+    this._config = {};
+    this._hass = undefined;
+    this._onChange = () => this._render();
+    const root = this.attachShadow({mode:"open"});
+    root.innerHTML = '<style>:host{display:block;width:30px;height:30px}button{box-sizing:border-box;width:30px;height:30px;border:0;border-radius:50%;padding:0;margin:0;display:grid;place-items:center;background:rgba(20,20,20,.62);color:white;box-shadow:0 1px 4px rgba(0,0,0,.25);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}button:active{transform:scale(.92)}button[aria-disabled=true]{cursor:default}button[data-state=active]{color:var(--primary-color);background:color-mix(in srgb,var(--primary-color) 20%,rgba(20,20,20,.72))}button[data-state=pending]{color:var(--primary-color);background:color-mix(in srgb,var(--primary-color) 12%,rgba(20,20,20,.72))}button[data-state=pending] ha-icon{animation:kfzClimatePending 1.2s ease-in-out infinite}button[data-state=failed]{color:var(--error-color)}button[data-state=unavailable]{opacity:.72}ha-icon{--mdc-icon-size:18px;width:18px;height:18px}@keyframes kfzClimatePending{0%,100%{opacity:.4}50%{opacity:1}}@media(prefers-reduced-motion:reduce){button[data-state=pending] ha-icon{animation:none}}</style><button type="button"><ha-icon icon="mdi:air-conditioner"></ha-icon></button>';
+    this._button = root.querySelector("button");
+    this._icon = root.querySelector("ha-icon");
+    for (const eventName of ["pointerdown","pointerup","keydown","keyup","dblclick","contextmenu"]) {
+      this._button.addEventListener(eventName, event => event.stopPropagation());
+    }
+    this._button.addEventListener("click", event => {
+      event.stopPropagation();
+      this._activate();
+    });
+  }
+
+  setConfig(config) { this._config = config || {}; this._render(); }
+  getCardSize() { return 1; }
+  connectedCallback() { climateListeners.add(this._onChange); this._render(); }
+  disconnectedCallback() { climateListeners.delete(this._onChange); }
+  get _key() {
+    return JSON.stringify([this._config.climate_entity,this._config.start_entity,this._config.stop_entity]);
+  }
+  set hass(hass) {
+    this._hass = hass;
+    const request = climateRequests.get(this._key);
+    if (request && climateTransitionConfirmed(request, hass.states?.[this._config.climate_entity])) {
+      clearTimeout(request.timer);
+      climateRequests.delete(this._key);
+      notifyClimateListeners();
+    }
+    this._render();
+  }
+
+  _state() {
+    const states = this._hass?.states || {};
+    const entity = states[this._config.climate_entity];
+    const active = climateLiveState(entity?.state);
+    const target = active === true ? this._config.stop_entity : this._config.start_entity;
+    const available = active !== null && climateButtonAvailable(states, target);
+    const request = climateRequests.get(this._key);
+    return {states,entity,active,target,available,request};
+  }
+
+  _render() {
+    if (!this._hass) return;
+    const {states,active,available,request} = this._state();
+    const strings = textFor(this._hass,"dashboard");
+    const state = request?.status === "pending" ? "pending" : !available ? "unavailable"
+      : request?.status === "failed" ? "failed" : active ? "active" : "off";
+    const soc = states[this._config.battery_entity]?.state;
+    const brand = String(states[this._config.vehicle_info_entity]?.attributes?.brand || "")
+      .normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").toLowerCase();
+    const lowSocHint = ["citroen","peugeot","ds","ds automobiles","opel","vauxhall"].includes(brand)
+      && soc !== undefined && soc !== "" && Number.isFinite(Number(soc)) && Number(soc) < 20
+      && climateLiveState(states[this._config.charging_entity]?.state) === false;
+    const title = state === "pending" ? strings.climatePending : state === "failed" ? strings.climateNotConfirmed
+      : state === "unavailable" ? strings.climateUnavailable + (lowSocHint ? " · " + strings.climateLowSoc : "")
+      : active ? strings.stopClimate : strings.startClimate;
+    this._button.dataset.state = state;
+    this._button.setAttribute("aria-disabled", String(state === "pending" || state === "unavailable"));
+    this._button.setAttribute("aria-busy",String(state === "pending"));
+    this._button.setAttribute("aria-label",title);
+    this._button.title = title;
+    this._icon.setAttribute("icon", state === "unavailable" ? "mdi:lock" : state === "failed" ? "mdi:alert-circle" : "mdi:air-conditioner");
+  }
+
+  async _activate() {
+    const {entity,active,target,available,request} = this._state();
+    if (request?.status === "pending" || !this._hass) return;
+    if (!available) {
+      this.dispatchEvent(new CustomEvent("hass-notification",{detail:{message:this._button.title},bubbles:true,composed:true}));
+      return;
+    }
+    const key = this._key;
+    const next = {status:"pending",expectedActive:!active,baselineChanged:Date.parse(entity.last_changed || "")};
+    // Never manufacture a confirmation from a generic last_updated event.
+    // A valid state timestamp is required for authoritative transition proof.
+    next.timer = setTimeout(() => {
+      if (climateRequests.get(key) === next) {
+        next.status = "failed";
+        notifyClimateListeners();
+      }
+    }, CLIMATE_COMMAND_GUARD_MS);
+    climateRequests.set(key,next);
+    notifyClimateListeners();
+    this.dispatchEvent(new CustomEvent("haptic",{detail:"light",bubbles:true,composed:true}));
+    try {
+      await this._hass.callService("button","press",{}, {entity_id:target});
+    } catch (_error) {
+      if (climateRequests.get(key) === next) {
+        clearTimeout(next.timer);
+        next.status = "failed";
+        notifyClimateListeners();
+      }
+    }
+  }
+}
+if (!customElements.get(CLIMATE_TAG)) customElements.define(CLIMATE_TAG,SvDashboardClimateControl);
 
 const unavailable = (state) =>
   !state || ["unknown", "unavailable", "none", ""].includes(String(state.state ?? "").toLowerCase());
@@ -151,28 +284,6 @@ function buildConfig(hass, config, statusState) {
   const climateDisplay = (preconditioningStart || preconditioningStop) ? "block" : "none";
   const showInfo = liveVariant && Boolean(vehicleInfo);
 
-  const climateRuntimeTemplate = (body) => `[[[
-    const isOn = (value) => ['on','true','inprogress','running'].includes(String(value ?? '').toLowerCase());
-    const actionTime = (item) => {
-      const stateTime = Date.parse(String(item?.state ?? ''));
-      if (Number.isFinite(stateTime)) return stateTime;
-      const changed = Date.parse(item?.last_changed || '');
-      return Number.isFinite(changed) ? changed : 0;
-    };
-    const live = states[${literal(preconditioning)}];
-    const liveActive = isOn(live?.state);
-    const startAt = actionTime(states[${literal(preconditioningStart)}]);
-    const stopAt = actionTime(states[${literal(preconditioningStop)}]);
-    const sourceUpdated = Date.parse(live?.last_updated || live?.last_changed || '');
-    const latestAction = startAt > stopAt ? 'start' : stopAt > startAt ? 'stop' : null;
-    const latestAt = latestAction === 'start' ? startAt : latestAction === 'stop' ? stopAt : 0;
-    const sourceAnswered = latestAt > 0 && Number.isFinite(sourceUpdated) && sourceUpdated >= latestAt;
-    const pending = latestAt > 0 && Date.now() - latestAt <= ${CLIMATE_COMMAND_GUARD_MS} && !sourceAnswered;
-    const pendingAction = pending ? latestAction : null;
-    const active = liveActive || pendingAction === 'start';
-    ${body}
-  ]]]`;
-
   const heroCard = {
     type: "custom:button-card",
     entity: primaryLevel,
@@ -267,6 +378,7 @@ function buildConfig(hass, config, statusState) {
         card: {
           type: "custom:button-card",
           entity: rightStatusEntity,
+          triggers_update: [charging, chargingEnd, temperature].filter(Boolean),
           show_name: true,
           show_state: false,
           show_icon: true,
@@ -325,63 +437,13 @@ function buildConfig(hass, config, statusState) {
       } : "",
       climate: (preconditioningStart || preconditioningStop) ? {
         card: {
-          type: "custom:button-card",
-          entity: preconditioning,
-          show_name: false,
-          show_state: false,
-          show_label: false,
-          show_icon: true,
-          icon: climateRuntimeTemplate(`
-            return 'mdi:air-conditioner';
-          `),
-          tap_action: {
-            action: "perform-action",
-            perform_action: "button.press",
-            target: {
-              entity_id: climateRuntimeTemplate(`
-                if (pending) return '';
-                return liveActive ? ${literal(preconditioningStop)} : ${literal(preconditioningStart)};
-              `),
-            },
-          },
-          hold_action: { action: "none" },
-          styles: {
-            card: [
-              { width: "30px" }, { height: "30px" }, { "min-width": "30px" }, { "min-height": "30px" },
-              { padding: 0 }, { margin: 0 }, { "border-radius": "50%" }, { border: "none" },
-              { "box-shadow": "0 1px 4px rgba(0,0,0,0.25)" },
-              { "pointer-events": climateRuntimeTemplate("return pending ? 'none' : 'auto';") },
-              { cursor: climateRuntimeTemplate("return pending ? 'default' : 'pointer';") },
-              { background: climateRuntimeTemplate(`
-                if (pendingAction === 'stop') return 'color-mix(in srgb, var(--error-color) 12%, rgba(20,20,20,0.72))';
-                if (pendingAction === 'start') return 'color-mix(in srgb, var(--primary-color) 12%, rgba(20,20,20,0.72))';
-                if (!active) return 'rgba(20,20,20,0.62)';
-                return 'color-mix(in srgb, var(--primary-color) 20%, rgba(20,20,20,0.72))';
-              `) },
-            ],
-            grid: [
-              { "grid-template-areas": "'i'" }, { "grid-template-columns": "30px" },
-              { "grid-template-rows": "30px" }, { "align-items": "center" }, { "justify-items": "center" },
-            ],
-            icon: [
-              { width: "18px" }, { height: "18px" },
-              { color: climateRuntimeTemplate(`
-                if (pendingAction === 'stop') return 'var(--error-color)';
-                if (pendingAction === 'start') return 'var(--primary-color)';
-                if (!active) return 'white';
-                return 'var(--primary-color)';
-              `) },
-              { animation: climateRuntimeTemplate("return pending ? 'kfzClimatePending 1.2s ease-in-out infinite' : 'none';") },
-              { margin: 0 }, { padding: 0 },
-            ],
-          },
-          extra_styles: `
-            @keyframes kfzClimatePending {
-              0%,100% { opacity:.55; }
-              50% { opacity:1; }
-            }
-          `,
-          triggers_update: [preconditioning, preconditioningStart, preconditioningStop, temperature].filter(Boolean),
+          type: "custom:sv-dashboard-climate-control",
+          climate_entity: preconditioning,
+          start_entity: preconditioningStart,
+          stop_entity: preconditioningStop,
+          battery_entity: battery,
+          charging_entity: charging,
+          vehicle_info_entity: vehicleInfo,
         },
       } : "",
       cable: `[[[ return '<ha-icon icon="mdi:ev-plug-type2" style="width:18px;height:18px;display:block;margin:0;padding:0;color:white"></ha-icon>'; ]]]`,
@@ -546,8 +608,8 @@ class SvDashboardVehicleOverviewCard extends HTMLElement {
     const selected = this._selected();
     const nextSignature = this._signatureFor(selected);
     if (nextSignature !== this._signature) {
-      this._signature = nextSignature;
-      this._rebuild();
+      if (!this._building) this._rebuild();
+      if (this._inner) this._inner.hass = hass;
       return;
     }
     if (this._inner) this._inner.hass = hass;
@@ -585,7 +647,7 @@ class SvDashboardVehicleOverviewCard extends HTMLElement {
       attributes.control_entities,
       picture || "",
       chargingEntity ? this._hass.states?.[chargingEntity]?.state || "" : "",
-      chargingEndEntity ? this._hass.states?.[chargingEndEntity]?.state || "" : "",
+      chargingEndEntity ? Boolean(this._hass.states?.[chargingEndEntity]) : false,
       this._config.navigation_path || "",
       this._config.heading || "",
       this._config.heading_icon || "",
@@ -607,13 +669,17 @@ class SvDashboardVehicleOverviewCard extends HTMLElement {
           : strings.noUniqueVehicle;
       this.innerHTML = `<ha-card><div style="padding:16px;color:var(--secondary-text-color)">${message}</div></ha-card>`;
       this._inner = undefined;
+      this._signature = "missing";
       return;
     }
 
     this._building = true;
     try {
       const helpers = await window.loadCardHelpers();
-      const config = buildConfig(this._hass, this._config, selected[1]);
+      const latest = this._selected();
+      if (!latest) return;
+      const config = buildConfig(this._hass, this._config, latest[1]);
+      this._signature = this._signatureFor(latest);
       const inner = helpers.createCardElement(config);
       this._inner = inner;
       this.replaceChildren(inner);

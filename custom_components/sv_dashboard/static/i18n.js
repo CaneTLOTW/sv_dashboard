@@ -194,6 +194,139 @@ for (const [language, labels] of Object.entries(PLUG_SESSION_LABELS)) {
   Object.assign(FRONTEND_TEXT.chargeHistory[language], {sessionSegments, sessionPauses, sessionElapsed, sessionPlugTime});
 }
 
+const CLIMATE_AND_PAUSE_LABELS = {
+  "de": [
+    "Vorklimatisierung nicht verfügbar",
+    "Warte auf Fahrzeugbestätigung",
+    "Vorklimatisierung nicht bestätigt",
+    "Unter 20 %: aktive Ladung kann erforderlich sein",
+    "Ladepause"
+  ],
+  "en": [
+    "Preconditioning unavailable",
+    "Waiting for vehicle confirmation",
+    "Preconditioning not confirmed",
+    "Below 20%: active charging may be required",
+    "Charging paused"
+  ],
+  "fr": [
+    "Préconditionnement indisponible",
+    "En attente de confirmation du véhicule",
+    "Préconditionnement non confirmé",
+    "Sous 20 % : recharge active parfois nécessaire",
+    "Recharge en pause"
+  ],
+  "it": [
+    "Precondizionamento non disponibile",
+    "In attesa di conferma del veicolo",
+    "Precondizionamento non confermato",
+    "Sotto il 20%: può servire la ricarica attiva",
+    "Ricarica in pausa"
+  ],
+  "es": [
+    "Preacondicionamiento no disponible",
+    "Esperando confirmación del vehículo",
+    "Preacondicionamiento no confirmado",
+    "Por debajo del 20 %: puede requerir carga activa",
+    "Carga en pausa"
+  ],
+  "pt": [
+    "Pré-condicionamento indisponível",
+    "A aguardar confirmação do veículo",
+    "Pré-condicionamento não confirmado",
+    "Abaixo de 20%: pode exigir carregamento ativo",
+    "Carregamento em pausa"
+  ],
+  "nl": [
+    "Voorconditionering niet beschikbaar",
+    "Wacht op voertuigbevestiging",
+    "Voorconditionering niet bevestigd",
+    "Onder 20%: actief laden kan vereist zijn",
+    "Laadpauze"
+  ],
+  "da": [
+    "Forkonditionering utilgængelig",
+    "Afventer bekræftelse fra bilen",
+    "Forkonditionering ikke bekræftet",
+    "Under 20 %: aktiv opladning kan være nødvendig",
+    "Ladepause"
+  ],
+  "nb": [
+    "Forvarming utilgjengelig",
+    "Venter på bekreftelse fra bilen",
+    "Forvarming ikke bekreftet",
+    "Under 20 %: aktiv lading kan være nødvendig",
+    "Ladepause"
+  ],
+  "sv": [
+    "Förkonditionering ej tillgänglig",
+    "Väntar på bekräftelse från bilen",
+    "Förkonditionering ej bekräftad",
+    "Under 20 %: aktiv laddning kan krävas",
+    "Laddningspaus"
+  ],
+  "fi": [
+    "Esilämmitys ei käytettävissä",
+    "Odotetaan auton vahvistusta",
+    "Esilämmitystä ei vahvistettu",
+    "Alle 20 %: aktiivinen lataus voi olla tarpeen",
+    "Lataustauko"
+  ],
+  "pl": [
+    "Klimatyzacja wstępna niedostępna",
+    "Oczekiwanie na potwierdzenie pojazdu",
+    "Brak potwierdzenia klimatyzacji",
+    "Poniżej 20%: może być wymagane aktywne ładowanie",
+    "Przerwa w ładowaniu"
+  ],
+  "cs": [
+    "Předklimatizace nedostupná",
+    "Čekání na potvrzení vozidla",
+    "Předklimatizace nepotvrzena",
+    "Pod 20 %: může být nutné aktivní nabíjení",
+    "Pauza nabíjení"
+  ],
+  "sk": [
+    "Predklimatizácia nedostupná",
+    "Čakanie na potvrdenie vozidla",
+    "Predklimatizácia nepotvrdená",
+    "Pod 20 %: môže byť potrebné aktívne nabíjanie",
+    "Prestávka nabíjania"
+  ],
+  "hu": [
+    "Előklimatizálás nem elérhető",
+    "Várakozás a jármű visszaigazolására",
+    "Előklimatizálás nincs visszaigazolva",
+    "20% alatt aktív töltés lehet szükséges",
+    "Töltési szünet"
+  ],
+  "ro": [
+    "Precondiționare indisponibilă",
+    "Se așteaptă confirmarea vehiculului",
+    "Precondiționare neconfirmată",
+    "Sub 20%: poate fi necesară încărcarea activă",
+    "Pauză de încărcare"
+  ],
+  "sl": [
+    "Predklimatizacija ni na voljo",
+    "Čakanje na potrditev vozila",
+    "Predklimatizacija ni potrjena",
+    "Pod 20 %: morda je potrebno aktivno polnjenje",
+    "Premor polnjenja"
+  ],
+  "hr": [
+    "Predklimatizacija nije dostupna",
+    "Čekanje potvrde vozila",
+    "Predklimatizacija nije potvrđena",
+    "Ispod 20 %: može biti potrebno aktivno punjenje",
+    "Stanka punjenja"
+  ]
+};
+for (const [language, labels] of Object.entries(CLIMATE_AND_PAUSE_LABELS)) {
+  const [climateUnavailable, climatePending, climateNotConfirmed, climateLowSoc, chargePaused] = labels;
+  Object.assign(FRONTEND_TEXT.dashboard[language], {climateUnavailable, climatePending, climateNotConfirmed, climateLowSoc, chargePaused});
+}
+
 // Public Home Assistant card-picker names are intentionally owned by the
 // shared i18n layer. Keep the compact universal overview clearly distinct from
 // the wide Battery + Fuel / Dual-Energy overview in every supported language.

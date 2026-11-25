@@ -79,27 +79,26 @@ test("battery bar keeps EV energy semantics without injecting fuel into the EV b
   assert.match(source, /triggers_update: \[primaryLevel, battery, batteryResidual, fuel, fuelConsumptionEntity, charging, engine, chargePower, tripEnergy, tripConsumption\]/);
 });
 
-test("EV Hero preconditioning uses one-tap start/stop with a 90 second pending guard", () => {
+test("EV Hero climate uses one persistent native control with explicit command lifecycle", () => {
   assert.match(source, /const CLIMATE_COMMAND_GUARD_MS = 90 \* 1000/);
-  assert.match(source, /const isOn = \(value\) => \['on','true','inprogress','running'\]/);
-  assert.match(source, /const latestAction = startAt > stopAt \? 'start' : stopAt > startAt \? 'stop' : null/);
-  assert.match(source, /Date\.now\(\) - latestAt <= \$\{CLIMATE_COMMAND_GUARD_MS\}/);
-  assert.match(source, /const pendingAction = pending \? latestAction : null/);
-  assert.match(source, /return liveActive \? \$\{literal\(preconditioningStop\)\} : \$\{literal\(preconditioningStart\)\}/);
-  assert.match(source, /"pointer-events": climateRuntimeTemplate\("return pending \? 'none' : 'auto';"\)/);
-  assert.match(source, /pendingAction === 'stop'/);
-  assert.match(source, /pendingAction === 'start'/);
-  assert.match(source, /perform_action: "button\.press"/);
-  assert.match(source, /hold_action: \{ action: "none" \}/);
+  assert.match(source, /type: "custom:sv-dashboard-climate-control"/);
+  assert.match(source, /climateRequests = new Map/);
+  assert.match(source, /await this\._hass\.callService\("button","press",\{\}, \{entity_id:target\}\)/);
+  assert.match(source, /request\?\.status === "pending"/);
+  assert.match(source, /climateTransitionConfirmed/);
+  assert.match(source, /changed > request\.baselineChanged/);
+  assert.match(source, /next\.status = "failed"/);
+  assert.match(source, /climateButtonAvailable/);
+  assert.match(source, /event\.stopPropagation\(\)/);
   assert.match(source, /kfzClimatePending/);
-  assert.match(source, /triggers_update: \[preconditioning, preconditioningStart, preconditioningStop, temperature\]/);
+  assert.match(source, /mdi:lock/);
+  assert.match(source, /CustomEvent\("haptic"/);
 });
 
-test("active EV climate uses neutral primary styling rather than temperature-as-error red", () => {
-  assert.match(source, /return 'mdi:air-conditioner'/);
-  assert.match(source, /return 'var\(--primary-color\)'/);
-  assert.doesNotMatch(source, /return Number\(temp\.state\) > 20 \? 'rgb\(33,150,243\)' : 'rgb\(244,67,54\)'/);
-  assert.doesNotMatch(source, /return Number\(temp\.state\) > 20 \? 'mdi:air-conditioner' : 'mdi:radiator'/);
+test("active EV climate retains primary styling and the existing 30px overlay", () => {
+  assert.match(source, /button\[data-state=active\]\{color:var\(--primary-color\)/);
+  assert.match(source, /width:30px;height:30px/);
+  assert.doesNotMatch(source, /chargingEndEntity \? this\._hass\.states\?\.\[chargingEndEntity\]\?\.state/);
 });
 
 test("vehicle overview contains no legacy household route, VIN or fixed vehicle entity", () => {

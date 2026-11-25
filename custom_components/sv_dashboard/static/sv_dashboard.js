@@ -384,7 +384,24 @@ class SvDashboardStrategy extends HTMLElement {
         .bubble-sub-button-container { position:absolute !important; left:8px !important; right:8px !important; bottom:6px !important; width:auto !important; margin:0 !important; padding:0 !important; display:flex !important; align-items:center !important; justify-content:flex-end !important; gap:6px !important; }
         .bubble-sub-button-4 { background-color:\${hass.states['${entity("battery_plugged")}']?.state === 'on' ? 'rgba(76,175,80,0.35)' : ''} !important; }
         .bubble-sub-button-4 > ha-icon { color:\${hass.states['${entity("battery_plugged")}']?.state === 'on' ? 'var(--success-color)' : ''} !important; }
-        ${chargingCardSubStateStyles}`,
+        ${chargingCardSubStateStyles}
+        \${(() => {
+          const plug = hass.states[${literalText(entity("battery_plugged") || "")}];
+          const charge = hass.states[${literalText(entity("battery_charging") || "")}];
+          const history = hass.states[${literalText(serverChargeEntity || "")}]?.attributes;
+          const result = hass.states[${literalText(lastChargeResult || "")}]?.attributes;
+          const since = Date.parse(plug?.last_changed || "");
+          const prior = [...(history?.charges || []), ...(result ? [result] : [])].some(row =>
+            Number(row.energy_kwh) > 0 && Date.parse(row.start_time || "") >= since
+            && Date.parse(row.end_time || "") >= since);
+          const target = card.querySelector('.bubble-state');
+          if (!target || !charge) return;
+          if (plug?.state === 'on' && charge.state === 'off' && Number.isFinite(since) && prior) {
+            target.innerText = ${literalText(strings.chargePaused)};
+          } else if (target.innerText === ${literalText(strings.chargePaused)}) {
+            target.innerText = typeof hass.formatEntityState === 'function' ? hass.formatEntityState(charge) : charge.state;
+          }
+        })()}`,
     } : null;
 
     const vehiclePicture = tracker ? hass.states[tracker]?.attributes?.entity_picture : undefined;
