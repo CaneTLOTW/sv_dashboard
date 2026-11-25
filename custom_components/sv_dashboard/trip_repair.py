@@ -218,6 +218,65 @@ def _plausible_repair(distance: float, duration_seconds: float | None) -> tuple[
     return True, speed
 
 
+def partition_replayed_trips(
+    trips: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Quarantine the observed short replay pattern before odometer repair.
+
+    A short, physically implausible row copies both odometer and distance
+    from a longer, valid trip and overlaps its end. Do not classify normal
+    short drives or merely adjacent rows as replays. Preserve raw payloads
+    in the caller's archive; return explicit provenance for the excluded IDs.
+    """
+    accepted: list[dict[str, Any]] = []
+    excluded: list[dict[str, Any]] = []
+    for row in sorted(trips, key=_trip_sort_key):
+        start, end = _time(row.get("start_time")), _time(row.get("end_time"))
+        duration = _number(row.get("duration_seconds"))
+        distance = _number(row.get("distance_km"))
+        mileage = _number(row.get("start_mileage"))
+        match = None
+        if (
+            start is not None and end is not None
+            and start.utcoffset() is not None and end.utcoffset() is not None
+            and duration is not None and 0 < duration <= 120
+            and distance is not None and distance > 0
+            and distance * 3600 / duration > _MAX_TRIP_SPEED_KMH
+            and mileage is not None and mileage > 0
+            and 0 < (end - start).total_seconds() <= 120
+        ):
+            for previous in reversed(accepted):
+                if previous.get("valid_for_statistics") is not True:
+                    continue
+                previous_start = _time(previous.get("start_time"))
+                previous_end = _time(previous.get("end_time"))
+                previous_duration = _number(previous.get("duration_seconds"))
+                if (
+                    previous_start is None or previous_end is None
+                    or previous_start.utcoffset() is None or previous_end.utcoffset() is None
+                    or previous_duration is None or previous_duration <= 2 * duration
+                ):
+                    continue
+                if (
+                    previous_start < start <= previous_end
+                    and 0 <= (previous_end - start).total_seconds() <= 120
+                    and end >= previous_end
+                    and _number(previous.get("start_mileage")) == mileage
+                    and _number(previous.get("distance_km")) == distance
+                ):
+                    match = previous
+                    break
+        if match is None:
+            accepted.append(row)
+        else:
+            excluded.append({
+                "id": row.get("id"),
+                "duplicate_of": match.get("id"),
+                "reason": "short_overlapping_odometer_replay",
+            })
+    return accepted, excluded
+
+
 def repair_trip_odometer_continuity(
     trips: list[dict[str, Any]], local_trips: list[dict[str, Any]] | None = None
 ) -> list[dict[str, Any]]:

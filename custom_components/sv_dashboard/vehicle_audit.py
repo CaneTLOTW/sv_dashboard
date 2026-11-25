@@ -674,7 +674,7 @@ async def async_build_vehicle_audit(hass: HomeAssistant, coordinator: Any) -> di
     status_url = upstream_transport_constant(client, "CAR_API_GET_VEHICLE_STATUS_URL")
     maintenance_url = upstream_transport_constant(client, "CAR_API_GET_VEHICLE_MAINTENANCE_URL")
     trips_url = upstream_transport_constant(client, "CAR_API_GET_VEHICLE_TRIPS_URL")
-    if not all((vehicles_url, status_url, maintenance_url, trips_url)):
+    if not all((vehicles_url, status_url, trips_url)):
         raise HistoricalTripsTransportUnavailable("upstream_read_only_urls_unavailable")
 
     probe, payload = await _run_probe(
@@ -703,12 +703,23 @@ async def async_build_vehicle_audit(hass: HomeAssistant, coordinator: Any) -> di
     probes["status"] = probe
     raw["status"] = payload
 
-    probe, payload = await _run_probe(
-        "maintenance",
-        async_authenticated_get(client, vehicle, maintenance_url),
-        secrets,
-        counts,
-    )
+    maintenance_reader = getattr(client, "get_vehicle_maintenance", None)
+    if callable(maintenance_reader):
+        probe, payload = await _run_probe(
+            "maintenance", maintenance_reader(vehicle), secrets, counts
+        )
+    elif maintenance_url:
+        probe, payload = await _run_probe(
+            "maintenance",
+            async_authenticated_get(client, vehicle, maintenance_url),
+            secrets,
+            counts,
+        )
+    else:
+        probe, payload = {
+            "name": "maintenance", "status": "unavailable",
+            "reason": "not_advertised",
+        }, None
     probes["maintenance"] = probe
     raw["maintenance"] = payload
 

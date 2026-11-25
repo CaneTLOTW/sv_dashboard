@@ -113,3 +113,22 @@ print(json.dumps({"remaining":[row["id"] for row in local],"invalid":invalid,"va
   assert.ok(result.invalid.quality_flags.includes("local_speed_outlier"));
   assert.equal(result.valid.backfill_eligible, true);
 });
+
+test("short overlapping server replay is quarantined before odometer repair", () => {
+  const output = runPython(String.raw`
+import importlib.util, json, sys
+spec = importlib.util.spec_from_file_location("trip_repair", sys.argv[1])
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+def row(id, start, end, duration, mileage, distance, valid=True):
+    return {"id":id,"start_time":"2026-01-01T"+start+"+00:00","end_time":"2026-01-01T"+end+"+00:00","duration_seconds":duration,"start_mileage":mileage,"end_mileage":mileage+distance,"distance_km":distance,"valid_for_statistics":valid,"quality_flags":[] if valid else ["derived_speed_outlier"]}
+rows = [row("normal","10:00:00","10:28:04",1684,1000,25),row("replay","10:28:01","10:29:01",60,1000,25,False),row("next","10:40:00","10:45:00",300,1025,4),row("short","10:50:00","10:51:00",60,1029,1)]
+original = json.dumps(rows, sort_keys=True)
+clean, excluded = mod.partition_replayed_trips(rows)
+assert json.dumps(rows, sort_keys=True) == original
+out = mod.repair_trip_odometer_continuity(clean, [])
+assert mod.partition_replayed_trips(out)[1] == []
+print(json.dumps({"ids":[x["id"] for x in out],"distance":sum(x["distance_km"] for x in out),"excluded":excluded}))
+`);
+  assert.deepEqual(JSON.parse(output), {ids:["normal","next","short"],distance:30,excluded:[{id:"replay",duplicate_of:"normal",reason:"short_overlapping_odometer_replay"}]});
+});

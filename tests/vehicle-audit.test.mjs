@@ -153,3 +153,10 @@ test("System card runs on demand and exports JSON plus GitHub Markdown locally",
   assert.match(frontend, /SV Dashboard vehicle capability audit/);
   assert.doesNotMatch(frontend, /window\.customCards/);
 });
+
+test("optional maintenance endpoint cannot abort the other read-only probes", () => {
+  assert.match(backend, /if not all\(\(vehicles_url, status_url, trips_url\)\):/);
+  assert.match(backend, /maintenance_reader = getattr\(client, "get_vehicle_maintenance", None\)/);
+  assert.match(backend, /elif maintenance_url:/);
+  assert.match(backend, /"reason": "not_advertised"/);
+});

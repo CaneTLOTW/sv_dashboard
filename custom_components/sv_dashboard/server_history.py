@@ -34,7 +34,9 @@ from .const import (
     UPSTREAM_DOMAIN,
 )
 from .charge_policy import allow_soc_only_charge_reconstruction
-from .trip_repair import local_trip_backfill_quality, repair_trip_odometer_continuity
+from .trip_repair import (
+    local_trip_backfill_quality, partition_replayed_trips, repair_trip_odometer_continuity,
+)
 from .trip_speed import resolve_trip_speed
 from .trip_field_resolution import resolve_canonical_trip_fields
 from .entity_identity import vehicle_vin
@@ -1085,6 +1087,8 @@ class ServerHistoryManager:
             for item in getattr(self.metrics, "data", {}).get("trips", [])
             if isinstance(item, dict)
         ] if self.metrics else []
+        trips, quarantined = partition_replayed_trips(trips)
+        self.data["quarantined_trip_replays"] = quarantined
         trips = repair_trip_odometer_continuity(trips, local_trips)
         trips = resolve_canonical_trip_fields(trips, local_trips)
         by_id = {trip["id"]: trip for trip in trips if trip.get("id")}
