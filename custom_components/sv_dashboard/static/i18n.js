@@ -2648,4 +2648,154 @@ for (const [language, labels] of Object.entries(DEPARTURE_LIVE_TEXT)) {
   const keys = ["departureLiveTitle","departureLiveNote","departureLiveConditions","departureExecutionLog","departureStatus_claimed","departureStatus_submitted","departureStatus_confirmed","departureStatus_unconfirmed","departureStatus_failed","departureStatus_unavailable","departureStatus_stale","departureStatus_engine","departureStatus_already_active","departureStatus_unknown","departureStatus_soc","departureStatus_plug","departureStatus_temperature","departureStatus_overlap"];
   Object.assign(FRONTEND_TEXT.dashboard[language], Object.fromEntries(keys.map((key,index)=>[key,labels[index]])));
 }
+const DEPARTURE_QUICK_TEXT = {
+  "de": [
+    "Einmalige Abfahrt",
+    "Heute",
+    "Morgen",
+    "Abfahrt planen",
+    "Klimastart liegt bereits in der Vergangenheit. Bitte eine spätere Uhrzeit wählen.",
+    "Für diese Uhrzeit gibt es bereits eine aktive einmalige Abfahrt."
+  ],
+  "en": [
+    "One-time departure",
+    "Today",
+    "Tomorrow",
+    "Plan departure",
+    "Climate start is already in the past. Choose a later time.",
+    "An active one-time departure already exists at this time."
+  ],
+  "fr": [
+    "Départ ponctuel",
+    "Aujourd’hui",
+    "Demain",
+    "Planifier le départ",
+    "Le démarrage est déjà passé. Choisissez une heure ultérieure.",
+    "Un départ ponctuel actif existe déjà à cette heure."
+  ],
+  "it": [
+    "Partenza singola",
+    "Oggi",
+    "Domani",
+    "Pianifica partenza",
+    "L’avvio clima è già passato. Scegli un orario successivo.",
+    "Esiste già una partenza singola attiva a quest’ora."
+  ],
+  "es": [
+    "Salida puntual",
+    "Hoy",
+    "Mañana",
+    "Planificar salida",
+    "El inicio del clima ya pasó. Elige una hora posterior.",
+    "Ya hay una salida puntual activa a esta hora."
+  ],
+  "pt": [
+    "Partida única",
+    "Hoje",
+    "Amanhã",
+    "Planear partida",
+    "O início da climatização já passou. Escolha uma hora posterior.",
+    "Já existe uma partida única ativa a esta hora."
+  ],
+  "nl": [
+    "Eenmalig vertrek",
+    "Vandaag",
+    "Morgen",
+    "Vertrek plannen",
+    "De klimaatstart is al verstreken. Kies een later tijdstip.",
+    "Er is al een actief eenmalig vertrek op dit tijdstip."
+  ],
+  "da": [
+    "Engangsafgang",
+    "I dag",
+    "I morgen",
+    "Planlæg afgang",
+    "Klimastart er allerede passeret. Vælg et senere tidspunkt.",
+    "Der er allerede en aktiv engangsafgang på dette tidspunkt."
+  ],
+  "nb": [
+    "Engangsavreise",
+    "I dag",
+    "I morgen",
+    "Planlegg avreise",
+    "Klimastart er allerede passert. Velg et senere tidspunkt.",
+    "En aktiv engangsavreise finnes allerede på dette tidspunktet."
+  ],
+  "sv": [
+    "Engångsavresa",
+    "Idag",
+    "Imorgon",
+    "Planera avresa",
+    "Klimatstarten har redan passerat. Välj en senare tid.",
+    "En aktiv engångsavresa finns redan vid denna tid."
+  ],
+  "fi": [
+    "Kertaluonteinen lähtö",
+    "Tänään",
+    "Huomenna",
+    "Suunnittele lähtö",
+    "Ilmastoinnin aloitusaika on jo mennyt. Valitse myöhempi aika.",
+    "Tähän aikaan on jo aktiivinen kertaluonteinen lähtö."
+  ],
+  "pl": [
+    "Jednorazowy odjazd",
+    "Dzisiaj",
+    "Jutro",
+    "Zaplanuj odjazd",
+    "Czas uruchomienia klimatyzacji minął. Wybierz późniejszą godzinę.",
+    "Istnieje już aktywny jednorazowy odjazd o tej godzinie."
+  ],
+  "cs": [
+    "Jednorázový odjezd",
+    "Dnes",
+    "Zítra",
+    "Naplánovat odjezd",
+    "Čas spuštění klimatizace již minul. Vyberte pozdější čas.",
+    "Na tento čas již existuje aktivní jednorázový odjezd."
+  ],
+  "sk": [
+    "Jednorazový odchod",
+    "Dnes",
+    "Zajtra",
+    "Naplánovať odchod",
+    "Čas spustenia klimatizácie už uplynul. Vyberte neskorší čas.",
+    "Na tento čas už existuje aktívny jednorazový odchod."
+  ],
+  "hu": [
+    "Egyszeri indulás",
+    "Ma",
+    "Holnap",
+    "Indulás tervezése",
+    "A klímaindítás ideje már elmúlt. Válasszon későbbi időpontot.",
+    "Erre az időpontra már van aktív egyszeri indulás."
+  ],
+  "ro": [
+    "Plecare unică",
+    "Astăzi",
+    "Mâine",
+    "Planifică plecarea",
+    "Pornirea climatizării a trecut deja. Alegeți o oră ulterioară.",
+    "Există deja o plecare unică activă la această oră."
+  ],
+  "sl": [
+    "Enkratni odhod",
+    "Danes",
+    "Jutri",
+    "Načrtuj odhod",
+    "Čas začetka klimatizacije je že minil. Izberite poznejši čas.",
+    "Ob tej uri že obstaja aktiven enkratni odhod."
+  ],
+  "hr": [
+    "Jednokratni polazak",
+    "Danas",
+    "Sutra",
+    "Planiraj polazak",
+    "Vrijeme pokretanja klimatizacije već je prošlo. Odaberite kasnije vrijeme.",
+    "Već postoji aktivan jednokratni polazak u ovo vrijeme."
+  ]
+};
+for (const [language, labels] of Object.entries(DEPARTURE_QUICK_TEXT)) {
+  const keys = ["departureQuickTitle","departureQuickToday","departureQuickTomorrow","departureQuickSave","departureQuickPast","departureQuickDuplicate"];
+  Object.assign(FRONTEND_TEXT.dashboard[language], Object.fromEntries(keys.map((key,index)=>[key,labels[index]])));
+}
 export { FRONTEND_TEXT, languageFor, localeFor, textFor };

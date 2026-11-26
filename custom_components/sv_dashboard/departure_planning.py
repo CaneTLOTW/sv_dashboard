@@ -15,7 +15,7 @@ _LOGGER = logging.getLogger(__name__)
 from homeassistant.util import dt as dt_util
 
 from .const import CONF_VEHICLE_SLUG, DOMAIN
-from .departure_plan import edit_profiles, normalize_profile, preview, normalize_reminder, reminder_candidate, due_occurrences, climate_gate, climate_state
+from .departure_plan import edit_profiles, normalize_profile, preview, normalize_reminder, reminder_candidate, due_occurrences, climate_gate, climate_state, quick_defaults, add_quick_profile
 
 
 class DeparturePlanning:
@@ -179,8 +179,9 @@ class DeparturePlanning:
             self.last_reminder = result
 
     def snapshot(self):
-        return {"revision": self.revision, "profiles": self.profiles, "preview_only": self.execution_enabled_at is None, "execution_enabled": self.execution_enabled_at is not None, "execution_log": sorted(self.ledger.values(), key=lambda row: row["at"], reverse=True)[:20], "reminder": self.reminder, "last_reminder": self.last_reminder,
-                **preview(self.profiles, dt_util.utcnow(), self.hass.config.time_zone)}
+        now = dt_util.utcnow()
+        return {"quick_defaults": quick_defaults(now, self.hass.config.time_zone), "revision": self.revision, "profiles": self.profiles, "preview_only": self.execution_enabled_at is None, "execution_enabled": self.execution_enabled_at is not None, "execution_log": sorted(self.ledger.values(), key=lambda row: row["at"], reverse=True)[:20], "reminder": self.reminder, "last_reminder": self.last_reminder,
+                **preview(self.profiles, now, self.hass.config.time_zone)}
 
     async def async_apply(self, msg):
         async with self.lock:
@@ -202,7 +203,10 @@ class DeparturePlanning:
                 self.revision += 1
                 return self.snapshot()
             reminder = normalize_reminder(msg.get("reminder")) if msg["op"] == "reminder" else self.reminder
-            rows = self.profiles if msg["op"] == "reminder" else edit_profiles(self.profiles, msg["op"], msg.get("profile"), msg.get("profile_id"))
+            if msg["op"] == "quick":
+                rows = add_quick_profile(self.profiles, msg.get("profile"), dt_util.utcnow(), self.hass.config.time_zone)
+            else:
+                rows = self.profiles if msg["op"] == "reminder" else edit_profiles(self.profiles, msg["op"], msg.get("profile"), msg.get("profile_id"))
             revision = self.revision + 1
             await self._persist(rows, revision, reminder, self.last_reminder)
             self.profiles, self.revision, self.reminder = rows, revision, reminder
@@ -212,7 +216,7 @@ class DeparturePlanning:
 @websocket_api.websocket_command({
     vol.Required("type"): f"{DOMAIN}/departure_plans",
     vol.Required("entry_id"): str,
-    vol.Required("op"): vol.In(("get", "save", "delete", "reminder", "execution")),
+    vol.Required("op"): vol.In(("get", "save", "delete", "reminder", "execution", "quick")),
     vol.Optional("revision"): int,
     vol.Optional("profile_id"): str,
     vol.Optional("profile"): dict,

@@ -18,3 +18,6 @@ test("departure planning stays in its own view and uses mapped climate dispatch 
 
 
 test("reminder uses separate explicit settings and existing notify path",()=>{const card=read("static/departure-planning-card.js"),backend=read("departure_planning.py"),manager=read("notifications.py");assert.match(card,/_request\("reminder",reminder\)/);assert.match(backend,/await self\._persist\(self\.profiles, self\.revision, self\.reminder, claim\)/);assert.match(manager,/async_departure_reminder/);assert.match(manager,/departure_reminder_available/);});
+
+
+test("quick planner shares the profile store and never arms execution",()=>{const card=read("static/departure-planning-card.js"),backend=read("departure_planning.py");assert.match(card,/_request\("quick",this\._quickProfile\(text\)\)/);assert.match(backend,/rows = add_quick_profile\(/);assert.match(card,/\.profile-row \.buttons\{grid-column:1\/-1/);assert.match(card,/clearInterval\(this\._poll\)/);});

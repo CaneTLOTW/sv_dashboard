@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.3-beta.8 — quick departure planner
+
+- Add a one-time quick planner with today/tomorrow/custom date, suggested future time, optional all-series exception, default 20-minute lead and 20% minimum SoC, without required manual name. Reject past starts, DST gaps and duplicate active one-time departures on the server. Keep full profile editor and execution opt-in. Separate mobile action row, compact climate switch and periodic read-only refresh when no unsaved edits exist.
+
 ### Marketplace distribution and documentation (development)
 
 - Document the built-in Home Assistant Marketplace from 2026.11 alongside legacy HACS; retain the 2026.5 minimum. Add the Marketplace repository badge, installation/migration/update steps, dependency categories and release/catalog checklist. Hide the default branch as an install option in shared HACS metadata where supported. No runtime code or existing release changes.

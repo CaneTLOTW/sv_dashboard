@@ -212,3 +212,30 @@ def climate_state(raw):
     if str(raw).lower() in ("off", "false", "disabled", "finished", "stopped"):
         return False
     return None
+
+
+def quick_defaults(now: datetime, timezone_name: str) -> dict:
+    """Suggest a departure about 30 minutes away, rounded up to five minutes."""
+    tz = ZoneInfo(timezone_name)
+    candidate = now.astimezone(UTC) + timedelta(minutes=30)
+    candidate = candidate.replace(second=0, microsecond=0) + timedelta(minutes=(-candidate.minute) % 5)
+    local = candidate.astimezone(tz)
+    today = now.astimezone(tz).date()
+    return {"date": local.date().isoformat(), "time": local.strftime("%H:%M"),
+            "today": today.isoformat(), "tomorrow": (today + timedelta(days=1)).isoformat()}
+
+
+def add_quick_profile(profiles, value, now, timezone_name):
+    """Use the same profile contract, with a future climate start guaranteed."""
+    profile = normalize_profile(value, "quick")
+    if profile["kind"] != "once" or not profile["enabled"]:
+        raise ValueError("invalid_profile")
+    departure = _local_departure(date.fromisoformat(profile["date"]), profile["time"], ZoneInfo(timezone_name))
+    if departure is None:
+        raise ValueError("quick_dst")
+    if departure - timedelta(minutes=profile["lead_minutes"]) <= now.astimezone(UTC):
+        raise ValueError("quick_past")
+    if any(p["kind"] == "once" and p["enabled"] and p["date"] == profile["date"]
+           and p["time"] == profile["time"] for p in profiles):
+        raise ValueError("quick_duplicate")
+    return edit_profiles(profiles, "save", profile, None)

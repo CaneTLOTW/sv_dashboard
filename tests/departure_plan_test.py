@@ -73,3 +73,16 @@ assert m.climate_gate(base, 35, "on", "on", 0, False, True, True) == "engine"
 assert m.climate_gate(base, 35, "off", "on", 0, False, True, False) == "stale"
 assert m.climate_gate(base, 35, "off", "on", 0, True, True, True) == "already_active"
 print("Departure execution gates passed")
+
+
+qnow = datetime(2026,11,26,14,38,tzinfo=UTC)
+assert m.quick_defaults(qnow,"Europe/Berlin")["time"]=="16:10"
+assert m.quick_defaults(datetime(2026,11,26,22,50,tzinfo=UTC),"Europe/Berlin")["date"]=="2026-11-27"
+q = {"name":"Once","kind":"once","date":"2026-11-26","time":"16:10","override":"none"}
+qr = m.add_quick_profile([],q,qnow,"Europe/Berlin")
+assert qr[0]["lead_minutes"]==20 and qr[0]["min_soc"]==20
+for vals, current, expected in [({**q,"time":"15:50"},[], "quick_past"),(q,qr,"quick_duplicate"),({**q,"date":"2027-03-28","time":"02:30"},[],"quick_dst")]:
+    try: m.add_quick_profile(current,vals,qnow,"Europe/Berlin")
+    except ValueError as exc: assert str(exc)==expected
+    else: raise AssertionError(expected)
+print("Quick departure tests passed")
