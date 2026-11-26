@@ -90,17 +90,17 @@ installTransparentMapMarkerCompatibility();
  * no longer produce a false missing-dependency page during the first reload.
  */
 const packageModules = Promise.allSettled([
-  import("./trip-history-card.js?v=0.7.3-beta.10"),
-  import("./monthly-statistics-card.js?v=0.7.3-beta.10"),
-  import("./range-calculator-card.js?v=0.7.3-beta.10"),
-  import("./departure-planning-card.js?v=0.7.3-beta.10"),
-  import("./charge-history-card.js?v=0.7.3-beta.10"),
+  import("./trip-history-card.js?v=0.7.3-beta.11"),
+  import("./monthly-statistics-card.js?v=0.7.3-beta.11"),
+  import("./range-calculator-card.js?v=0.7.3-beta.11"),
+  import("./departure-planning-card.js?v=0.7.3-beta.11"),
+  import("./charge-history-card.js?v=0.7.3-beta.11"),
   import("./gps-history-card.js?v=0.6.0-beta.28"),
-  import("./vehicle-overview-card.js?v=0.7.3-beta.10"),
-  import("./dual-energy-overview-card.js?v=0.7.3-beta.10"),
-  import("./fuel-history-card.js?v=0.7.3-beta.10"),
-  import("./vehicle-audit-card.js?v=0.7.3-beta.10"),
-  import("./vehicle-diagnostics-card.js?v=0.7.3-beta.10"),
+  import("./vehicle-overview-card.js?v=0.7.3-beta.11"),
+  import("./dual-energy-overview-card.js?v=0.7.3-beta.11"),
+  import("./fuel-history-card.js?v=0.7.3-beta.11"),
+  import("./vehicle-audit-card.js?v=0.7.3-beta.11"),
+  import("./vehicle-diagnostics-card.js?v=0.7.3-beta.11"),
 ]);
 
 /*
@@ -142,4 +142,4 @@ window.__svDashboardPackageReadiness = Promise.race([
   }),
 ]).finally(() => clearTimeout(packageTimer));
 
-await import("./sv_dashboard.js?v=0.7.3-beta.10");
+await import("./sv_dashboard.js?v=0.7.3-beta.11");

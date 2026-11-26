@@ -5,7 +5,7 @@ const read=p=>fs.readFileSync("custom_components/sv_dashboard/"+p,"utf8");
 test("departure planning stays in its own view and uses mapped climate dispatch only",()=>{
  const strategy=read("static/sv_dashboard.js"),frontend=read("static/frontend.js"),card=read("static/departure-planning-card.js"),backend=read("departure_planning.py");
  assert.match(strategy,/path: "departure", icon: "mdi:calendar-clock"/);
- assert.match(frontend,/import\("\.\/departure-planning-card\.js\?v=0\.7\.3-beta\.10"\)/);
+ assert.match(frontend,/import\("\.\/departure-planning-card\.js\?v=0\.7\.3-beta\.11"\)/);
  assert.match(card,/sv_dashboard\/departure_plans/);
  assert.match(backend,/connection\.user\.is_admin/);
  assert.match(backend,/revision_conflict/);
