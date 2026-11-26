@@ -1404,6 +1404,6 @@ const RANGE_CALC_TEXT = {
 };
 for (const [language, labels] of Object.entries(RANGE_CALC_TEXT)) {
   const keys = ["rangeCalcTitle","rangeCalcTarget","rangeCalcReserve","rangeCalcReset","rangeCalcSettings","rangeCalcCapacity","rangeCalcBasis","rangeCalcCurrent","rangeCalcNew","rangeCalcExtra","rangeCalcReference","rangeCalcCapacityNote","rangeCalcFitted","rangeCalcScenario","rangeCalcFitNote","rangeCalcScenarioNote","rangeCalcRange","rangeCalcArrival","rangeCalcStop","rangeCalcPossible","rangeCalcEnergy","rangeCalcRunning","rangeCalcWarmup","rangeCalcShortfall","rangeCalcUncertain","rangeCalcMissing","rangeCalcWarning","rangeCalcLowTitle","rangeCalcLowGeneral","rangeCalcLowC3"];
-  Object.assign(FRONTEND_TEXT.dashboard[language], Object.fromEntries(keys.map((key, index) => [key, labels[index]])));
+  Object.assign(FRONTEND_TEXT.dashboard[language], Object.fromEntries(keys.map((key, index) => [key, labels[index]])), {rangeCalcLowC3Title: "Citroën ë-C3 Standard Range"});
 }
 export { FRONTEND_TEXT, languageFor, localeFor, textFor };

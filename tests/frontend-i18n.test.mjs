@@ -35,7 +35,7 @@ const CAPABILITY_EXCEPTIONS = {
   tripHistory: new Set(["reconstructedGap", "localGapRecovery"]),
   chargeHistory: new Set(["sessionSegments", "sessionPauses", "sessionElapsed", "sessionPlugTime"]),
   dashboard: new Set([
-    "packageLoadFailed",
+    "packageLoadFailed", "rangeCalcLowC3Title",
     "rangeCalcTitle", "rangeCalcTarget", "rangeCalcReserve", "rangeCalcReset", "rangeCalcSettings", "rangeCalcCapacity", "rangeCalcBasis", "rangeCalcCurrent", "rangeCalcNew", "rangeCalcExtra", "rangeCalcReference", "rangeCalcCapacityNote", "rangeCalcFitted", "rangeCalcScenario", "rangeCalcFitNote", "rangeCalcScenarioNote", "rangeCalcRange", "rangeCalcArrival", "rangeCalcStop", "rangeCalcPossible", "rangeCalcEnergy", "rangeCalcRunning", "rangeCalcWarmup", "rangeCalcShortfall", "rangeCalcUncertain", "rangeCalcMissing", "rangeCalcWarning", "rangeCalcLowTitle", "rangeCalcLowGeneral", "rangeCalcLowC3",
     "monthlyConsumptionTitle", "monthlyAmbient", "monthlyEnergyCoverage", "monthlyTemperatureCoverage", "monthlyEstimatedShare", "monthlyNoData", "monthlyMethod", "monthlyDetails", "monthlyWinterTitle", "monthlyWinterText", "monthlyExample", "monthlySource",
     "climateUnavailable", "climatePending", "climateNotConfirmed", "climateLowSoc", "chargePaused",

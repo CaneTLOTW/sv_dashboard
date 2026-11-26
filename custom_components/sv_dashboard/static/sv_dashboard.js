@@ -4,7 +4,7 @@
  * status entity created by the backend config entry. It never derives IDs from
  * VINs or friendly names.
  */
-import { languageFor, localeFor, textFor } from "./i18n.js?v=0.7.3-beta.3";
+import { languageFor, localeFor, textFor } from "./i18n.js?v=0.7.3-beta.4";
 
 const STRATEGY_TYPE = "sv-dashboard";
 const STATUS_DOMAIN = "sv_dashboard";
@@ -898,7 +898,7 @@ class SvDashboardStrategy extends HTMLElement {
       icon: "mdi:help-circle-outline",
       type: "sections",
       max_columns: 1,
-      sections: [{ type: "grid", cards: [{ type: "heading", heading: strings.help, icon: "mdi:help-circle-outline", heading_style: "title" }, markdown(strings.helpContent), ...(supportsElectric && !supportsDualEnergy ? [markdown("## "+strings.rangeCalcLowTitle+"\n\n"+strings.rangeCalcLowGeneral), markdown("### Citroën ë-C3 Standard Range\n\n"+strings.rangeCalcLowC3+"\n\n[Citroën handbook](https://service.citroen.com/ACddb/modeles/c3.cc2eu/eGuide_cc21eu_ed01-24/pdfs/9999_9999_530_de-DE.pdf) · [ADAC Autotest](https://assets.adac.de/image/upload/Autodatenbank/Autotest/at6525-citroen-e-c3-standard-range-you/citroen-e-c3-standard-range-you.pdf)")] : [])] }],
+      sections: [{ type: "grid", cards: [{ type: "heading", heading: strings.help, icon: "mdi:help-circle-outline", heading_style: "title" }, markdown(strings.helpContent), ...(supportsElectric && !supportsDualEnergy ? [markdown("## "+strings.rangeCalcLowTitle+"\n\n"+strings.rangeCalcLowGeneral), markdown("### "+strings.rangeCalcLowC3Title+"\n\n"+strings.rangeCalcLowC3+"\n\n[PDF](https://service.citroen.com/ACddb/modeles/c3.cc2eu/eGuide_cc21eu_ed01-24/pdfs/9999_9999_530_de-DE.pdf) · [ADAC Autotest](https://assets.adac.de/image/upload/Autodatenbank/Autotest/at6525-citroen-e-c3-standard-range-you/citroen-e-c3-standard-range-you.pdf)")] : [])] }],
     });
 
     views.push({
