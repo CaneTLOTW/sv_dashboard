@@ -248,7 +248,7 @@ class DeparturePlanning:
         async with self.lock:
             if not self.notifications.departure_reminder_available():
                 return
-            candidate = reminder_candidate(self._effective_profiles(), dt_util.utcnow(), self.hass.config.time_zone,
+            candidate = reminder_candidate(dt_util.utcnow(), self.hass.config.time_zone,
                 self.reminder, (self.last_reminder or {}).get("date"),
                 self.notifications.departure_reminder_soc())
             if candidate is None:

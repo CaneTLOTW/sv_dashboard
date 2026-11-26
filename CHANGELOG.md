@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.3-beta.17 — independent evening charging reminder
+
+- Daily low-SoC warning uses its own adjustable 1–100% threshold, independent of departure profiles and scheduler enable. Existing reminder enabled/time and daily attempt guard retained; missing threshold defaults to 30% on legacy stores, without writing until normal persistence. Existing notification recipients, alerts and quiet hours remain in force. No charge or climate command. Profile minimum and target remain unchanged.
+
 ## 0.7.3-beta.16 — restore-safe climate presentation
 
 - Do not treat HA `last_changed`, `last_updated` or `last_reported` as fresh vehicle climate evidence. A retained ON cannot become red again after restart. A newer stop suppresses older ON evidence. Pending confirmation requires a newer climate source timestamp, including local Hero requests; missing/old temperature yields generic active rather than an inferred heating/cooling color. Preserve neutral idle (not a physical OFF assertion), no question mark, and existing scheduler safety/ledger behavior. Add exact owner-restart regression fixture (#136).

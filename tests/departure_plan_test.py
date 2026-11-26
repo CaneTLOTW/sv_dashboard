@@ -49,14 +49,25 @@ evening = datetime(2026,11,26,18,30,tzinfo=UTC)
 base = m.normalize_profile({**weekly("A",[4],"07:30"),"min_soc":30},"a")
 exception = m.normalize_profile({**once("2026-11-27","a"),"min_soc":20},"ex")
 settings = m.normalize_reminder({"enabled":True})
-assert m.reminder_candidate([base],evening,"Europe/Berlin",settings,None,17)["minimum"]==30
-assert m.reminder_candidate([base,exception],evening,"Europe/Berlin",settings,None,25) is None
-assert m.reminder_candidate([base,exception],evening,"Europe/Berlin",settings,None,17)["departure"]=="06:30"
-assert m.reminder_candidate([base],evening,"Europe/Berlin",settings,"2026-11-26",17) is None
-assert m.reminder_candidate([base],evening,"Europe/Berlin",settings,None,None) is None
-assert m.reminder_candidate([base],evening,"Europe/Berlin",m.normalize_reminder({}),None,17) is None
-assert m.reminder_candidate([base],datetime(2026,11,26,18,51,tzinfo=UTC),"Europe/Berlin",settings,None,17) is None
-assert m.reminder_candidate([base],evening,"Europe/Berlin",settings,None,30) is None
+assert settings["min_soc"] == 30
+assert m.reminder_candidate(evening,"Europe/Berlin",settings,None,17) == {"date":"2026-11-26","minimum":30,"soc":17}
+assert m.reminder_candidate(evening,"Europe/Berlin",settings,None,29)["minimum"] == 30
+assert m.reminder_candidate(evening,"Europe/Berlin",settings,"2026-11-26",17) is None
+for invalid in (None, -1, 101, float("nan"), True, "17"):
+    assert m.reminder_candidate(evening,"Europe/Berlin",settings,None,invalid) is None
+assert m.reminder_candidate(evening,"Europe/Berlin",m.normalize_reminder({}),None,17) is None
+assert m.reminder_candidate(datetime(2026,11,26,18,51,tzinfo=UTC),"Europe/Berlin",settings,None,17) is None
+assert m.reminder_candidate(evening,"Europe/Berlin",settings,None,30) is None
+custom = m.normalize_reminder({"enabled":True,"min_soc":75,"time":"19:30"})
+assert m.reminder_candidate(evening,"Europe/Berlin",custom,None,74)["minimum"] == 75
+assert m.reminder_candidate(evening,"Europe/Berlin",custom,None,75) is None
+for invalid in (0,101,True,20.5,"30"):
+    try:
+        m.normalize_reminder({"min_soc":invalid})
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("invalid warning threshold")
 print("Departure reminder tests passed")
 
 

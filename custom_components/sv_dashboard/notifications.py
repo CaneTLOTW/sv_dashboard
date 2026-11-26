@@ -342,7 +342,6 @@ class VehicleNotificationManager:
         return await self._async_notify(
             text(self.hass, "departure_reminder_title"),
             text(self.hass, "departure_reminder_message",
-                departure=candidate["departure"], start=candidate["start"],
                 soc=self._number(candidate["soc"], 0), minimum=candidate["minimum"]),
             "departure_reminder", SWITCH_ALERTS,
         )
