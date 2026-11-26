@@ -2798,4 +2798,118 @@ for (const [language, labels] of Object.entries(DEPARTURE_QUICK_TEXT)) {
   const keys = ["departureQuickTitle","departureQuickToday","departureQuickTomorrow","departureQuickSave","departureQuickPast","departureQuickDuplicate"];
   Object.assign(FRONTEND_TEXT.dashboard[language], Object.fromEntries(keys.map((key,index)=>[key,labels[index]])));
 }
+const DEPARTURE_PREP_TEXT = {
+  "de": [
+    "Startfenster verpasst",
+    "Kürzlich geweckt",
+    "Wake-up-Vorbereitung",
+    "Alter der Fahrzeugdaten"
+  ],
+  "en": [
+    "Start window missed",
+    "Recently woken",
+    "Wake-up preparation",
+    "Vehicle data age"
+  ],
+  "fr": [
+    "Créneau de démarrage manqué",
+    "Réveil récent",
+    "Préparation du réveil",
+    "Âge des données véhicule"
+  ],
+  "it": [
+    "Finestra di avvio mancata",
+    "Risveglio recente",
+    "Preparazione risveglio",
+    "Età dati veicolo"
+  ],
+  "es": [
+    "Ventana de inicio perdida",
+    "Activación reciente",
+    "Preparación de activación",
+    "Antigüedad de datos"
+  ],
+  "pt": [
+    "Janela de início perdida",
+    "Ativação recente",
+    "Preparação da ativação",
+    "Idade dos dados"
+  ],
+  "nl": [
+    "Startvenster gemist",
+    "Recent gewekt",
+    "Wake-up voorbereiding",
+    "Leeftijd voertuiggegevens"
+  ],
+  "da": [
+    "Startvindue overskredet",
+    "Nyligt vækket",
+    "Wake-up forberedelse",
+    "Køretøjsdataenes alder"
+  ],
+  "nb": [
+    "Startvindu passert",
+    "Nylig vekket",
+    "Wake-up forberedelse",
+    "Alder på kjøretøydata"
+  ],
+  "sv": [
+    "Startfönster missat",
+    "Nyligen väckt",
+    "Wake-up förberedelse",
+    "Fordonsdataålder"
+  ],
+  "fi": [
+    "Aloitusikkuna ohitettu",
+    "Äskettäin herätetty",
+    "Herätyksen valmistelu",
+    "Ajoneuvotietojen ikä"
+  ],
+  "pl": [
+    "Pominięto okno startu",
+    "Niedawno wybudzony",
+    "Przygotowanie wybudzenia",
+    "Wiek danych pojazdu"
+  ],
+  "cs": [
+    "Zmeškané okno startu",
+    "Nedávno probuzeno",
+    "Příprava probuzení",
+    "Stáří dat vozidla"
+  ],
+  "sk": [
+    "Zmeškané okno štartu",
+    "Nedávno prebudené",
+    "Príprava prebudenia",
+    "Vek údajov vozidla"
+  ],
+  "hu": [
+    "Indítási ablak elmúlt",
+    "Nemrég ébresztve",
+    "Ébresztés előkészítése",
+    "Járműadatok kora"
+  ],
+  "ro": [
+    "Interval de pornire ratat",
+    "Trezire recentă",
+    "Pregătire trezire",
+    "Vechime date vehicul"
+  ],
+  "sl": [
+    "Zamujeno časovno okno",
+    "Nedavno prebujen",
+    "Priprava prebujanja",
+    "Starost podatkov vozila"
+  ],
+  "hr": [
+    "Propušteno vrijeme pokretanja",
+    "Nedavno probuđeno",
+    "Priprema buđenja",
+    "Starost podataka vozila"
+  ]
+};
+for (const [language, labels] of Object.entries(DEPARTURE_PREP_TEXT)) {
+  const keys = ["departureStatus_missed","departureStatus_recent","departurePreparation","departureDataAge"];
+  Object.assign(FRONTEND_TEXT.dashboard[language], Object.fromEntries(keys.map((key,index)=>[key,labels[index]])));
+}
 export { FRONTEND_TEXT, languageFor, localeFor, textFor };

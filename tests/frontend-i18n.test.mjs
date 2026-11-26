@@ -36,6 +36,7 @@ const CAPABILITY_EXCEPTIONS = {
   chargeHistory: new Set(["sessionSegments", "sessionPauses", "sessionElapsed", "sessionPlugTime"]),
   dashboard: new Set([
     "packageLoadFailed",
+    "departureStatus_missed", "departureStatus_recent", "departurePreparation", "departureDataAge",
     "departureQuickTitle", "departureQuickToday", "departureQuickTomorrow", "departureQuickSave", "departureQuickPast", "departureQuickDuplicate",
     "departureLiveTitle", "departureLiveNote", "departureLiveConditions", "departureExecutionLog", "departureStatus_claimed", "departureStatus_submitted", "departureStatus_confirmed", "departureStatus_unconfirmed", "departureStatus_failed", "departureStatus_unavailable", "departureStatus_stale", "departureStatus_engine", "departureStatus_already_active", "departureStatus_unknown", "departureStatus_soc", "departureStatus_plug", "departureStatus_temperature", "departureStatus_overlap",
     "departureReminderTitle", "departureReminderEnabled", "departureReminderTime", "departureReminderNote", "departureReminderSent", "departureReminderAttempt",

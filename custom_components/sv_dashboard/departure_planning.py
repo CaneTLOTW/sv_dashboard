@@ -131,7 +131,10 @@ class DeparturePlanning:
                     if not fresh and key not in self.preparation:
                         wake = self._state("wakeup", "button")
                         # Claim the preparation before sending, including failures.
-                        item = {"at": now.isoformat(), "status": "claimed",
+                        recent_preparation = any(value.get("status") in ("claimed", "submitted", "failed") and
+                            timedelta(0) <= now - (dt_util.parse_datetime(value.get("at", "")) or cutoff) < timedelta(minutes=10)
+                            for value in self.preparation.values())
+                        item = {"at": now.isoformat(), "status": "claimed", "name": row["name"], "departure": row["departure"],
                                 "heartbeat": heartbeat.isoformat() if heartbeat else None,
                                 "heartbeat_source": source}
                         self.preparation[key] = item
@@ -140,7 +143,9 @@ class DeparturePlanning:
                         except Exception:
                             self.preparation.pop(key, None)
                             raise
-                        if getattr(engine, "state", None) == "on":
+                        if recent_preparation:
+                            item["status"] = "recent"
+                        elif getattr(engine, "state", None) == "on":
                             item["status"] = "engine"
                         elif wake is None or wake.state == "unavailable":
                             item["status"] = "unavailable"
@@ -225,7 +230,7 @@ class DeparturePlanning:
 
     def snapshot(self):
         now = dt_util.utcnow()
-        return {"quick_defaults": quick_defaults(now, self.hass.config.time_zone), "revision": self.revision, "profiles": self.profiles, "preview_only": self.execution_enabled_at is None, "execution_enabled": self.execution_enabled_at is not None, "execution_log": sorted(self.ledger.values(), key=lambda row: row["at"], reverse=True)[:20], "reminder": self.reminder, "last_reminder": self.last_reminder,
+        return {"quick_defaults": quick_defaults(now, self.hass.config.time_zone), "revision": self.revision, "profiles": self.profiles, "preview_only": self.execution_enabled_at is None, "execution_enabled": self.execution_enabled_at is not None, "execution_log": sorted(self.ledger.values(), key=lambda row: row["at"], reverse=True)[:20], "preparation_log": sorted((value for key, value in self.preparation.items() if key not in self.ledger), key=lambda row: row["at"], reverse=True)[:20], "reminder": self.reminder, "last_reminder": self.last_reminder,
                 **preview(self.profiles, now, self.hass.config.time_zone)}
 
     async def async_apply(self, msg):
