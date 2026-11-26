@@ -88,15 +88,15 @@ installTransparentMapMarkerCompatibility();
  * no longer produce a false missing-dependency page during the first reload.
  */
 const packageModules = Promise.allSettled([
-  import("./trip-history-card.js?v=0.7.3-beta.2"),
+  import("./trip-history-card.js?v=0.7.3-beta.3"),
   import("./monthly-statistics-card.js?v=0.7.3-beta.3"),
-  import("./charge-history-card.js?v=0.7.3-beta.2"),
+  import("./charge-history-card.js?v=0.7.3-beta.3"),
   import("./gps-history-card.js?v=0.6.0-beta.28"),
-  import("./vehicle-overview-card.js?v=0.7.3-beta.2"),
-  import("./dual-energy-overview-card.js?v=0.7.3-beta.2"),
-  import("./fuel-history-card.js?v=0.7.3-beta.2"),
-  import("./vehicle-audit-card.js?v=0.7.3-beta.2"),
-  import("./vehicle-diagnostics-card.js?v=0.7.3-beta.2"),
+  import("./vehicle-overview-card.js?v=0.7.3-beta.3"),
+  import("./dual-energy-overview-card.js?v=0.7.3-beta.3"),
+  import("./fuel-history-card.js?v=0.7.3-beta.3"),
+  import("./vehicle-audit-card.js?v=0.7.3-beta.3"),
+  import("./vehicle-diagnostics-card.js?v=0.7.3-beta.3"),
 ]);
 
 /*
@@ -138,4 +138,4 @@ window.__svDashboardPackageReadiness = Promise.race([
   }),
 ]).finally(() => clearTimeout(packageTimer));
 
-await import("./sv_dashboard.js?v=0.7.3-beta.2");
+await import("./sv_dashboard.js?v=0.7.3-beta.3");
