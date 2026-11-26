@@ -214,6 +214,24 @@ def climate_state(raw):
     return None
 
 
+def climate_source_confirms(state, attributes, changed_at, dispatched_at, now):
+    """Require an ON transition and a newer timestamp from the climate field."""
+    deadline = dispatched_at + timedelta(minutes=3)
+    if climate_state(state) is not True or not dispatched_at < changed_at <= min(deadline, now):
+        return False
+    for key in ("Zuletzt aktualisiert", "Last updated"):
+        raw = attributes.get(key)
+        if not isinstance(raw, str):
+            continue
+        try:
+            source_at = datetime.fromisoformat(raw)
+        except ValueError:
+            continue
+        if source_at.utcoffset() is not None:
+            return dispatched_at < source_at <= min(changed_at, deadline, now)
+    return False
+
+
 def quick_defaults(now: datetime, timezone_name: str) -> dict:
     """Suggest a departure about 30 minutes away, rounded up to five minutes."""
     tz = ZoneInfo(timezone_name)

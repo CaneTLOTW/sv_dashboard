@@ -2,7 +2,7 @@
 export function climatePresentation(climate, temperature, now = Date.now()) {
   const fresh = entity => {
     const a = entity?.attributes || {};
-    for (const raw of [a["Last updated"], a.last_updated, a.updatedAt, a.updated_at, a.createdAt, a.created_at, a.source_timestamp, a.source_time]) {
+    for (const raw of [a["Zuletzt aktualisiert"], a["Last updated"], a.last_updated, a.updatedAt, a.updated_at, a.createdAt, a.created_at, a.source_timestamp, a.source_time]) {
       if (typeof raw !== "string" || !raw.trim()) continue;
       const t = Date.parse(raw);
       if (Number.isFinite(t)) return now - t >= -5 * 60000 && now - t <= 15 * 60000;

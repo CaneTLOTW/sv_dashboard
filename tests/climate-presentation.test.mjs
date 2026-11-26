@@ -28,3 +28,13 @@ test("all climate surfaces share presentation and statistics uses two sections",
   assert.match(read("sv_dashboard.js"),/climatePresentation\.toString\(\)/);
   assert.match(read("sv_dashboard.js"),/cards: consumptionCards/);
 });
+
+test("localized Stellantis field timestamp is recognized and preferred", () => {
+  const localized = { "Zuletzt aktualisiert": new Date(now).toISOString() };
+  const climate = { state: "on", attributes: localized };
+  const temperature = e("-4", 60, localized);
+  assert.equal(climatePresentation(climate, temperature, now).mode, "heating");
+  assert.equal(climatePresentation(e("on", 0, {
+    "Zuletzt aktualisiert": new Date(now - 16 * 60000).toISOString(),
+  }), temperature, now).mode, "unknown");
+});

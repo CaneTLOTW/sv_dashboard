@@ -15,7 +15,7 @@ _LOGGER = logging.getLogger(__name__)
 from homeassistant.util import dt as dt_util
 
 from .const import CONF_VEHICLE_SLUG, DOMAIN
-from .departure_plan import edit_profiles, normalize_profile, preview, normalize_reminder, reminder_candidate, due_occurrences, climate_gate, climate_state, quick_defaults, add_quick_profile, execution_candidates, fresh_heartbeat, expire_one_time_profiles
+from .departure_plan import edit_profiles, normalize_profile, preview, normalize_reminder, reminder_candidate, due_occurrences, climate_gate, climate_state, climate_source_confirms, quick_defaults, add_quick_profile, execution_candidates, fresh_heartbeat, expire_one_time_profiles
 
 
 class DeparturePlanning:
@@ -219,9 +219,11 @@ class DeparturePlanning:
                     continue
                 # Durable claim precedes the only service call; no blind retry.
                 try:
-                    if dt_util.utcnow() >= datetime.fromisoformat(row["deadline"]):
+                    dispatch_at = dt_util.utcnow()
+                    if dispatch_at >= datetime.fromisoformat(row["deadline"]):
                         item["status"] = "missed"
                     else:
+                        item["dispatch_at"] = dispatch_at.isoformat()
                         await asyncio.wait_for(self.hass.services.async_call(
                             "button", "press", {"entity_id": button.entity_id}, blocking=True), timeout=30)
                         item["status"] = "submitted"
@@ -230,15 +232,18 @@ class DeparturePlanning:
                 await self._persist(self.profiles, self.revision, self.reminder, self.last_reminder)
             # Reconcile a newer actual vehicle climate transition on later ticks.
             changed = False
+            reconciled_at = dt_util.utcnow()
             climate = self._state("preconditioning")
             for item in self.ledger.values():
                 if item.get("status") not in ("claimed", "submitted"):
                     continue
-                stamp = dt_util.parse_datetime(item["at"])
-                if climate and climate_state(climate.state) is True and climate.last_changed > stamp and climate.last_changed <= stamp + timedelta(minutes=3):
+                stamp = dt_util.parse_datetime(item.get("dispatch_at") or item["at"])
+                if item["status"] == "submitted" and climate and climate_source_confirms(
+                    climate.state, climate.attributes, climate.last_changed, stamp, reconciled_at
+                ):
                     item["status"] = "confirmed"
                     changed = True
-                elif now - stamp >= timedelta(minutes=3):
+                elif reconciled_at - stamp >= timedelta(minutes=3):
                     item["status"] = "unconfirmed"
                     changed = True
             if changed:
