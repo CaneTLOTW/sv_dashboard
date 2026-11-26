@@ -1,6 +1,6 @@
 import { LitElement, html, css, nothing } from "./vendor-lit.js?v=0.6.0-beta.7";
-import { localeFor, textFor } from "./i18n.js?v=0.7.3-beta.5";
-import { finite, monthSeries, chartGeometry } from "./monthly-statistics-core.js?v=0.7.3-beta.5";
+import { localeFor, textFor } from "./i18n.js?v=0.7.3-beta.6";
+import { finite, monthSeries, chartGeometry } from "./monthly-statistics-core.js?v=0.7.3-beta.6";
 
 const TAG = "sv-dashboard-monthly-statistics-card";
 const SOURCE = "https://www.frontera-forum.de/forum/thread/292-verr%C3%BCckte-hypothese-der-44kwh-akku-hat-eine-undokumentierte-akkuheizung/";
@@ -56,7 +56,7 @@ class SvDashboardMonthlyStatisticsCard extends LitElement {
   }
   _percent(value) { const n=finite(value); return n===null ? "—" : this._number(n*100,0)+" %"; }
   _month(key, compact=false) {
-    return new Intl.DateTimeFormat(localeFor(this._hass),{month:compact?"narrow":"short",...(compact?{}:{year:"2-digit"}),timeZone:"UTC"}).format(new Date(key+"-01T00:00:00Z"));
+    return new Intl.DateTimeFormat(localeFor(this._hass),{month:compact?"2-digit":"short",...(compact?{}:{year:"2-digit"}),timeZone:"UTC"}).format(new Date(key+"-01T00:00:00Z"));
   }
   render() {
     if (!this._config || !this._hass) return nothing;

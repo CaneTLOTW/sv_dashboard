@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import voluptuous as vol
 from homeassistant.components import websocket_api
+from homeassistant.core import callback
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.event import async_track_time_interval
 from datetime import timedelta
@@ -40,6 +41,7 @@ class DeparturePlanning:
         self.notifications = notifications
         self._unsubscribe = async_track_time_interval(self.hass, self._tick, timedelta(minutes=1))
 
+    @callback
     def _tick(self, _now):
         if self._task is None or self._task.done():
             self._task = self.hass.async_create_task(self._async_reminder())
