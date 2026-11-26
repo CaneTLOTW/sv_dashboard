@@ -21,3 +21,6 @@ test("reminder uses separate explicit settings and existing notify path",()=>{co
 
 
 test("quick planner shares the profile store and never arms execution",()=>{const card=read("static/departure-planning-card.js"),backend=read("departure_planning.py");assert.match(card,/_request\("quick",this\._quickProfile\(text\)\)/);assert.match(backend,/rows = add_quick_profile\(/);assert.match(card,/\.profile-row \.buttons\{grid-column:1\/-1/);assert.match(card,/clearInterval\(this\._poll\)/);});
+
+
+test("quick planner shifts the selected day time exactly 15 minutes without rollover", async()=>{const {shiftDepartureTime}=await import("../custom_components/sv_dashboard/static/departure-time-core.js");assert.equal(shiftDepartureTime("07:30",15),"07:45");assert.equal(shiftDepartureTime("07:30",-15),"07:15");assert.equal(shiftDepartureTime("07:52",15),"08:07");assert.equal(shiftDepartureTime("00:10",-15),null);assert.equal(shiftDepartureTime("23:50",15),null);assert.equal(shiftDepartureTime("23:45",-15),"23:30");assert.equal(shiftDepartureTime("",15),null);assert.equal(shiftDepartureTime("07:30",5),null);const card=read("static/departure-planning-card.js");assert.match(card,/_shiftQuickTime\(-15\)/);assert.match(card,/_shiftQuickTime\(15\)/);});

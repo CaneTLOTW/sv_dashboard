@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.3-beta.9 — quick departure time stepper
+
+- Add −15 / +15 minute buttons beside the native time picker. Preserve the selected date, disable steps across midnight, retain exact minute editing and server-side future-start checks.
+
 ## 0.7.3-beta.8 — quick departure planner
 
 - Add a one-time quick planner with today/tomorrow/custom date, suggested future time, optional all-series exception, default 20-minute lead and 20% minimum SoC, without required manual name. Reject past starts, DST gaps and duplicate active one-time departures on the server. Keep full profile editor and execution opt-in. Separate mobile action row, compact climate switch and periodic read-only refresh when no unsaved edits exist.
