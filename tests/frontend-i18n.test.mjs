@@ -36,6 +36,7 @@ const CAPABILITY_EXCEPTIONS = {
   chargeHistory: new Set(["sessionSegments", "sessionPauses", "sessionElapsed", "sessionPlugTime"]),
   dashboard: new Set([
     "packageLoadFailed",
+    "monthlyConsumptionTitle", "monthlyAmbient", "monthlyEnergyCoverage", "monthlyTemperatureCoverage", "monthlyEstimatedShare", "monthlyNoData", "monthlyMethod", "monthlyDetails", "monthlyWinterTitle", "monthlyWinterText", "monthlyExample", "monthlySource",
     "climateUnavailable", "climatePending", "climateNotConfirmed", "climateLowSoc", "chargePaused",
     "periodicWakeup",
     "wakeupInterval",

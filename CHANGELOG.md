@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.3-beta.3 — development: monthly consumption statistics
+
+- Add a BEV-only monthly consumption bar chart and drive-time ambient-temperature line in Statistics, retaining the existing rolling 500-km graph. Consumption uses distance-weighted qualified canonical trips; missing energy/temperature remains missing and coverage is disclosed. Temperature evidence uses bounded Home Assistant Recorder observations, not measured battery temperature. Retain matched per-trip summaries after Recorder expiry.
+- Add a clearly labeled owner-reported winter heating hypothesis for the Frontera 44 kWh and an illustrative calculation, without claiming a manufacturer-confirmed heater or universal threshold (#135).
+- Development only; owner beta.2 runtime and published release are unchanged.
+
 ## 0.7.3-beta.2 — acceptance candidate hardening
 
 - Explicitly use more-info for numeric charge-limit taps (including the icon) and retain slider drag; only switch entities can toggle. Protect legacy mappings and missing capabilities (#132).
