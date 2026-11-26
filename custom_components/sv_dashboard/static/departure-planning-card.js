@@ -1,6 +1,6 @@
 import { LitElement, html, css, nothing } from "./vendor-lit.js?v=0.6.0-beta.7";
-import { localeFor, textFor } from "./i18n.js?v=0.7.3-beta.11";
-import { shiftDepartureTime } from "./departure-time-core.js?v=0.7.3-beta.11";
+import { localeFor, textFor } from "./i18n.js?v=0.7.3-beta.12";
+import { shiftDepartureTime } from "./departure-time-core.js?v=0.7.3-beta.12";
 
 const TAG="sv-dashboard-departure-planning-card";
 const fresh=()=>({name:"",kind:"weekly",enabled:true,time:"07:30",weekdays:[0,1,2,3,4],date:null,override:"none",lead_minutes:20,min_soc:20,only_plugged:false,below_c:null,target_soc:null});
