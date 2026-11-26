@@ -10,7 +10,8 @@
  * changes presentation (no heading/self-navigation, optional info button);
  * entity resolution, picture lifecycle and overlay rendering stay shared.
  */
-import { languageFor, textFor } from "./i18n.js?v=0.7.3-beta.12";
+import { languageFor, textFor } from "./i18n.js?v=0.7.3-beta.13";
+import { climatePresentation } from "./climate-presentation-core.js?v=0.7.3-beta.13";
 
 const STATUS_DOMAIN = "sv_dashboard";
 const CARD_TAG = "sv-dashboard-vehicle-overview-card";
@@ -55,7 +56,7 @@ class SvDashboardClimateControl extends HTMLElement {
     this._hass = undefined;
     this._onChange = () => this._render();
     const root = this.attachShadow({mode:"open"});
-    root.innerHTML = '<style>:host{display:block;width:30px;height:30px}button{box-sizing:border-box;width:30px;height:30px;border:0;border-radius:50%;padding:0;margin:0;display:grid;place-items:center;background:rgba(20,20,20,.62);color:white;box-shadow:0 1px 4px rgba(0,0,0,.25);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}button:active{transform:scale(.92)}button[aria-disabled=true]{cursor:default}button[data-state=active]{color:var(--primary-color);background:color-mix(in srgb,var(--primary-color) 20%,rgba(20,20,20,.72))}button[data-state=pending]{color:var(--primary-color);background:color-mix(in srgb,var(--primary-color) 12%,rgba(20,20,20,.72))}button[data-state=pending] ha-icon{animation:kfzClimatePending 1.2s ease-in-out infinite}button[data-state=failed]{color:var(--error-color)}button[data-state=unavailable]{opacity:.72}ha-icon{--mdc-icon-size:18px;width:18px;height:18px}@keyframes kfzClimatePending{0%,100%{opacity:.4}50%{opacity:1}}@media(prefers-reduced-motion:reduce){button[data-state=pending] ha-icon{animation:none}}</style><button type="button"><ha-icon icon="mdi:air-conditioner"></ha-icon></button>';
+    root.innerHTML = '<style>:host{display:block;width:30px;height:30px}button{box-sizing:border-box;width:30px;height:30px;border:0;border-radius:50%;padding:0;margin:0;display:grid;place-items:center;background:rgba(20,20,20,.62);color:white;box-shadow:0 1px 4px rgba(0,0,0,.25);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}button:active{transform:scale(.92)}button[aria-disabled=true]{cursor:default}button[data-state=heating],button[data-state=cooling]{color:var(--climate-color);background:color-mix(in srgb,var(--climate-color) 20%,rgba(20,20,20,.72))}button[data-state=active],button[data-state=unknown]{color:white}button[data-state=pending]{color:#e5a329;background:color-mix(in srgb,#e5a329 12%,rgba(20,20,20,.72))}button[data-state=pending] ha-icon{animation:kfzClimatePending 1.2s ease-in-out infinite}button[data-state=failed]{color:var(--error-color)}button[data-state=unavailable]{opacity:.72}ha-icon{--mdc-icon-size:18px;width:18px;height:18px}@keyframes kfzClimatePending{0%,100%{opacity:.4}50%{opacity:1}}@media(prefers-reduced-motion:reduce){button[data-state=pending] ha-icon{animation:none}}</style><button type="button"><ha-icon icon="mdi:air-conditioner"></ha-icon></button>';
     this._button = root.querySelector("button");
     this._icon = root.querySelector("ha-icon");
     for (const eventName of ["pointerdown","pointerup","keydown","keyup","dblclick","contextmenu"]) {
@@ -69,8 +70,8 @@ class SvDashboardClimateControl extends HTMLElement {
 
   setConfig(config) { this._config = config || {}; this._render(); }
   getCardSize() { return 1; }
-  connectedCallback() { climateListeners.add(this._onChange); this._render(); }
-  disconnectedCallback() { climateListeners.delete(this._onChange); }
+  connectedCallback() { climateListeners.add(this._onChange); this._freshnessTimer = setInterval(this._onChange, 30000); this._render(); }
+  disconnectedCallback() { climateListeners.delete(this._onChange); clearInterval(this._freshnessTimer); }
   get _key() {
     return JSON.stringify([this._config.climate_entity,this._config.start_entity,this._config.stop_entity]);
   }
@@ -97,25 +98,28 @@ class SvDashboardClimateControl extends HTMLElement {
 
   _render() {
     if (!this._hass) return;
-    const {states,active,available,request} = this._state();
+    const {states,entity,active,available,request} = this._state();
+    const presentation = climatePresentation(entity, states[this._config.temperature_entity]);
     const strings = textFor(this._hass,"dashboard");
-    const state = request?.status === "pending" ? "pending" : !available ? "unavailable"
-      : request?.status === "failed" ? "failed" : active ? "active" : "off";
+    const state = request?.status === "pending" ? "pending" : request?.status === "failed" ? "failed" : presentation.mode;
     const soc = states[this._config.battery_entity]?.state;
     const brand = String(states[this._config.vehicle_info_entity]?.attributes?.brand || "")
       .normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").toLowerCase();
     const lowSocHint = ["citroen","peugeot","ds","ds automobiles","opel","vauxhall"].includes(brand)
       && soc !== undefined && soc !== "" && Number.isFinite(Number(soc)) && Number(soc) < 20
       && climateLiveState(states[this._config.charging_entity]?.state) === false;
+    const action = active ? strings.stopClimate : strings.startClimate;
     const title = state === "pending" ? strings.climatePending : state === "failed" ? strings.climateNotConfirmed
-      : state === "unavailable" ? strings.climateUnavailable + (lowSocHint ? " · " + strings.climateLowSoc : "")
-      : active ? strings.stopClimate : strings.startClimate;
+      : !available ? strings.climateUnavailable + (lowSocHint ? " · " + strings.climateLowSoc : "")
+      : state === "unknown" ? strings.unknown + " · " + action : action;
     this._button.dataset.state = state;
-    this._button.setAttribute("aria-disabled", String(state === "pending" || state === "unavailable"));
+    this._button.setAttribute("aria-disabled", String(state === "pending" || !available));
+    if (presentation.color) this._button.style.setProperty("--climate-color", presentation.color);
+    else this._button.style.removeProperty("--climate-color");
     this._button.setAttribute("aria-busy",String(state === "pending"));
     this._button.setAttribute("aria-label",title);
     this._button.title = title;
-    this._icon.setAttribute("icon", state === "unavailable" ? "mdi:lock" : state === "failed" ? "mdi:alert-circle" : "mdi:air-conditioner");
+    this._icon.setAttribute("icon", state === "failed" ? "mdi:alert-circle" : state === "pending" ? "mdi:sync" : !available && presentation.mode === "off" ? "mdi:lock" : presentation.icon);
   }
 
   async _activate() {
@@ -439,6 +443,7 @@ function buildConfig(hass, config, statusState) {
         card: {
           type: "custom:sv-dashboard-climate-control",
           climate_entity: preconditioning,
+          temperature_entity: temperature,
           start_entity: preconditioningStart,
           stop_entity: preconditioningStop,
           battery_entity: battery,

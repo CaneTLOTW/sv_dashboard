@@ -4,7 +4,8 @@
  * status entity created by the backend config entry. It never derives IDs from
  * VINs or friendly names.
  */
-import { languageFor, localeFor, textFor } from "./i18n.js?v=0.7.3-beta.12";
+import { languageFor, localeFor, textFor } from "./i18n.js?v=0.7.3-beta.13";
+import { climatePresentation } from "./climate-presentation-core.js?v=0.7.3-beta.13";
 
 const STRATEGY_TYPE = "sv-dashboard";
 const STATUS_DOMAIN = "sv_dashboard";
@@ -524,7 +525,19 @@ class SvDashboardStrategy extends HTMLElement {
       { type: "grid", cards: present([
         separator(strings.quickActions, "mdi:lightning-bolt"),
         bubble("command_status", strings.commandStatus, "mdi:remote"),
-        bubble("preconditioning", strings.climate, "mdi:air-conditioner", [press("preconditioning_start", strings.startClimate, "mdi:fan"), press("preconditioning_stop", strings.stopClimate, "mdi:fan-off")]),
+        entity("preconditioning") ? {
+          ...bubble("preconditioning", strings.climate, "mdi:air-conditioner", [press("preconditioning_start", strings.startClimate, "mdi:fan"), press("preconditioning_stop", strings.stopClimate, "mdi:fan-off")]),
+          styles: `\${(() => {
+            const value = hass.states[entity];
+            const view = (${climatePresentation.toString()})(value, hass.states[${literalText(entity("temperature") || "")}]);
+            const target = card.querySelector('.bubble-state');
+            if (target) target.innerText = view.confirmed && value ? (typeof hass.formatEntityState === 'function' ? hass.formatEntityState(value) : value.state) : ${literalText(strings.unknown)};
+            if (icon) {
+              icon.setAttribute('icon', view.icon);
+              icon.style.setProperty('color', view.color || 'var(--secondary-text-color)', 'important');
+            }
+          })()}`
+        } : null,
       ]) },
       { type: "grid", cards: present([
         supportsCharging ? separator(strings.chargingRange, "mdi:battery-charging") : null,
@@ -581,8 +594,13 @@ class SvDashboardStrategy extends HTMLElement {
         supportsElectric && !supportsDualEnergy && serverTripEntity ? { type: "custom:sv-dashboard-range-calculator-card", entity: serverTripEntity, soc_entity: entity("battery"), soh_entity: entity("battery_health_capacity"), capacity_entity: entity("battery_capacity"), temperature_entity: entity("temperature"), grid_options: { columns: "full" } } : null,
         supportsFuel && trailingFuelConsumption ? { type: "statistics-graph", title: strings.trailingFuelConsumption, entities: [trailingFuelConsumption], days_to_show: LONG_TERM_STATISTICS_DAYS, period: "week", stat_types: ["mean"], chart_type: "line", hide_legend: true, grid_options: { columns: "full", rows: 5 } } : null,
         supportsFuel && entity("fuel_consumption_instant") ? { type: "statistics-graph", title: strings.fuelConsumption, entities: [entity("fuel_consumption_instant")], days_to_show: LONG_TERM_STATISTICS_DAYS, period: "week", stat_types: ["mean"], chart_type: "line", hide_legend: true, grid_options: { columns: "full", rows: 5 } } : null,
-      ].filter(Boolean);
-      views.push({ title: strings.longTermStatistics, path: "statistics", icon: "mdi:chart-timeline-variant", type: "sections", max_columns: 2, sections: [{ type: "grid", cards: [{ type: "heading", heading: strings.longTermStatistics, icon: "mdi:chart-timeline-variant", heading_style: "title" }, markdown(strings.longTermStatisticsIntro), ...statisticsCards] }] });
+      ];
+      const historyCards = statisticsCards.slice(0, 4).filter(Boolean);
+      const consumptionCards = statisticsCards.slice(4).filter(Boolean);
+      views.push({ title: strings.longTermStatistics, path: "statistics", icon: "mdi:chart-timeline-variant", type: "sections", max_columns: 2, sections: [
+        { type: "grid", cards: [{ type: "heading", heading: strings.longTermStatistics, icon: "mdi:chart-timeline-variant", heading_style: "title" }, markdown(strings.longTermStatisticsIntro), ...historyCards] },
+        ...(consumptionCards.length ? [{ type: "grid", cards: consumptionCards }] : []),
+      ] });
     }
 
     if (modules.trips && serverTripEntity) {

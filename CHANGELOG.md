@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.3-beta.13 — climate presentation and responsive statistics
+
+- Restore inferred red radiator / blue A/C for active climate using recent source-stamped temperature (20 °C heuristic, not measured HVAC mode). Show neutral unknown for stale or missing climate source timestamps; no HA receipt-time fallback. Preserve manual controls and existing command guard. Apply presentation to EV and dual-energy Hero and Quick Actions.
+- Split Statistics into two Home Assistant sections: health/mileage and consumption/range, retaining mobile stacking and existing graphs. No historical statistics mutation.
+- Includes beta.12 automatic one-off expiry and prior scheduled wake-up. Runtime acceptance and the separate charge-grouping diagnostic remain outstanding.
+
 ## 0.7.3-beta.12 — automatic one-off cleanup
 
 - Remove expired one-time departure profiles at their departure instant on the next scheduler tick, startup or dashboard request, including inactive one-offs. Preserve recurring profiles, execution records and preparation records for 30 days. An expired date-wide override is hidden but remains effective until local midnight, preventing an unexpected same-day series restart. Persist cleanup atomically with a revision change for removed profiles; no vehicle commands or changes to execution authorization.

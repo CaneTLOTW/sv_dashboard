@@ -1,5 +1,6 @@
 import { LitElement, html, css, nothing } from "./vendor-lit.js?v=0.6.0-beta.7";
-import { localeFor, textFor } from "./i18n.js?v=0.7.3-beta.12";
+import { localeFor, textFor } from "./i18n.js?v=0.7.3-beta.13";
+import { climatePresentation } from "./climate-presentation-core.js?v=0.7.3-beta.13";
 
 const STATUS_DOMAIN = "sv_dashboard";
 const CARD_TAG = "sv-dashboard-dual-energy-overview-card";
@@ -81,8 +82,8 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
       display: grid; place-items: center; padding: 0; cursor: pointer; box-shadow: 0 2px 9px rgba(0,0,0,.10);
     }
     .climate-control ha-icon { --mdc-icon-size: 24px; color: var(--secondary-text-color); }
-    .climate-control.active { background: color-mix(in srgb, var(--primary-color) 13%, var(--card-background-color)); border-color: color-mix(in srgb, var(--primary-color) 32%, var(--divider-color)); }
-    .climate-control.active ha-icon { color: var(--primary-color); }
+    .climate-control.active { background: color-mix(in srgb, var(--climate-color, var(--secondary-text-color)) 13%, var(--card-background-color)); border-color: color-mix(in srgb, var(--climate-color, var(--secondary-text-color)) 32%, var(--divider-color)); }
+    .climate-control.active ha-icon { color: var(--climate-color, var(--secondary-text-color)); }
     .climate-control.pending-start { background: color-mix(in srgb, var(--primary-color) 8%, var(--card-background-color)); border-color: color-mix(in srgb, var(--primary-color) 22%, var(--divider-color)); }
     .climate-control.pending-start ha-icon { color: var(--primary-color); animation: svHeroClimatePending 1.2s ease-in-out infinite; }
     .climate-control.pending-stop { background: color-mix(in srgb, var(--error-color) 10%, var(--card-background-color)); border-color: color-mix(in srgb, var(--error-color) 38%, var(--divider-color)); }
@@ -341,9 +342,9 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
     const climatePending = Date.now() < this._climatePendingUntil && Boolean(this._climatePendingAction);
     const climateAction = climateActive ? "stop" : "start";
     const climateActionEntity = climateActive ? mapped.preconditioning_stop : mapped.preconditioning_start;
-    const temperatureNumber = numeric(temperatureState);
-    const climateIcon = climateActive && temperatureNumber !== null && temperatureNumber <= 20 ? "mdi:radiator" : "mdi:air-conditioner";
-    const climateLabel = climateActive ? dashboardText.stopClimate : dashboardText.startClimate;
+    const presentation = climatePresentation(climateState, temperatureState);
+    const climateIcon = climatePending ? "mdi:sync" : presentation.icon;
+    const climateLabel = (presentation.confirmed ? "" : dashboardText.unknown + " · ") + (climateActive ? dashboardText.stopClimate : dashboardText.startClimate);
 
     const pictureContent = picture
       ? html`<img src=${picture} alt="" />`
@@ -353,7 +354,7 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
       <ha-card>
         <div class="hero">
 ${(mapped.preconditioning_start || mapped.preconditioning_stop) ? html`
-  <button class="top-control climate-control ${climateActive ? "active" : ""} ${climatePending ? `pending-${this._climatePendingAction}` : ""}" type="button"
+  <button class="top-control climate-control ${presentation.confirmed && climateActive ? "active" : ""} ${climatePending ? `pending-${this._climatePendingAction}` : ""}" style=${presentation.color ? `--climate-color:${presentation.color}` : ""} type="button"
     ?disabled=${climatePending || !climateActionEntity} aria-label=${climateLabel} title=${climateLabel}
     data-action=${climateAction} @click=${(event) => { event.stopPropagation(); this._sendClimate(mapped); }}>
     <ha-icon icon=${climateIcon}></ha-icon>
