@@ -37,7 +37,7 @@ from .const import (
     UPSTREAM_DOMAIN,
 )
 from .charge_policy import allow_soc_only_charge_reconstruction
-from .monthly_statistics import celsius, monthly_consumption, observe_trip_temperatures
+from .monthly_statistics import celsius, monthly_consumption, observe_trip_temperatures, range_calibration
 from .trip_repair import (
     local_trip_backfill_quality, partition_replayed_trips, repair_trip_odometer_continuity,
     recover_local_odometer_gaps,
@@ -1385,6 +1385,7 @@ class ServerHistoryManager:
             except Exception as err:  # Optional statistics never invalidate canonical history.
                 _LOGGER.debug("Could not update SV monthly statistics: %s", err)
                 self.data["monthly_consumption"] = []
+                self.data["range_calibration"] = {"mode": "unavailable"}
             if self.metrics:
                 await self.metrics.async_reconcile_canonical_mileage(
                     self.data.get("trips", [])
@@ -1688,6 +1689,7 @@ class ServerHistoryManager:
         archive = observe_trip_temperatures(trips, observations, archive)
         self.data["monthly_temperature_archive"] = archive
         self.data["monthly_consumption"] = monthly_consumption(trips, archive, self.hass.config.time_zone)
+        self.data["range_calibration"] = await self.hass.async_add_executor_job(range_calibration, trips, archive)
 
     async def _async_recorder_charges(self) -> list[dict[str, Any]]:
         """Rebuild observed historical sessions from local Recorder states.
