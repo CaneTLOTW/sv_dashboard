@@ -42,3 +42,18 @@ for n in range(20):
     rows = m.edit_profiles(rows,"save",weekly(str(n),[0],"08:00"),None)
 assert len(rows)==22
 print("Departure planning tests passed")
+
+
+evening = datetime(2026,11,26,18,30,tzinfo=UTC)
+base = m.normalize_profile({**weekly("A",[4],"07:30"),"min_soc":30},"a")
+exception = m.normalize_profile({**once("2026-11-27","a"),"min_soc":20},"ex")
+settings = m.normalize_reminder({"enabled":True})
+assert m.reminder_candidate([base],evening,"Europe/Berlin",settings,None,17)["minimum"]==30
+assert m.reminder_candidate([base,exception],evening,"Europe/Berlin",settings,None,25) is None
+assert m.reminder_candidate([base,exception],evening,"Europe/Berlin",settings,None,17)["departure"]=="06:30"
+assert m.reminder_candidate([base],evening,"Europe/Berlin",settings,"2026-11-26",17) is None
+assert m.reminder_candidate([base],evening,"Europe/Berlin",settings,None,None) is None
+assert m.reminder_candidate([base],evening,"Europe/Berlin",m.normalize_reminder({}),None,17) is None
+assert m.reminder_candidate([base],datetime(2026,11,26,18,51,tzinfo=UTC),"Europe/Berlin",settings,None,17) is None
+assert m.reminder_candidate([base],evening,"Europe/Berlin",settings,None,30) is None
+print("Departure reminder tests passed")

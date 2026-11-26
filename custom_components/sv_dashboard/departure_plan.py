@@ -126,3 +126,46 @@ def preview(profiles: list, now: datetime, timezone_name: str, days: int = 14) -
                 "start_passed": start < now, "target_soc": p["target_soc"]})
     upcoming.sort(key=lambda p: (p["departure"], p["profile_id"]))
     return {"today": today.isoformat(), "timezone": timezone_name, "upcoming": upcoming, "skipped": skipped}
+
+
+def normalize_reminder(value: dict) -> dict:
+    if not isinstance(value, dict):
+        raise ValueError("invalid_reminder")
+    clock = value.get("time", "19:30")
+    if not isinstance(clock, str) or not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", clock):
+        raise ValueError("invalid_time")
+    return {"enabled": _bool(value.get("enabled", False)), "time": clock}
+
+
+def reminder_candidate(profiles: list, now: datetime, timezone_name: str,
+                       settings: dict, last_date: str | None, soc: float | None) -> dict | None:
+    """One warning per evening, for a real next-morning departure after overrides.
+
+    The last reported SoC is a risk signal, not a forecast or a command gate.
+    Never assume charging plans, temperature, or plug status tomorrow.
+    """
+    if not settings["enabled"] or soc is None or not 0 <= soc <= 100:
+        return None
+    tz = ZoneInfo(timezone_name)
+    local = now.astimezone(tz)
+    today = local.date()
+    if last_date == today.isoformat():
+        return None
+    scheduled = _local_departure(today, settings["time"], tz)
+    if scheduled is None or not timedelta(0) <= now.astimezone(UTC) - scheduled < timedelta(minutes=20):
+        return None
+    tomorrow = today + timedelta(days=1)
+    by_id = {p["id"]: p for p in profiles}
+    for occurrence in preview(profiles, now, timezone_name, 2)["upcoming"]:
+        departure = datetime.fromisoformat(occurrence["departure"]).astimezone(tz)
+        if departure.date() != tomorrow or departure.hour >= 12:
+            continue
+        profile = by_id[occurrence["profile_id"]]
+        minimum = profile["min_soc"]
+        # The desired departure charge is deliberately separate from the
+        # climate threshold. This reminder is about the climate risk only.
+        if soc < minimum:
+            start = datetime.fromisoformat(occurrence["start"]).astimezone(tz)
+            return {"date": today.isoformat(), "departure": departure.strftime("%H:%M"),
+                    "start": start.strftime("%H:%M"), "minimum": minimum, "soc": soc}
+    return None

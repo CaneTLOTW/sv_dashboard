@@ -15,6 +15,8 @@ from homeassistant.core import HomeAssistant
 
 _MESSAGES: dict[str, dict[str, str]] = {
     "de": {
+        "departure_reminder_title": "Ladehinweis für morgen",
+        "departure_reminder_message": "Abfahrt {departure}, geplanter Klimastart {start}. Zuletzt gemeldeter SoC {soc} %, Profilminimum {minimum} %. Bitte prüfen, ob über Nacht ausreichend geladen wird; Vorklimatisierung könnte sonst ausfallen.",
         "manual_wakeup": "Manueller Wake-up angefordert",
         "test_title": "SV Dashboard-Test",
         "test_message": "Dieser Test bestätigt die ausgewählten SV Dashboard-Benachrichtigungsempfänger.",
@@ -47,6 +49,8 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "unknown": "Unbekannt",
     },
     "en": {
+        "departure_reminder_title": "Charging reminder for tomorrow",
+        "departure_reminder_message": "Departure {departure}, planned climate start {start}. Last reported SoC {soc}%, profile minimum {minimum}%. Check overnight charging; preconditioning may otherwise be unavailable.",
         "manual_wakeup": "Manual wake-up requested",
         "test_title": "SV Dashboard test",
         "test_message": "This test confirms the selected SV Dashboard notification recipients.",
@@ -79,6 +83,8 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "unknown": "Unknown",
     },
     "fr": {
+        "departure_reminder_title": "Rappel de recharge pour demain",
+        "departure_reminder_message": "Départ {departure}, climatisation prévue {start}. Dernier SoC signalé {soc} %, minimum du profil {minimum} %. Vérifiez la recharge de nuit ; le préconditionnement pourrait sinon être indisponible.",
         "manual_wakeup": "Réveil manuel demandé",
         "test_title": "Test SV Dashboard",
         "test_message": "Ce test confirme les destinataires de notification sélectionnés pour SV Dashboard.",
@@ -111,6 +117,8 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "unknown": "Inconnu",
     },
     "it": {
+        "departure_reminder_title": "Promemoria ricarica per domani",
+        "departure_reminder_message": "Partenza {departure}, clima previsto {start}. Ultimo SoC segnalato {soc}%, minimo profilo {minimum}%. Verificare la ricarica notturna; il precondizionamento potrebbe non essere disponibile.",
         "manual_wakeup": "Riattivazione manuale richiesta",
         "test_title": "Test SV Dashboard",
         "test_message": "Questo test conferma i destinatari delle notifiche selezionati per SV Dashboard.",
@@ -143,6 +151,8 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "unknown": "Sconosciuto",
     },
     "es": {
+        "departure_reminder_title": "Recordatorio de carga para mañana",
+        "departure_reminder_message": "Salida {departure}, climatización prevista {start}. Último SoC comunicado {soc} %, mínimo del perfil {minimum} %. Comprueba la carga nocturna; el preacondicionamiento podría no estar disponible.",
         "manual_wakeup": "Activación manual solicitada",
         "test_title": "Prueba de SV Dashboard",
         "test_message": "Esta prueba confirma los destinatarios de notificaciones seleccionados para SV Dashboard.",
@@ -175,6 +185,8 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "unknown": "Desconocido",
     },
     "pt": {
+        "departure_reminder_title": "Lembrete de carregamento para amanhã",
+        "departure_reminder_message": "Partida {departure}, climatização prevista {start}. Último SoC comunicado {soc}%, mínimo do perfil {minimum}%. Verifique o carregamento noturno; o pré-condicionamento pode não estar disponível.",
         "manual_wakeup": "Ativação manual solicitada",
         "test_title": "Teste do SV Dashboard",
         "test_message": "Este teste confirma os destinatários de notificações selecionados para o SV Dashboard.",
@@ -207,6 +219,8 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "unknown": "Desconhecido",
     },
     "nl": {
+        "departure_reminder_title": "Laadherinnering voor morgen",
+        "departure_reminder_message": "Vertrek {departure}, geplande klimaatstart {start}. Laatst gemelde SoC {soc}%, profielminimum {minimum}%. Controleer het laden vannacht; voorverwarming kan anders niet beschikbaar zijn.",
         "manual_wakeup": "Handmatige wake-up aangevraagd",
         "test_title": "SV Dashboard-test",
         "test_message": "Deze test bevestigt de geselecteerde SV Dashboard-meldingsontvangers.",
@@ -239,6 +253,8 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "unknown": "Onbekend",
     },
     "da": {
+        "departure_reminder_title": "Ladepåmindelse til i morgen",
+        "departure_reminder_message": "Afgang {departure}, planlagt klimastart {start}. Sidst rapporteret SoC {soc}%, profilminimum {minimum}%. Kontrollér opladning i nat; forvarmning kan ellers være utilgængelig.",
         "manual_wakeup": "Manuel vækning anmodet",
         "test_title": "SV Dashboard-test",
         "test_message": "Denne test bekræfter de valgte SV Dashboard-notifikationsmodtagere.",
@@ -271,6 +287,8 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "unknown": "Ukendt",
     },
     "nb": {
+        "departure_reminder_title": "Ladepåminnelse for i morgen",
+        "departure_reminder_message": "Avreise {departure}, planlagt klimastart {start}. Sist rapportert SoC {soc}%, profilminimum {minimum}%. Sjekk lading i natt; forvarming kan ellers være utilgjengelig.",
         "manual_wakeup": "Manuell vekking forespurt",
         "test_title": "SV Dashboard-test",
         "test_message": "Denne testen bekrefter de valgte SV Dashboard-varslingsmottakerne.",
@@ -303,6 +321,8 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "unknown": "Ukjent",
     },
     "sv": {
+        "departure_reminder_title": "Laddpåminnelse för imorgon",
+        "departure_reminder_message": "Avresa {departure}, planerad klimatstart {start}. Senast rapporterad SoC {soc}%, profilminimum {minimum}%. Kontrollera nattladdning; förkonditionering kan annars vara otillgänglig.",
         "manual_wakeup": "Manuell väckning begärd",
         "test_title": "SV Dashboard-test",
         "test_message": "Detta test bekräftar de valda SV Dashboard-mottagarna för aviseringar.",
@@ -335,6 +355,8 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "unknown": "Okänd",
     },
     "fi": {
+        "departure_reminder_title": "Latausmuistutus huomiselle",
+        "departure_reminder_message": "Lähtö {departure}, suunniteltu ilmastoinnin aloitus {start}. Viimeksi ilmoitettu SoC {soc} %, profiilin minimi {minimum} %. Tarkista yölataus; esilämmitys ei ehkä muuten toimi.",
         "manual_wakeup": "Manuaalinen herätys pyydetty",
         "test_title": "SV Dashboard -testi",
         "test_message": "Tämä testi vahvistaa SV Dashboardille valitut ilmoitusten vastaanottajat.",
@@ -367,6 +389,8 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "unknown": "Tuntematon",
     },
     "pl": {
+        "departure_reminder_title": "Przypomnienie o ładowaniu na jutro",
+        "departure_reminder_message": "Wyjazd {departure}, planowana klimatyzacja {start}. Ostatni zgłoszony SoC {soc}%, minimum profilu {minimum}%. Sprawdź nocne ładowanie; przygotowanie auta może być niedostępne.",
         "manual_wakeup": "Zażądano ręcznego wybudzenia",
         "test_title": "Test SV Dashboard",
         "test_message": "Ten test potwierdza wybranych odbiorców powiadomień SV Dashboard.",
@@ -399,6 +423,8 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "unknown": "Nieznane",
     },
     "cs": {
+        "departure_reminder_title": "Připomínka nabíjení na zítra",
+        "departure_reminder_message": "Odjezd {departure}, plánovaný start klimatizace {start}. Poslední hlášený SoC {soc} %, minimum profilu {minimum} %. Zkontrolujte noční nabíjení; předehřev jinak nemusí fungovat.",
         "manual_wakeup": "Požadováno ruční probuzení",
         "test_title": "Test SV Dashboard",
         "test_message": "Tento test potvrzuje vybrané příjemce oznámení SV Dashboard.",
@@ -431,6 +457,8 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "unknown": "Neznámé",
     },
     "sk": {
+        "departure_reminder_title": "Pripomienka nabíjania na zajtra",
+        "departure_reminder_message": "Odchod {departure}, plánovaný štart klimatizácie {start}. Posledný hlásený SoC {soc} %, minimum profilu {minimum} %. Skontrolujte nočné nabíjanie; predohrev inak nemusí fungovať.",
         "manual_wakeup": "Požadované ručné prebudenie",
         "test_title": "Test SV Dashboard",
         "test_message": "Tento test potvrdzuje vybraných príjemcov upozornení SV Dashboard.",
@@ -463,6 +491,8 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "unknown": "Neznáme",
     },
     "hu": {
+        "departure_reminder_title": "Töltési emlékeztető holnapra",
+        "departure_reminder_message": "Indulás {departure}, tervezett klímaindítás {start}. Utolsó jelentett SoC {soc}%, profilminimum {minimum}%. Ellenőrizze az éjszakai töltést; az előkondicionálás különben elmaradhat.",
         "manual_wakeup": "Kézi ébresztés kérve",
         "test_title": "SV Dashboard teszt",
         "test_message": "Ez a teszt megerősíti az SV Dashboard kiválasztott értesítési címzettjeit.",
@@ -495,6 +525,8 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "unknown": "Ismeretlen",
     },
     "ro": {
+        "departure_reminder_title": "Memento de încărcare pentru mâine",
+        "departure_reminder_message": "Plecare {departure}, climatizare planificată {start}. Ultimul SoC raportat {soc}%, minim profil {minimum}%. Verificați încărcarea nocturnă; precondiționarea ar putea fi indisponibilă.",
         "manual_wakeup": "Trezire manuală solicitată",
         "test_title": "Test SV Dashboard",
         "test_message": "Acest test confirmă destinatarii selectați pentru notificările SV Dashboard.",
@@ -527,6 +559,8 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "unknown": "Necunoscut",
     },
     "sl": {
+        "departure_reminder_title": "Opomnik za polnjenje za jutri",
+        "departure_reminder_message": "Odhod {departure}, načrtovani začetek klimatizacije {start}. Zadnji sporočeni SoC {soc}%, minimum profila {minimum}%. Preverite nočno polnjenje; predgretje sicer morda ne bo na voljo.",
         "manual_wakeup": "Zahtevano ročno prebujanje",
         "test_title": "Preizkus SV Dashboard",
         "test_message": "Ta preizkus potrjuje izbrane prejemnike obvestil SV Dashboard.",
@@ -559,6 +593,8 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "unknown": "Neznano",
     },
     "hr": {
+        "departure_reminder_title": "Podsjetnik za punjenje sutra",
+        "departure_reminder_message": "Polazak {departure}, planirani početak klimatizacije {start}. Posljednji prijavljeni SoC {soc}%, minimum profila {minimum}%. Provjerite noćno punjenje; predgrijavanje inače možda neće biti dostupno.",
         "manual_wakeup": "Zatraženo ručno buđenje",
         "test_title": "Test SV Dashboard",
         "test_message": "Ovaj test potvrđuje odabrane primatelje obavijesti SV Dashboard.",

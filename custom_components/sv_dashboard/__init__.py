@@ -210,6 +210,7 @@ async def async_setup_entry(
         planning = DeparturePlanning(hass, entry)
         await planning.async_initialize()
         coordinator.departure_planning = planning
+        planning.async_start(notifications)
     except Exception:
         _LOGGER.exception("Could not load SV departure planning; existing store retained")
 
@@ -239,6 +240,8 @@ async def async_unload_entry(
         if coordinator.server_history is not None:
             coordinator.server_history.async_cancel_background_tasks()
         await coordinator.fuel_history.async_shutdown()
+        if coordinator.departure_planning is not None:
+            await coordinator.departure_planning.async_shutdown()
         await coordinator.notifications.async_shutdown()
         await coordinator.metrics.async_shutdown()
         hass.data[DOMAIN].pop(entry.entry_id, None)

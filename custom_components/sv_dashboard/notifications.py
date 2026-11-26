@@ -322,6 +322,29 @@ class VehicleNotificationManager:
     async def async_manual_wakeup(self) -> None:
         await self._async_wakeup(text(self.hass, "manual_wakeup"))
 
+    def departure_reminder_available(self) -> bool:
+        """Reuse existing notification permissions, targets and quiet hours."""
+        if not self.is_enabled(SWITCH_NOTIFICATIONS) or not self.is_enabled(SWITCH_ALERTS) or not self._enabled_recipients() or self._in_quiet_hours():
+            return False
+        last = self.data.get("last_notification") or {}
+        stamp = self._parse_time(last.get("time"))
+        return not (last.get("type") == "charge_reminder" and stamp is not None
+                    and timedelta(0) <= dt_util.utcnow() - stamp < timedelta(minutes=10))
+
+    def departure_reminder_soc(self):
+        return self._state_number("battery")
+
+    async def async_departure_reminder(self, candidate: dict) -> bool:
+        if not self.departure_reminder_available():
+            return False
+        return await self._async_notify(
+            text(self.hass, "departure_reminder_title"),
+            text(self.hass, "departure_reminder_message",
+                departure=candidate["departure"], start=candidate["start"],
+                soc=self._number(candidate["soc"], 0), minimum=candidate["minimum"]),
+            "departure_reminder", SWITCH_ALERTS,
+        )
+
     async def async_test_notification(self) -> None:
         await self._async_notify(
             text(self.hass, "test_title"),
