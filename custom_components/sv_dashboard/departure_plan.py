@@ -118,7 +118,7 @@ def preview(profiles: list, now: datetime, timezone_name: str, days: int = 14) -
             if departure is None:
                 skipped.append({"profile_id": p["id"], "date": day.isoformat(), "reason": "dst_gap"})
                 continue
-            if departure < now:
+            if departure <= now:
                 continue
             start = departure - timedelta(minutes=p["lead_minutes"])
             upcoming.append({"profile_id": p["id"], "name": p["name"], "kind": p["kind"],
@@ -268,3 +268,26 @@ def fresh_heartbeat(now, stamp, source):
     return bool(stamp is not None and stamp.tzinfo is not None and
                 source == "upstream_payload_timestamp" and
                 timedelta(0) <= now - stamp <= timedelta(minutes=15))
+
+
+def expire_one_time_profiles(profiles, held_overrides, now, timezone_name):
+    """Remove elapsed one-offs; preserve their date-wide series exceptions until midnight."""
+    now = now.astimezone(UTC)
+    tz = ZoneInfo(timezone_name)
+    today = now.astimezone(tz).date()
+    kept, expired = [], []
+    held = {p["id"]: p for p in held_overrides if p["date"] == today.isoformat()}
+    for p in profiles:
+        if p["kind"] != "once":
+            kept.append(p)
+            continue
+        day = date.fromisoformat(p["date"])
+        departure = _local_departure(day, p["time"], tz)
+        # A nonexistent DST wall-clock time has no instant; remove after its date.
+        if day < today or (departure is not None and departure <= now):
+            expired.append((p, departure))
+            if day == today and departure is not None and p["enabled"] and p["override"] != "none":
+                held[p["id"]] = p
+        else:
+            kept.append(p)
+    return kept, list(held.values()), expired

@@ -106,3 +106,70 @@ assert not m.fresh_heartbeat(start,start-timedelta(minutes=78),"upstream_payload
 assert not m.fresh_heartbeat(start,start,"ha_last_updated")
 assert m.fresh_heartbeat(start,start-timedelta(minutes=1),"upstream_payload_timestamp")
 print("Departure preparation windows passed")
+
+
+# Cleanup at the exact departure instant, including disabled and old one-offs.
+tz = "Europe/Berlin"
+at = datetime(2026,11,26,15,0,tzinfo=UTC)
+weekly_later = m.normalize_profile(weekly("Evening",[3],"18:00"),"series")
+one = m.normalize_profile({"name":"One","kind":"once","date":"2026-11-26","time":"16:00","override":"all"},"one")
+disabled = m.normalize_profile({**one,"enabled":False,"override":"none"},"disabled")
+future = m.normalize_profile({**one,"date":"2026-11-27","override":"none"},"future")
+old = m.normalize_profile({**one,"date":"2026-11-25"},"old")
+active, held, expired = m.expire_one_time_profiles([weekly_later,one,disabled,future,old],[],at,tz)
+assert active == [weekly_later,future]
+assert held == [one]
+assert {p["id"] for p,_ in expired} == {"one","disabled","old"}
+assert m.expire_one_time_profiles([one],[],at-timedelta(seconds=1),tz)[0] == [one]
+assert not any(r["profile_id"]=="one" for r in m.preview(active+held,at,tz)["upcoming"])
+assert not any(r["profile_id"]=="series" and r["departure"].startswith("2026-11-26") for r in m.preview(active+held,at,tz)["upcoming"])
+next_day = datetime(2026,11,26,23,0,tzinfo=UTC)
+assert m.expire_one_time_profiles(active,held,next_day,tz)[1] == []
+assert any(r["profile_id"]=="series" for r in m.preview(active,next_day,tz)["upcoming"])
+gap = m.normalize_profile({**one,"date":"2027-03-28","time":"02:30"},"gap")
+assert m.expire_one_time_profiles([gap],[],datetime(2027,3,28,12,tzinfo=UTC),tz)[0] == [gap]
+assert m.expire_one_time_profiles([gap],[],datetime(2027,3,29,0,tzinfo=UTC),tz)[0] == []
+fall = m.normalize_profile({**one,"date":"2027-10-31","time":"02:30"},"fall")
+assert m.expire_one_time_profiles([fall],[],datetime(2027,10,31,0,30,tzinfo=UTC),tz)[0] == []
+print("One-time profile expiry and date-wide exception tests passed")
+
+# Exercise the actual async cleanup implementation without HA or network.
+import ast
+import asyncio
+from types import SimpleNamespace
+source = (Path(__file__).parents[1] / "custom_components/sv_dashboard/departure_planning.py").read_text()
+manager = next(n for n in ast.parse(source).body if isinstance(n,ast.ClassDef) and n.name=="DeparturePlanning")
+method = next(n for n in manager.body if isinstance(n,ast.AsyncFunctionDef) and n.name=="_async_cleanup_locked")
+namespace = {"expire_one_time_profiles":m.expire_one_time_profiles,"timedelta":timedelta,
+             "dt_util":SimpleNamespace(parse_datetime=lambda v:datetime.fromisoformat(v) if v else None)}
+exec(compile(ast.Module(body=[method],type_ignores=[]),"<cleanup-test>","exec"),namespace)
+cleanup = namespace["_async_cleanup_locked"]
+
+async def check_cleanup():
+    calls = []
+    async def save(rows, revision, reminder, last_reminder):
+        calls.append((rows,revision))
+    k = "one|"+at.isoformat()
+    old_key = "old|2026-09-01T12:00:00+00:00"
+    existing = {"at":(at-timedelta(minutes=20)).isoformat(),"status":"stale","name":"One"}
+    s = SimpleNamespace(profiles=[weekly_later,one],held_overrides=[],ledger={k:existing,old_key:{"at":"2026-09-01T12:00:00+00:00"}},preparation={},
+                        revision=4,reminder={},last_reminder=None,hass=SimpleNamespace(config=SimpleNamespace(time_zone=tz)),_persist=save)
+    await cleanup(s,at)
+    assert s.profiles == [weekly_later] and s.held_overrides == [one] and s.revision==5
+    assert s.ledger == {k:existing} and len(calls)==1
+    await cleanup(s,at)
+    assert len(calls)==1
+    await cleanup(s,next_day)
+    assert s.held_overrides==[] and s.revision==5 and len(calls)==2
+    async def fail(*args): raise OSError("test")
+    s.profiles=[one];s._persist=fail
+    before=(s.profiles,s.held_overrides,s.ledger,s.preparation,s.revision)
+    try: await cleanup(s,at)
+    except OSError: pass
+    else: raise AssertionError("storage failure ignored")
+    assert (s.profiles,s.held_overrides,s.ledger,s.preparation,s.revision)==before
+    s._persist=save;s.ledger={};s.preparation={k:{"at":(at-timedelta(minutes=30)).isoformat(),"status":"submitted"}}
+    await cleanup(s,at)
+    assert s.ledger[k]["status"]=="missed" and s.ledger[k]["preparation"]["status"]=="submitted"
+asyncio.run(check_cleanup())
+print("Cleanup persistence, history retention and rollback tests passed")

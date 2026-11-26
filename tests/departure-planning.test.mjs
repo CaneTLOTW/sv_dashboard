@@ -30,3 +30,6 @@ test("full profile editor offers time stepper, numeric slider buttons and option
 
 
 test("scheduled stale preparation uses persisted claim and mapped wake path",()=>{const backend=read("departure_planning.py"),notifications=read("notifications.py");assert.match(backend,/self\.preparation\[key\] = item/);assert.match(backend,/self\.notifications\.async_departure_wakeup\(\)/);assert.match(backend,/fresh_heartbeat\(now, heartbeat, source\)/);assert.match(backend,/datetime\.fromisoformat\(row\["deadline"\]\)/);assert.match(notifications,/async with self\._wakeup_lock/);});
+
+
+test("one-time cleanup runs independently of UI and preserves date exceptions",()=>{const backend=read("departure_planning.py");assert.match(backend,/await self\._async_cleanup_locked\(dt_util\.utcnow\(\)\)/);assert.match(backend,/await self\._async_cleanup_locked\(now\)/);assert.match(backend,/self\.profiles \+ self\.held_overrides/);assert.match(backend,/revision = self\.revision \+ int\(rows != self\.profiles\)/);assert.match(backend,/"held_overrides": self\.held_overrides/);});

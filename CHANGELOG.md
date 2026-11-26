@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.3-beta.12 — automatic one-off cleanup
+
+- Remove expired one-time departure profiles at their departure instant on the next scheduler tick, startup or dashboard request, including inactive one-offs. Preserve recurring profiles, execution records and preparation records for 30 days. An expired date-wide override is hidden but remains effective until local midnight, preventing an unexpected same-day series restart. Persist cleanup atomically with a revision change for removed profiles; no vehicle commands or changes to execution authorization.
+
 ## 0.7.3-beta.11 — scheduled climate preparation
 
 - Prepare effective departures up to ten minutes before climate start. For stale upstream heartbeat, persist one wake-up attempt per occurrence and use the existing mapped wake-up path with a ten-minute recent-wake check. Re-evaluate source freshness until a bounded five-minute late-start deadline (never at/after departure); no duplicate climate commands and no bypass of existing profile gates. Record heartbeat age and preparation outcome. Failure push and per-field source freshness remain follow-up work.

@@ -15,7 +15,7 @@ _LOGGER = logging.getLogger(__name__)
 from homeassistant.util import dt as dt_util
 
 from .const import CONF_VEHICLE_SLUG, DOMAIN
-from .departure_plan import edit_profiles, normalize_profile, preview, normalize_reminder, reminder_candidate, due_occurrences, climate_gate, climate_state, quick_defaults, add_quick_profile, execution_candidates, fresh_heartbeat
+from .departure_plan import edit_profiles, normalize_profile, preview, normalize_reminder, reminder_candidate, due_occurrences, climate_gate, climate_state, quick_defaults, add_quick_profile, execution_candidates, fresh_heartbeat, expire_one_time_profiles
 
 
 class DeparturePlanning:
@@ -32,6 +32,7 @@ class DeparturePlanning:
         self.execution_enabled_at = None
         self.ledger = {}
         self.preparation = {}
+        self.held_overrides = []
 
     async def async_initialize(self):
         data = await self.store.async_load()
@@ -46,8 +47,13 @@ class DeparturePlanning:
             self.execution_enabled_at = dt_util.parse_datetime(data.get("execution_enabled_at") or "")
             self.ledger = data.get("ledger", {})
             self.preparation = data.get("preparation", {})
-            if not isinstance(self.ledger, dict) or not isinstance(self.preparation, dict):
+            held = data.get("held_overrides", [])
+            if not isinstance(self.ledger, dict) or not isinstance(self.preparation, dict) or not isinstance(held, list):
                 raise ValueError("invalid_store")
+            self.held_overrides = [normalize_profile(p, p["id"]) for p in held]
+            if any(p["kind"] != "once" for p in self.held_overrides):
+                raise ValueError("invalid_store")
+        await self._async_cleanup_locked(dt_util.utcnow())
 
     def async_start(self, notifications, coordinator):
         self.coordinator = coordinator
@@ -71,7 +77,40 @@ class DeparturePlanning:
         await self.store.async_save({"revision": revision, "profiles": rows,
                                      "reminder": reminder, "last_reminder": last_reminder,
                                      "execution_enabled_at": self.execution_enabled_at.isoformat() if self.execution_enabled_at else None,
-                                     "ledger": self.ledger, "preparation": self.preparation})
+                                     "ledger": self.ledger, "preparation": self.preparation, "held_overrides": self.held_overrides})
+
+    def _effective_profiles(self):
+        # Hidden expired exceptions still suppress the original calendar date.
+        return self.profiles + self.held_overrides
+
+    async def _async_cleanup_locked(self, now):
+        rows, held, expired = expire_one_time_profiles(
+            self.profiles, self.held_overrides, now, self.hass.config.time_zone)
+        cutoff = now - timedelta(days=30)
+        ledger = {key: value for key, value in self.ledger.items()
+                  if (dt_util.parse_datetime(value.get("at", "")) or now) >= cutoff}
+        preparation = {key: value for key, value in self.preparation.items()
+                       if (dt_util.parse_datetime(value.get("at", "")) or now) >= cutoff}
+        # A prepared occurrence without a dispatch record must not vanish silently.
+        for profile, departure in expired:
+            if departure is None:
+                continue
+            key = profile["id"] + "|" + departure.isoformat()
+            if key in preparation and key not in ledger:
+                ledger[key] = {"at": now.isoformat(), "name": profile["name"],
+                               "departure": departure.isoformat(), "status": "missed",
+                               "preparation": preparation[key]}
+        if (rows, held, ledger, preparation) == (self.profiles, self.held_overrides, self.ledger, self.preparation):
+            return
+        revision = self.revision + int(rows != self.profiles)
+        previous = self.held_overrides, self.ledger, self.preparation
+        self.held_overrides, self.ledger, self.preparation = held, ledger, preparation
+        try:
+            await self._persist(rows, revision, self.reminder, self.last_reminder)
+        except Exception:
+            self.held_overrides, self.ledger, self.preparation = previous
+            raise
+        self.profiles, self.revision = rows, revision
 
     async def _async_tick(self):
         try:
@@ -98,14 +137,9 @@ class DeparturePlanning:
     async def _async_execute(self):
         async with self.lock:
             now = dt_util.utcnow()
-            # Bounded log, but retain all recent claims beyond any due window.
+            await self._async_cleanup_locked(now)
             cutoff = now - timedelta(days=30)
-            old = dict(self.ledger)
-            self.ledger = {key: value for key, value in old.items()
-                           if (dt_util.parse_datetime(value.get("at", "")) or now) >= cutoff}
-            self.preparation = {key: value for key, value in self.preparation.items()
-                                if (dt_util.parse_datetime(value.get("at", "")) or now) >= cutoff}
-            for row in execution_candidates(self.profiles, now, self.hass.config.time_zone,
+            for row in execution_candidates(self._effective_profiles(), now, self.hass.config.time_zone,
                                             self.execution_enabled_at, self.ledger, self.preparation):
                 # Recompute after awaited work on a prior occurrence.
                 now = dt_util.utcnow()
@@ -214,7 +248,7 @@ class DeparturePlanning:
         async with self.lock:
             if not self.notifications.departure_reminder_available():
                 return
-            candidate = reminder_candidate(self.profiles, dt_util.utcnow(), self.hass.config.time_zone,
+            candidate = reminder_candidate(self._effective_profiles(), dt_util.utcnow(), self.hass.config.time_zone,
                 self.reminder, (self.last_reminder or {}).get("date"),
                 self.notifications.departure_reminder_soc())
             if candidate is None:
@@ -231,10 +265,11 @@ class DeparturePlanning:
     def snapshot(self):
         now = dt_util.utcnow()
         return {"quick_defaults": quick_defaults(now, self.hass.config.time_zone), "revision": self.revision, "profiles": self.profiles, "preview_only": self.execution_enabled_at is None, "execution_enabled": self.execution_enabled_at is not None, "execution_log": sorted(self.ledger.values(), key=lambda row: row["at"], reverse=True)[:20], "preparation_log": sorted((value for key, value in self.preparation.items() if key not in self.ledger), key=lambda row: row["at"], reverse=True)[:20], "reminder": self.reminder, "last_reminder": self.last_reminder,
-                **preview(self.profiles, now, self.hass.config.time_zone)}
+                **preview(self._effective_profiles(), now, self.hass.config.time_zone)}
 
     async def async_apply(self, msg):
         async with self.lock:
+            await self._async_cleanup_locked(dt_util.utcnow())
             if msg["op"] == "get":
                 return self.snapshot()
             if msg.get("revision") != self.revision:
