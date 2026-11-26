@@ -892,6 +892,13 @@ class SvDashboardStrategy extends HTMLElement {
       });
     }
 
+    if (entity("preconditioning_start") || entity("preconditioning_start_button")) {
+      views.push({
+        title: strings.departureTitle, path: "departure", icon: "mdi:calendar-clock", type: "sections", max_columns: 1,
+        sections: [{type:"grid",cards:[{type:"custom:sv-dashboard-departure-planning-card",entry_id:attributes.entry_id,grid_options:{columns:"full"}}]}],
+      });
+    }
+
     views.push({
       title: strings.help,
       path: "help",
@@ -927,7 +934,7 @@ class SvDashboardStrategy extends HTMLElement {
     // Home Assistant renders this array left-to-right. Keep Vehicle on the
     // left and Help on the far right, matching the requested right-to-left
     // reading order: Help → System → Notifications → … → Vehicle.
-    const viewOrder = ["vehicle", "charging", "statistics", "trips", "gps", "wakeup", "notifications", "system", "help"];
+    const viewOrder = ["vehicle", "charging", "departure", "statistics", "trips", "gps", "wakeup", "notifications", "system", "help"];
     views.sort((left, right) => viewOrder.indexOf(left.path) - viewOrder.indexOf(right.path));
     return { title: strings.name, icon: vehicleIcon, views };
   }

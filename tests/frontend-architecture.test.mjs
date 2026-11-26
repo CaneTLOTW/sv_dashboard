@@ -257,7 +257,7 @@ test("wake-up action stays a real button press, shows command status, and views 
   assert.match(strategy, /entity: wakeupStatusEntity/);
   assert.match(strategy, /perform_action: "button\.press"/);
   assert.match(strategy, /target: \{ entity_id: control\("manual_wakeup"\) \}/);
-  assert.match(strategy, /const viewOrder = \["vehicle", "charging", "statistics", "trips", "gps", "wakeup", "notifications", "system", "help"\]/);
+  assert.match(strategy, /const viewOrder = \["vehicle", "charging", "departure", "statistics", "trips", "gps", "wakeup", "notifications", "system", "help"\]/);
   assert.match(strategy, /const mappedEntityCount = Object\.keys\(mapped\)\.length/);
   assert.match(strategy, /target\.innerText='\$\{mappedEntityCount\}'/);
 });

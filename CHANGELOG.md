@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.3-beta.5 — experimental departure planning
+
+- Add dedicated departure view with persistent per-vehicle profiles, weekly and one-off plans, per-date targeted or all-series exceptions, upcoming 14-day preview and neutral optional desired departure SoC. No artificial four-profile cap. Experimental preview only: no climate or charging dispatch, no EVCC dependency. Admin-only changes, revision guard, local HA timezone and DST handling (#136).
+
 ## 0.7.3-beta.4 — development: range planning and low battery information
 
 - Add BEV range planning based on qualified own trips, with bounded temperature/startup model only after chronological holdout improvement; otherwise an explicitly assumed scenario. Adjustable SoC, SoH, current/new usable capacity, temperature, target distance, reserve, speed and route surcharge. No vehicle writes or range guarantee.

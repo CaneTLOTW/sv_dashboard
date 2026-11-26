@@ -68,6 +68,7 @@ jobs:
           node --check custom_components/sv_dashboard/static/monthly-statistics-card.js
           node --check custom_components/sv_dashboard/static/range-calculator-card.js
           node --check custom_components/sv_dashboard/static/range-calculator-core.js
+          node --check custom_components/sv_dashboard/static/departure-planning-card.js
 
       - name: Run Node regression tests
         run: node --test tests/*.test.mjs
