@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.3-beta.7 — opt-in scheduled climate execution
+
+- Add per-vehicle live climate execution switch, bounded due window, durable claims and command/vehicle-confirmation history. Default off; no automatic charging commands or native schedule writes. Require current upstream heartbeat, mapped available button, engine off and profile conditions; no blind retry. Improve iOS profile form with date/time sizing and lead/minimum SoC sliders.
+
 ## 0.7.3-beta.6 — mobile statistics and departure reminder
 
 - Four mobile-friendly range sliders (SoC, ambient temperature, target distance and arrival reserve), exact distance still editable in advanced settings; unreachable arrivals shown as a dash. Clarify temperature trip-count label. Monthly chart uses rolling current-calendar 12-month window, trims months before first available data, shows internal/trailing gaps without fake zeroes, and fits mobile width.
