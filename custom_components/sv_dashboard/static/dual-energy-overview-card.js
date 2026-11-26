@@ -1,6 +1,6 @@
 import { LitElement, html, css, nothing } from "./vendor-lit.js?v=0.6.0-beta.7";
-import { localeFor, textFor } from "./i18n.js?v=0.7.3-beta.14";
-import { climatePresentation } from "./climate-presentation-core.js?v=0.7.3-beta.14";
+import { localeFor, textFor } from "./i18n.js?v=0.7.3-beta.15";
+import { climatePresentation } from "./climate-presentation-core.js?v=0.7.3-beta.15";
 
 const STATUS_DOMAIN = "sv_dashboard";
 const CARD_TAG = "sv-dashboard-dual-energy-overview-card";

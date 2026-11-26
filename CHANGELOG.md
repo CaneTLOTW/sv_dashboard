@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.3-beta.15 — departure planner card styling
+
+- Remove the large outer white card from Departure Planning. Use two independent responsive stacks with theme-aware panels and section separators matching the vehicle overview. Profiles, execution history, preview and compact settings are visually grouped; the reminder moves below the history/preview in the management column. Narrow screens stack in reading order. No changes to scheduler, data, climate controls, authorization or profile operations.
+
 ## 0.7.3-beta.14 — compact departure planning and climate UX
 
 - Replace persistent unknown/question mark with neutral idle presentation. Display recent reported ON (source timestamp or HA state transition up to 30 min) as heating/cooling inferred from last reported ambient temperature, or generic active when temperature missing. German source timestamp supported. Neutral idle is not a physical OFF confirmation; no change to scheduler safety checks, source confirmation ledger or raw telemetry. Recent start/stop button timestamps show pending up to three minutes; manual controls retain duplicate guard. Errors remain in command feedback/tooltip rather than replacing normal climate icon.
