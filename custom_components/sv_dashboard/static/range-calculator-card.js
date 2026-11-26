@@ -29,7 +29,7 @@ class RangeCalculator extends LitElement{
   const r=calculateRange(m,v),row=(l,x)=>html`<div class="row"><span>${l}</span><strong>${x}</strong></div>`;
   return html`<ha-card header="${t.rangeCalcTitle}"><div class="body"><div class="grid">
   ${this._slider("SoC","soc",v.soc,0,100,"%")}${this._slider(t.monthlyAmbient,"temp",v.temp,-25,40,"°C")}
-  ${this._slider(t.rangeCalcTarget,"target",v.target,5,Math.max(600,Math.ceil(v.target/5)*5),"km",5)}${this._slider(t.rangeCalcReserve,"reserve",v.reserve,0,50,"%")}
+  ${this._slider(t.rangeCalcTarget,"target",v.target,1,Math.max(600,Math.ceil(v.target/5)*5),"km",1)}${this._slider(t.rangeCalcReserve,"reserve",v.reserve,0,50,"%")}
   </div><div class="actions"><button @click="${()=>this._set("soc",100)}">SoC 100 %</button><button @click="${()=>this._inputs={}}">${t.rangeCalcReset}</button></div>
   <details ?open="${v.capacity===null||m.mode==="scenario"&&v.referenceTemp===null}"><summary>${t.rangeCalcSettings}</summary><div class="grid">
   ${this._field(t.rangeCalcCapacity+" (kWh)","capacity",v.capacity,1,300,.1)}

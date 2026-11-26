@@ -2132,4 +2132,154 @@ for (const [language, labels] of Object.entries(DEPARTURE_TEXT)) {
   const keys = ["departureTitle","departurePreview","departureRefresh","departureNext","departureStart","departurePastStart","departureEmpty","departureProfiles","departureOverride","departureAll","departureExpired","departureActive","departureInactive","departureDisable","departureEnable","departureEdit","departureConfirmDelete","departureCancel","departureDelete","departureNew","departureName","departureRepeat","departureWeekly","departureOnce","departureTime","departureDate","departureNone","departureLead","departureMinSoc","departureBelow","departureTarget","departurePlugged","departureConditionsNote","departureSave","departureCalendar","departureSkipped","departureDst","departureError"];
   Object.assign(FRONTEND_TEXT.dashboard[language], Object.fromEntries(keys.map((key, index) => [key, labels[index]])));
 }
+const DEPARTURE_REMINDER_TEXT = {
+  "de": [
+    "Abendliche Ladeerinnerung",
+    "Ladehinweis aktivieren",
+    "Uhrzeit",
+    "Prüft die gültigen Abfahrten morgen vor 12 Uhr. Warnt bei zuletzt gemeldetem SoC unter dem Profilminimum. Nutzt vorhandene Warnungen, Empfänger und Ruhezeiten; keine Lade- oder Klimabefehle.",
+    "An Notify übergeben",
+    "Versuch ohne bestätigte Übergabe"
+  ],
+  "en": [
+    "Evening charging reminder",
+    "Enable charging reminder",
+    "Time",
+    "Checks effective departures tomorrow before noon. Warns when last reported SoC is below the profile minimum. Uses existing alerts, recipients and quiet hours; no charging or climate commands.",
+    "Submitted to Notify",
+    "Attempt without confirmed submission"
+  ],
+  "fr": [
+    "Rappel de recharge du soir",
+    "Activer le rappel",
+    "Heure",
+    "Vérifie les départs effectifs de demain avant midi. Alerte si le dernier SoC est sous le minimum du profil. Utilise les alertes, destinataires et heures silencieuses existants ; aucune commande de recharge ou de climatisation.",
+    "Transmis à Notify",
+    "Tentative sans transmission confirmée"
+  ],
+  "it": [
+    "Promemoria serale di ricarica",
+    "Attiva promemoria",
+    "Ora",
+    "Verifica le partenze effettive di domani prima di mezzogiorno. Avvisa se l’ultimo SoC è sotto il minimo del profilo. Usa avvisi, destinatari e orari di silenzio esistenti; nessun comando di ricarica o clima.",
+    "Inviato a Notify",
+    "Tentativo senza invio confermato"
+  ],
+  "es": [
+    "Recordatorio nocturno de carga",
+    "Activar recordatorio",
+    "Hora",
+    "Comprueba salidas efectivas de mañana antes del mediodía. Avisa si el último SoC es inferior al mínimo del perfil. Usa alertas, destinatarios y horas de silencio existentes; sin comandos de carga ni clima.",
+    "Enviado a Notify",
+    "Intento sin envío confirmado"
+  ],
+  "pt": [
+    "Lembrete noturno de carregamento",
+    "Ativar lembrete",
+    "Hora",
+    "Verifica partidas efetivas de amanhã antes do meio-dia. Avisa se o último SoC estiver abaixo do mínimo do perfil. Usa alertas, destinatários e horas de silêncio existentes; sem comandos de carga ou climatização.",
+    "Enviado para Notify",
+    "Tentativa sem envio confirmado"
+  ],
+  "nl": [
+    "Avondherinnering voor laden",
+    "Laadherinnering inschakelen",
+    "Tijd",
+    "Controleert effectieve vertrekken morgen vóór 12 uur. Waarschuwt als de laatst gemelde SoC onder het profielminimum ligt. Gebruikt bestaande waarschuwingen, ontvangers en stille uren; geen laad- of klimaatopdrachten.",
+    "Aan Notify doorgegeven",
+    "Poging zonder bevestigde overdracht"
+  ],
+  "da": [
+    "Aftenpåmindelse om opladning",
+    "Aktivér ladepåmindelse",
+    "Tid",
+    "Kontrollerer morgendagens afgange før middag. Advarer hvis senest rapporterede SoC er under profilminimum. Bruger eksisterende alarmer, modtagere og stille timer; ingen lade- eller klimakommandoer.",
+    "Overført til Notify",
+    "Forsøg uden bekræftet overførsel"
+  ],
+  "nb": [
+    "Kveldspåminnelse om lading",
+    "Aktiver ladepåminnelse",
+    "Tid",
+    "Sjekker morgendagens avganger før kl. 12. Varsler hvis sist rapportert SoC er under profilminimum. Bruker eksisterende varsler, mottakere og stille timer; ingen lade- eller klimakommandoer.",
+    "Sendt til Notify",
+    "Forsøk uten bekreftet overføring"
+  ],
+  "sv": [
+    "Kvällspåminnelse om laddning",
+    "Aktivera laddpåminnelse",
+    "Tid",
+    "Kontrollerar morgondagens avresor före kl. 12. Varnar om senast rapporterad SoC är under profilminimum. Använder befintliga varningar, mottagare och tysta timmar; inga ladd- eller klimatkommandon.",
+    "Överlämnat till Notify",
+    "Försök utan bekräftad överlämning"
+  ],
+  "fi": [
+    "Illan latausmuistutus",
+    "Ota latausmuistutus käyttöön",
+    "Aika",
+    "Tarkistaa huomisen lähdöt ennen puoltapäivää. Varoittaa, jos viimeisin SoC on alle profiilin minimin. Käyttää nykyisiä hälytyksiä, vastaanottajia ja hiljaisia aikoja; ei lataus- tai ilmastointikomentoja.",
+    "Välitetty Notifylle",
+    "Yritys ilman vahvistettua välitystä"
+  ],
+  "pl": [
+    "Wieczorne przypomnienie o ładowaniu",
+    "Włącz przypomnienie",
+    "Godzina",
+    "Sprawdza obowiązujące odjazdy jutro przed południem. Ostrzega, gdy ostatni SoC jest poniżej minimum profilu. Używa istniejących alertów, odbiorców i ciszy nocnej; bez poleceń ładowania i klimatyzacji.",
+    "Przekazano do Notify",
+    "Próba bez potwierdzenia przekazania"
+  ],
+  "cs": [
+    "Večerní připomínka nabíjení",
+    "Zapnout připomínku",
+    "Čas",
+    "Kontroluje platné odjezdy zítra před polednem. Varuje, pokud poslední SoC je pod minimem profilu. Používá stávající upozornění, příjemce a klidové hodiny; bez příkazů nabíjení či klimatizace.",
+    "Předáno Notify",
+    "Pokus bez potvrzeného předání"
+  ],
+  "sk": [
+    "Večerná pripomienka nabíjania",
+    "Zapnúť pripomienku",
+    "Čas",
+    "Kontroluje platné odchody zajtra pred poludním. Varuje, ak posledný SoC je pod minimom profilu. Používa existujúce upozornenia, príjemcov a tiché hodiny; bez príkazov nabíjania či klimatizácie.",
+    "Odovzdané Notify",
+    "Pokus bez potvrdeného odovzdania"
+  ],
+  "hu": [
+    "Esti töltési emlékeztető",
+    "Emlékeztető engedélyezése",
+    "Időpont",
+    "Ellenőrzi a holnapi délelőtti érvényes indulásokat. Figyelmeztet, ha az utolsó SoC a profilminimum alatt van. A meglévő riasztásokat, címzetteket és csendes időt használja; nincs töltés- vagy klímaparancs.",
+    "Átadva a Notify-nak",
+    "Kísérlet igazolt átadás nélkül"
+  ],
+  "ro": [
+    "Memento de încărcare seara",
+    "Activează mementoul",
+    "Ora",
+    "Verifică plecările efective de mâine înainte de prânz. Avertizează dacă ultimul SoC este sub minimul profilului. Utilizează alertele, destinatarii și orele de liniște existente; fără comenzi de încărcare sau climatizare.",
+    "Trimis către Notify",
+    "Încercare fără transmitere confirmată"
+  ],
+  "sl": [
+    "Večerni opomnik za polnjenje",
+    "Omogoči opomnik",
+    "Čas",
+    "Preveri veljavne odhode jutri pred poldnevom. Opozori, če je zadnji SoC pod minimumom profila. Uporablja obstoječa opozorila, prejemnike in tihe ure; brez ukazov polnjenja ali klimatizacije.",
+    "Predano Notify",
+    "Poskus brez potrjene predaje"
+  ],
+  "hr": [
+    "Večernji podsjetnik za punjenje",
+    "Omogući podsjetnik",
+    "Vrijeme",
+    "Provjerava važeće polaske sutra prije podneva. Upozorava ako je posljednji SoC ispod minimuma profila. Koristi postojeća upozorenja, primatelje i tihe sate; bez naredbi punjenja ili klimatizacije.",
+    "Predano Notifyju",
+    "Pokušaj bez potvrđene predaje"
+  ]
+};
+for (const [language, labels] of Object.entries(DEPARTURE_REMINDER_TEXT)) {
+  const keys = ["departureReminderTitle","departureReminderEnabled","departureReminderTime","departureReminderNote","departureReminderSent","departureReminderAttempt"];
+  Object.assign(FRONTEND_TEXT.dashboard[language], Object.fromEntries(keys.map((key,index)=>[key,labels[index]])));
+}
 export { FRONTEND_TEXT, languageFor, localeFor, textFor };

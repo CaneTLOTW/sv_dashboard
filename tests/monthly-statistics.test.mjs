@@ -7,7 +7,7 @@ test("monthly plot inserts absent months, preserves missing values and limits ca
   assert.equal(finite(null),null);
   assert.equal(finite(0),0);
   const rows=monthSeries([{month:"2026-09",consumption_kwh_100km:15,ambient_temperature_c:12},{month:"2026-11",consumption_kwh_100km:22,ambient_temperature_c:2}]);
-  assert.equal(rows.length,12);
+  assert.equal(rows.length,3);
   assert.deepEqual(rows.slice(-3).map(r=>r.month),["2026-09","2026-10","2026-11"]);
   assert.equal(rows.at(-2).consumption_kwh_100km,undefined);
   assert.equal(monthSeries([{month:"2026-09"}],"2026-12").at(-1).month,"2026-12");
@@ -16,7 +16,8 @@ test("monthly plot inserts absent months, preserves missing values and limits ca
   assert.equal(geometry.line.match(/M/g).length,2);
   assert.equal(geometry.line.includes("L"),false);
   assert.equal(chartGeometry([{ambient_temperature_c:0},{ambient_temperature_c:1}]).line.includes("L"),true);
-  assert.equal(monthSeries([{month:"2020-01"},{month:"2026-11"}]).length,12);
+  assert.equal(monthSeries([{month:"2020-01"},{month:"2026-11"}]).length,1);
+  assert.equal(monthSeries([{month:"2025-12"},{month:"2026-11"}]).length,12);
 });
 
 test("monthly chart belongs to BEV statistics and retains the rolling consumption plot", () => {

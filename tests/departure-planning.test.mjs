@@ -13,3 +13,6 @@ test("departure planning stays in its own view and never dispatches",()=>{
  assert.doesNotMatch(backend,/services\.async_call|button\.press|ThermalPrecond/);
  assert.doesNotMatch(card,/callService|button\.press/);
 });
+
+
+test("reminder uses separate explicit settings and existing notify path",()=>{const card=read("static/departure-planning-card.js"),backend=read("departure_planning.py"),manager=read("notifications.py");assert.match(card,/_request\("reminder",reminder\)/);assert.match(backend,/await self\._persist\(self\.profiles, self\.revision, self\.reminder, claim\)/);assert.match(manager,/async_departure_reminder/);assert.match(manager,/departure_reminder_available/);});

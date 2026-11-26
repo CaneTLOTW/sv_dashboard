@@ -20,8 +20,10 @@ export function monthSeries(rows, currentMonth = null) {
   if (!byMonth.size) return [];
   const indexes = [...byMonth.keys()];
   const latest = monthIndex(currentMonth) ?? Math.max(...indexes);
-  const earliest = latest - 11;
-  if (!indexes.some(index => index >= earliest && index <= latest)) return [];
+  const windowStart = latest - 11;
+  const available = indexes.filter(index => index >= windowStart && index <= latest);
+  if (!available.length) return [];
+  const earliest = Math.min(...available);
   return Array.from({length: latest - earliest + 1}, (_, offset) => {
     const index = earliest + offset;
     const month = String(Math.floor(index / 12)).padStart(4, "0") + "-" + String(index % 12 + 1).padStart(2, "0");

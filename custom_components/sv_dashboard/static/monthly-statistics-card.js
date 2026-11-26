@@ -94,11 +94,11 @@ class SvDashboardMonthlyStatisticsCard extends LitElement {
                   </svg>
                 </div>
                 <div class="axis temp-axis">${[4,3,2,1,0].map(n=>html`<span>${this._number(tempMin+n*tempStep,0)}°</span>`)}</div>
-                <div class="months" style="${columnStyle}">${rows.map(row=>html`<span title="${formatMonth(row)}">${this._month(row.month,rows.length>6)}${row.month.endsWith("-01")?html`<small> ${row.month.slice(2,4)}</small>`:nothing}</span>`)}</div>
+                <div class="months" style="${columnStyle}">${rows.map(row=>html`<span title="${formatMonth(row)}">${this._month(row.month,rows.length>6)}${rows.length>6&&row.month.endsWith("-01")?html`<small> ${row.month.slice(2,4)}</small>`:nothing}</span>`)}</div>
               </div>
             </div>
             <details>
-              <summary>${text.monthlyDetails} · 12</summary>
+              <summary>${text.monthlyDetails}</summary>
               <div class="scroll"><table>
                 <thead><tr><th></th><th>kWh/100 km</th><th>°C</th><th>${text.monthlyEnergyCoverage}</th><th>${text.monthlyTemperatureCoverage}</th><th>${text.monthlyEstimatedShare}</th></tr></thead>
                 <tbody>${rows.map(row=>html`<tr><td>${formatMonth(row)}</td><td>${this._number(row.consumption_kwh_100km)}</td><td>${this._number(row.ambient_temperature_c)}</td><td>${this._percent(row.energy_coverage)}</td><td>${this._percent(row.temperature_coverage)}</td><td>${this._percent(row.estimated_energy_share)}</td></tr>`)}</tbody>

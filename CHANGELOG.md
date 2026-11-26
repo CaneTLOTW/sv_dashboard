@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.3-beta.6 — mobile statistics and departure reminder
+
+- Four mobile-friendly range sliders (SoC, ambient temperature, target distance and arrival reserve), exact distance still editable in advanced settings; unreachable arrivals shown as a dash. Clarify temperature trip-count label. Monthly chart uses rolling current-calendar 12-month window, trims months before first available data, shows internal/trailing gaps without fake zeroes, and fits mobile width.
+- Includes departure profiles and opt-in configurable evening charge reminder through existing notification permissions/recipients/quiet hours. One persisted attempt per vehicle/date, valid next-morning profile after overrides, last reported SoC below profile minimum. No automatic climate or charging commands or native program sync (#135, #136).
+
 ## 0.7.3-beta.5 — experimental departure planning
 
 - Add dedicated departure view with persistent per-vehicle profiles, weekly and one-off plans, per-date targeted or all-series exceptions, upcoming 14-day preview and neutral optional desired departure SoC. No artificial four-profile cap. Experimental preview only: no climate or charging dispatch, no EVCC dependency. Admin-only changes, revision guard, local HA timezone and DST handling (#136).
