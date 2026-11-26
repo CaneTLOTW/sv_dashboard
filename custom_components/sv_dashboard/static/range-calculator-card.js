@@ -1,6 +1,6 @@
 import { LitElement, html, css, nothing } from "./vendor-lit.js?v=0.6.0-beta.7";
-import { localeFor,textFor } from "./i18n.js?v=0.7.3-beta.8";
-import { num,calculateRange } from "./range-calculator-core.js?v=0.7.3-beta.8";
+import { localeFor,textFor } from "./i18n.js?v=0.7.3-beta.9";
+import { num,calculateRange } from "./range-calculator-core.js?v=0.7.3-beta.9";
 const TAG="sv-dashboard-range-calculator-card";
 class RangeCalculator extends LitElement{
  static properties={_hass:{state:true},_config:{state:true},_inputs:{state:true}};

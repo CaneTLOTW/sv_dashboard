@@ -68,7 +68,7 @@ test("one unchanged SOC cannot be misrepresented as a vertical power-over-SOC cu
 });
 
 test("package entry cache-busts the corrected charge chart module", () => {
-    assert.match(frontend, /charge-history-card\.js\?v=0\.7\.3-beta\.8/);
+    assert.match(frontend, /charge-history-card\.js\?v=0\.7\.3-beta\.9/);
 });
 
 test("in-flight Recorder query queues a follow-up when SOC changes during load", () => {

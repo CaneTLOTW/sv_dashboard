@@ -28,7 +28,7 @@ test("monthly chart belongs to BEV statistics and retains the rolling consumptio
   const monthly=strategy.indexOf('type: "custom:sv-dashboard-monthly-statistics-card"');
   assert.ok(rolling>=0 && monthly>rolling);
   assert.match(strategy,/supportsElectric && !supportsDualEnergy && serverTripEntity \? \{ type: "custom:sv-dashboard-monthly-statistics-card"/);
-  assert.match(frontend,/import\("\.\/monthly-statistics-card\.js\?v=0\.7\.3-beta\.8"\)/);
+  assert.match(frontend,/import\("\.\/monthly-statistics-card\.js\?v=0\.7\.3-beta\.9"\)/);
   assert.match(card,/server_history_ready/);
   assert.match(card,/monthlyTemperatureCoverage/);
   assert.match(card,/frontera-forum\.de/);

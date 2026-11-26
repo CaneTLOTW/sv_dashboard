@@ -1,5 +1,5 @@
 import { LitElement, html, css, nothing } from "./vendor-lit.js?v=0.6.0-beta.7";
-import { localeFor, textFor } from "./i18n.js?v=0.7.3-beta.8";
+import { localeFor, textFor } from "./i18n.js?v=0.7.3-beta.9";
 import { shiftDepartureTime } from "./departure-time-core.js?v=0.7.3-beta.9";
 
 const TAG="sv-dashboard-departure-planning-card";
