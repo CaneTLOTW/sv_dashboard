@@ -10,8 +10,8 @@
  * changes presentation (no heading/self-navigation, optional info button);
  * entity resolution, picture lifecycle and overlay rendering stay shared.
  */
-import { languageFor, textFor } from "./i18n.js?v=0.7.3-beta.15";
-import { climatePresentation } from "./climate-presentation-core.js?v=0.7.3-beta.15";
+import { languageFor, textFor } from "./i18n.js?v=0.7.3-beta.16";
+import { climatePresentation } from "./climate-presentation-core.js?v=0.7.3-beta.16";
 
 const STATUS_DOMAIN = "sv_dashboard";
 const CARD_TAG = "sv-dashboard-vehicle-overview-card";
@@ -42,7 +42,9 @@ function climateButtonAvailable(states, entityId) {
 function climateTransitionConfirmed(request, entity) {
   if (!request || climateLiveState(entity?.state) !== request.expectedActive) return false;
   const changed = Date.parse(entity?.last_changed || "");
-  return Number.isFinite(changed) && changed > request.baselineChanged;
+  const view = climatePresentation(entity, undefined);
+  return view.confirmed && view.sourceAt > request.dispatchedAt &&
+    Number.isFinite(changed) && changed > request.baselineChanged;
 }
 
 function notifyClimateListeners() {
@@ -129,9 +131,9 @@ class SvDashboardClimateControl extends HTMLElement {
       return;
     }
     const key = this._key;
-    const next = {status:"pending",expectedActive:!active,baselineChanged:Date.parse(entity?.last_changed || "")};
+    const next = {status:"pending",expectedActive:!active,baselineChanged:Date.parse(entity?.last_changed || ""),dispatchedAt:Date.now()};
     // Never manufacture a confirmation from a generic last_updated event.
-    // A valid state timestamp is required for authoritative transition proof.
+    // A newer climate-field source timestamp must corroborate the HA state transition.
     next.timer = setTimeout(() => {
       if (climateRequests.get(key) === next) {
         next.status = "failed";

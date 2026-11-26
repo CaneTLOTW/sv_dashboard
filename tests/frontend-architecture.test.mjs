@@ -25,21 +25,21 @@ const diagnosticsBackend = read("vehicle_diagnostics.py");
 
 test("Home Assistant registers one SV frontend resource", () => {
   assert.match(constants, /FRONTEND_URL = "\/sv_dashboard\/frontend\.js"/);
-  assert.match(constants, /FRONTEND_VERSION = "0\.7\.3-beta\.15"/);
-  assert.equal(manifest.version, "0.7.3-beta.15");
+  assert.match(constants, /FRONTEND_VERSION = "0\.7\.3-beta\.16"/);
+  assert.equal(manifest.version, "0.7.3-beta.16");
   assert.match(constants, /FRONTEND_RESOURCE_URLS = \(FRONTEND_URL,\)/);
   // Refresh modules importing the changed i18n catalog and updated history/Hero code.
-  assert.match(frontend, /import\("\.\/vehicle-overview-card\.js\?v=0\.7\.3-beta\.15"\)/);
+  assert.match(frontend, /import\("\.\/vehicle-overview-card\.js\?v=0\.7\.3-beta\.16"\)/);
   assert.match(frontend, /import\("\.\/gps-history-card\.js\?v=0\.6\.0-beta\.28"\)/);
-  assert.match(frontend, /import\("\.\/charge-history-card\.js\?v=0\.7\.3-beta\.15"\)/);
-  assert.match(frontend, /import\("\.\/dual-energy-overview-card\.js\?v=0\.7\.3-beta\.15"\)/);
-  assert.match(frontend, /import\("\.\/fuel-history-card\.js\?v=0\.7\.3-beta\.15"\)/);
-  assert.match(frontend, /import\("\.\/vehicle-diagnostics-card\.js\?v=0\.7\.3-beta\.15"\)/);
-  assert.match(frontend, /import\("\.\/sv_dashboard\.js\?v=0\.7\.3-beta\.15"\)/);
-  assert.match(strategy, /from "\.\/i18n\.js\?v=0\.7\.3-beta\.15"/);
+  assert.match(frontend, /import\("\.\/charge-history-card\.js\?v=0\.7\.3-beta\.16"\)/);
+  assert.match(frontend, /import\("\.\/dual-energy-overview-card\.js\?v=0\.7\.3-beta\.16"\)/);
+  assert.match(frontend, /import\("\.\/fuel-history-card\.js\?v=0\.7\.3-beta\.16"\)/);
+  assert.match(frontend, /import\("\.\/vehicle-diagnostics-card\.js\?v=0\.7\.3-beta\.16"\)/);
+  assert.match(frontend, /import\("\.\/sv_dashboard\.js\?v=0\.7\.3-beta\.16"\)/);
+  assert.match(strategy, /from "\.\/i18n\.js\?v=0\.7\.3-beta\.16"/);
   assert.doesNotMatch(frontend, /gps-history-fix\.js/);
   assert.doesNotMatch(frontend, /map-marker-fix\.js/);
-  assert.match(frontend, /import\("\.\/vehicle-audit-card\.js\?v=0\.7\.3-beta\.15"\)/);
+  assert.match(frontend, /import\("\.\/vehicle-audit-card\.js\?v=0\.7\.3-beta\.16"\)/);
 });
 
 test("static asset discovery does not block the Home Assistant event loop", () => {
@@ -52,8 +52,8 @@ test("dependency preflight never delays Strategy registration", () => {
   assert.match(frontend, /DEPENDENCY_GRACE_MS = 10000/);
   assert.match(frontend, /window\.__svDashboardDependencyReadiness = Promise\.all/);
   assert.doesNotMatch(frontend, /await dependencyReadiness/);
-  assert.match(frontend, /await import\("\.\/sv_dashboard\.js\?v=0\.7\.3-beta\.15"\)/);
-  const strategyImport = frontend.indexOf('await import("./sv_dashboard.js?v=0.7.3-beta.15")');
+  assert.match(frontend, /await import\("\.\/sv_dashboard\.js\?v=0\.7\.3-beta\.16"\)/);
+  const strategyImport = frontend.indexOf('await import("./sv_dashboard.js?v=0.7.3-beta.16")');
   assert.ok(strategyImport >= 0);
   assert.match(strategy, /window\.__svDashboardDependencyReadiness/);
   assert.match(strategy, /await readiness/);

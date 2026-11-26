@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.3-beta.16 — restore-safe climate presentation
+
+- Do not treat HA `last_changed`, `last_updated` or `last_reported` as fresh vehicle climate evidence. A retained ON cannot become red again after restart. A newer stop suppresses older ON evidence. Pending confirmation requires a newer climate source timestamp, including local Hero requests; missing/old temperature yields generic active rather than an inferred heating/cooling color. Preserve neutral idle (not a physical OFF assertion), no question mark, and existing scheduler safety/ledger behavior. Add exact owner-restart regression fixture (#136).
+
 ## 0.7.3-beta.15 — departure planner card styling
 
 - Remove the large outer white card from Departure Planning. Use two independent responsive stacks with theme-aware panels and section separators matching the vehicle overview. Profiles, execution history, preview and compact settings are visually grouped; the reminder moves below the history/preview in the management column. Narrow screens stack in reading order. No changes to scheduler, data, climate controls, authorization or profile operations.

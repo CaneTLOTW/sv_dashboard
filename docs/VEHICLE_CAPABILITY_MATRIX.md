@@ -136,3 +136,9 @@ Canonical external vehicle test thread: #2.
 
 - [#132](https://github.com/CaneTLOTW/sv_dashboard/issues/132): confirmed in the reporter's SV 0.7.2 / Stellantis Vehicles 2026.10.3 / Bubble Card 3.4.3 installation that separate numeric target and enable switch are exposed. The reporter observed a stop near 80% with HA charge limit enabled; native 80%-limit-off command timed out. Native command support remains unknown, not inferred from HA limit behavior. No model-specific runtime branching.
 - Bubble Card 3.4.3 slider default tap toggles non-sensor entities; SV sets explicit more-info for numeric controls and toggle only for a switch. Actual vehicle retest pending. The reporter also confirmed the optional-maintenance API audit failure predates upstream 2026.11.2.
+
+## Climate source freshness (2026-11-26 owner runtime)
+
+- **Confirmed:** HA restore/restart can renew `last_changed` for a retained ON state without renewing the underlying localized climate-field source timestamp. The observed UI-only false activation is reproduced in [#136](https://github.com/CaneTLOTW/sv_dashboard/issues/136#issuecomment-7204668180). Physical HVAC activity and initiator of the earlier start command remain **unknown**.
+- **Confirmed field presence:** the localized `Zuletzt aktualisiert` exposes `preconditioning.airConditioning.createdAt` in the observed integration. MQTT status changes may arrive without a newer REST field timestamp. A source-dated independent MQTT event is not established by this evidence.
+- Presentation policy: neutral idle when source evidence is insufficient; fresh source-stamped ON permits active display; color is inferred only from recent source-stamped temperature. Receipt/restore time and command acknowledgement do not prove current physical operation. The scheduler ledger is separate.

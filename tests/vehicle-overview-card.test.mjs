@@ -150,7 +150,7 @@ test("card editor persists the selected config entry instead of a VIN", () => {
 
 
 test("vehicle overview localizes runtime and editor text through the shared catalog", () => {
-  assert.match(source, /import \{ languageFor, textFor \} from "\.\/i18n\.js\?v=0\.7\.3-beta\.15"/);
+  assert.match(source, /import \{ languageFor, textFor \} from "\.\/i18n\.js\?v=0\.7\.3-beta\.16"/);
   assert.match(source, /textFor\(hass, "vehicleOverview"\)/);
   assert.match(source, /languageFor\(this\._hass\)/);
   assert.match(source, /registrationStrings\.cardName/);
@@ -168,3 +168,5 @@ test("EV Hero freshness badge remains a recent-source cue", () => {
   assert.match(source, /color-mix\(in srgb, var\(--primary-color\) 14%/);
   assert.match(source, /color-mix\(in srgb, var\(--primary-color\) 45%/);
 });
+
+test("manual climate confirmation requires post-dispatch source time",()=>{assert.match(source,/view\.confirmed && view\.sourceAt > request\.dispatchedAt/);});

@@ -1,6 +1,6 @@
 import { LitElement, html, css, nothing } from "./vendor-lit.js?v=0.6.0-beta.7";
-import { localeFor, textFor } from "./i18n.js?v=0.7.3-beta.15";
-import { climatePresentation } from "./climate-presentation-core.js?v=0.7.3-beta.15";
+import { localeFor, textFor } from "./i18n.js?v=0.7.3-beta.16";
+import { climatePresentation } from "./climate-presentation-core.js?v=0.7.3-beta.16";
 
 const STATUS_DOMAIN = "sv_dashboard";
 const CARD_TAG = "sv-dashboard-dual-energy-overview-card";
@@ -183,7 +183,9 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
       const state = mapped.preconditioning ? hass.states?.[mapped.preconditioning] : undefined;
       if (usable(state)) {
         const active = isOn(state.state);
-        if ((this._climatePendingAction === "start" && active) || (this._climatePendingAction === "stop" && !active)) {
+        const view = climatePresentation(state, undefined);
+        const dispatchedAt = this._climatePendingUntil - CLIMATE_COMMAND_GUARD_MS;
+        if (view.confirmed && view.sourceAt > dispatchedAt && ((this._climatePendingAction === "start" && active) || (this._climatePendingAction === "stop" && !active))) {
           this._clearClimatePending();
         }
       }

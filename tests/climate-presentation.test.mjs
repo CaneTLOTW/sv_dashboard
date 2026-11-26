@@ -9,7 +9,7 @@ test("reported ON uses heating/cooling; missing temperature uses neutral active"
   assert.equal(climatePresentation(e("on"),e("20"),now).mode,"heating");
   assert.equal(climatePresentation(e("on"),e("21"),now).mode,"cooling");
   assert.equal(climatePresentation(e("on"),e("77",0,{unit_of_measurement:"°F"}),now).mode,"cooling");
-  assert.equal(climatePresentation(e("on"),e("25",120),now).mode,"cooling");
+  assert.equal(climatePresentation(e("on"),e("25",120),now).mode,"active");
   for(const temp of [undefined,e("unknown"),e("")]) assert.equal(climatePresentation(e("on"),temp,now).mode,"active");
 });
 test("idle is the visual default; stale ON and unknown never become a question mark",()=>{
@@ -20,11 +20,11 @@ test("idle is the visual default; stale ON and unknown never become a question m
   assert.equal(climatePresentation(e("off",120),e("-4"),now).mode,"off");
   assert.equal(climatePresentation(e("unknown"),e("-4"),now).mode,"off");
 });
-test("German field timestamp and MQTT/HA ON transition can display active without claiming source confirmation",()=>{
+test("German field timestamp works; an undated MQTT/HA transition cannot establish active",()=>{
   const localized={"Zuletzt aktualisiert":new Date(now).toISOString()};
   assert.equal(climatePresentation({state:"on",attributes:localized},e("-4"),now).mode,"heating");
   const mqtt={...e("on",60),last_changed:new Date(now-60000).toISOString()};
-  assert.equal(climatePresentation(mqtt,e("-4"),now).mode,"heating");
+  assert.equal(climatePresentation(mqtt,e("-4"),now).mode,"off");
   assert.equal(climatePresentation(mqtt,e("-4"),now).confirmed,false);
 });
 test("recent button timestamp displays pending until a matching newer observation or expiry",()=>{
@@ -40,4 +40,32 @@ test("all climate surfaces share presentation and statistics uses two sections",
   for(const p of ["vehicle-overview-card.js","dual-energy-overview-card.js","sv_dashboard.js"])assert.match(read(p),/climate-presentation-core\.js/);
   assert.match(read("sv_dashboard.js"),/climatePresentation\.toString\(\)/);
   assert.match(read("sv_dashboard.js"),/cards: consumptionCards/);
+});
+
+test("observed beta.15 restart regression: old ON must stay neutral regardless of HA timestamps",()=>{
+  const at=Date.parse("2026-11-26T22:22:58Z");
+  const source="2026-11-26T19:25:29Z";
+  const start={state:"2026-11-26T18:53:24Z",last_changed:"2026-11-26T22:13:35Z"};
+  const temperature={state:"-4",attributes:{"Zuletzt aktualisiert":"2026-11-26T19:01:29Z"}};
+  for(const changed of ["2026-11-26T18:53:36Z","2026-11-26T22:13:35Z"]) {
+    const climate={state:"on",attributes:{"Zuletzt aktualisiert":source},last_changed:changed,last_updated:changed,last_reported:changed};
+    const result=climatePresentation(climate,temperature,at,start);
+    assert.equal(result.mode,"off");
+    assert.equal(result.active,false);
+    assert.equal(result.confirmed,false);
+    assert.equal(result.pending,false);
+    assert.equal(result.color,null);
+  }
+});
+test("restore during a pending request cannot confirm it; recent stop suppresses older ON",()=>{
+  const button={state:new Date(now-60000).toISOString()};
+  const restored={...e("on",5),last_changed:new Date(now-1000).toISOString()};
+  assert.equal(climatePresentation(restored,e("-4"),now,button).mode,"pending");
+  assert.equal(climatePresentation(restored,e("-4"),now,undefined,button).mode,"pending");
+  const oldStop={state:new Date(now-240000).toISOString()};
+  assert.equal(climatePresentation(restored,e("-4"),now,undefined,oldStop).mode,"off");
+  assert.equal(climatePresentation(e("on",0),e("-4"),now,undefined,oldStop).mode,"heating");
+});
+test("naive source time and fresh HA receipt time cannot make restored ON active",()=>{
+  assert.equal(climatePresentation({state:"on",attributes:{"Zuletzt aktualisiert":"2026-11-26T16:00:00"},last_changed:new Date(now).toISOString()},e("-4"),now).mode,"off");
 });
