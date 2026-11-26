@@ -7,8 +7,11 @@ test("monthly plot inserts absent months, preserves missing values and limits ca
   assert.equal(finite(null),null);
   assert.equal(finite(0),0);
   const rows=monthSeries([{month:"2026-09",consumption_kwh_100km:15,ambient_temperature_c:12},{month:"2026-11",consumption_kwh_100km:22,ambient_temperature_c:2}]);
-  assert.deepEqual(rows.map(r=>r.month),["2026-09","2026-10","2026-11"]);
-  assert.equal(rows[1].consumption_kwh_100km,undefined);
+  assert.equal(rows.length,12);
+  assert.deepEqual(rows.slice(-3).map(r=>r.month),["2026-09","2026-10","2026-11"]);
+  assert.equal(rows.at(-2).consumption_kwh_100km,undefined);
+  assert.equal(monthSeries([{month:"2026-09"}],"2026-12").at(-1).month,"2026-12");
+  assert.deepEqual(monthSeries([{month:"2020-01"}],"2026-12"),[]);
   const geometry=chartGeometry(rows);
   assert.equal(geometry.line.match(/M/g).length,2);
   assert.equal(geometry.line.includes("L"),false);

@@ -15,7 +15,7 @@ class SvDashboardMonthlyStatisticsCard extends LitElement {
     .temp-swatch { width:20px; height:0; border-top:2px solid var(--monthly-temp-color,#d68d34); }
     .scroll { overflow-x:auto; scrollbar-width:thin; }
     .chart { display:grid; grid-template-columns:37px minmax(0,1fr) 37px; grid-template-rows:200px auto; padding:10px 0 2px; }
-    .axis { display:flex; flex-direction:column; justify-content:space-between; font-size:11px; color:var(--secondary-text-color); padding:0 4px; text-align:right; transform:translateY(-6px); }
+    .axis { display:flex; flex-direction:column; justify-content:space-between; font-size:11px; color:var(--secondary-text-color); padding:0 4px; text-align:right; margin:-6px 0; line-height:12px; }
     .temp-axis { text-align:left; color:var(--monthly-temp-color,#d68d34); }
     .plot { position:relative; height:200px; border-bottom:1px solid var(--divider-color); border-left:1px solid var(--divider-color); }
     .gridlines { position:absolute; inset:0; display:flex; flex-direction:column; justify-content:space-between; pointer-events:none; }
@@ -28,6 +28,10 @@ class SvDashboardMonthlyStatisticsCard extends LitElement {
     .temp-line path { stroke:var(--monthly-temp-color,#d68d34); fill:none; stroke-linecap:round; stroke-linejoin:round; vector-effect:non-scaling-stroke; }
     .months { grid-column:2; display:grid; text-align:center; gap:0; color:var(--secondary-text-color); font-size:11px; padding-top:8px; }
     .months span { white-space:nowrap; }
+    .compact .months { font-size:10px; }
+    .compact .value { font-size:9px; }
+    @container (max-width:430px) { .compact .value { display:none; } }
+    .content { container-type:inline-size; }
     .muted { color:var(--secondary-text-color); font-size:var(--ha-font-size-s,12px); line-height:1.45; margin:12px 0 0; }
     details { margin-top:10px; font-size:var(--ha-font-size-s,12px); }
     summary { cursor:pointer; color:var(--primary-text-color); }
@@ -51,14 +55,16 @@ class SvDashboardMonthlyStatisticsCard extends LitElement {
     return number === null ? "—" : new Intl.NumberFormat(localeFor(this._hass),{maximumFractionDigits:digits}).format(number);
   }
   _percent(value) { const n=finite(value); return n===null ? "—" : this._number(n*100,0)+" %"; }
-  _month(key) {
-    return new Intl.DateTimeFormat(localeFor(this._hass),{month:"short",year:"2-digit",timeZone:"UTC"}).format(new Date(key+"-01T00:00:00Z"));
+  _month(key, compact=false) {
+    return new Intl.DateTimeFormat(localeFor(this._hass),{month:compact?"narrow":"short",...(compact?{}:{year:"2-digit"}),timeZone:"UTC"}).format(new Date(key+"-01T00:00:00Z"));
   }
   render() {
     if (!this._config || !this._hass) return nothing;
     const text = textFor(this._hass,"dashboard");
     const state = this._hass.states[this._config.entity];
-    const rows = monthSeries(state?.attributes?.server_history_ready ? state.attributes.monthly_consumption : []);
+    const parts = new Intl.DateTimeFormat("en-CA",{year:"numeric",month:"2-digit",timeZone:this._hass.config?.time_zone||"UTC"}).formatToParts(new Date());
+    const currentMonth = parts.find(p=>p.type==="year").value+"-"+parts.find(p=>p.type==="month").value;
+    const rows = monthSeries(state?.attributes?.server_history_ready ? state.attributes.monthly_consumption : [], currentMonth);
     const {energyMax,energyStep,tempMin,tempStep,line,points} = chartGeometry(rows);
     const columnStyle = "grid-template-columns:repeat("+rows.length+",minmax(0,1fr))";
     const formatMonth = row => this._month(row.month);
@@ -68,7 +74,7 @@ class SvDashboardMonthlyStatisticsCard extends LitElement {
           <div class="legend"><span><i class="swatch"></i>kWh/100 km</span><span><i class="temp-swatch"></i>${text.monthlyAmbient} · °C</span></div>
           ${rows.length ? html`
             <div class="scroll">
-              <div class="chart" style="min-width:${Math.max(275, rows.length*53+74)}px">
+              <div class="chart ${rows.length>6?"compact":""}" style="min-width:275px">
                 <div class="axis">${[4,3,2,1,0].map(n=>html`<span>${this._number(n*energyStep,0)}</span>`)}</div>
                 <div class="plot" role="img" aria-label="${text.monthlyConsumptionTitle} · kWh/100 km / °C">
                   <div class="gridlines" aria-hidden="true">${[0,1,2,3,4].map(()=>html`<span></span>`)}</div>
@@ -88,11 +94,11 @@ class SvDashboardMonthlyStatisticsCard extends LitElement {
                   </svg>
                 </div>
                 <div class="axis temp-axis">${[4,3,2,1,0].map(n=>html`<span>${this._number(tempMin+n*tempStep,0)}°</span>`)}</div>
-                <div class="months" style="${columnStyle}">${rows.map(row=>html`<span>${formatMonth(row)}</span>`)}</div>
+                <div class="months" style="${columnStyle}">${rows.map(row=>html`<span title="${formatMonth(row)}">${this._month(row.month,rows.length>6)}${row.month.endsWith("-01")?html`<small> ${row.month.slice(2,4)}</small>`:nothing}</span>`)}</div>
               </div>
             </div>
             <details>
-              <summary>${text.monthlyDetails}</summary>
+              <summary>${text.monthlyDetails} · 12</summary>
               <div class="scroll"><table>
                 <thead><tr><th></th><th>kWh/100 km</th><th>°C</th><th>${text.monthlyEnergyCoverage}</th><th>${text.monthlyTemperatureCoverage}</th><th>${text.monthlyEstimatedShare}</th></tr></thead>
                 <tbody>${rows.map(row=>html`<tr><td>${formatMonth(row)}</td><td>${this._number(row.consumption_kwh_100km)}</td><td>${this._number(row.ambient_temperature_c)}</td><td>${this._percent(row.energy_coverage)}</td><td>${this._percent(row.temperature_coverage)}</td><td>${this._percent(row.estimated_energy_share)}</td></tr>`)}</tbody>

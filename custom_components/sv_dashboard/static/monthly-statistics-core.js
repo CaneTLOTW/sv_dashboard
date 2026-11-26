@@ -11,7 +11,7 @@ function monthIndex(key) {
   return year * 12 + month - 1;
 }
 
-export function monthSeries(rows) {
+export function monthSeries(rows, currentMonth = null) {
   const byMonth = new Map();
   for (const row of Array.isArray(rows) ? rows : []) {
     const index = monthIndex(row?.month);
@@ -19,8 +19,9 @@ export function monthSeries(rows) {
   }
   if (!byMonth.size) return [];
   const indexes = [...byMonth.keys()];
-  const latest = Math.max(...indexes);
-  const earliest = Math.max(Math.min(...indexes), latest - 11);
+  const latest = monthIndex(currentMonth) ?? Math.max(...indexes);
+  const earliest = latest - 11;
+  if (!indexes.some(index => index >= earliest && index <= latest)) return [];
   return Array.from({length: latest - earliest + 1}, (_, offset) => {
     const index = earliest + offset;
     const month = String(Math.floor(index / 12)).padStart(4, "0") + "-" + String(index % 12 + 1).padStart(2, "0");
