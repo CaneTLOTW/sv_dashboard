@@ -37,6 +37,7 @@ from .notifications import VehicleNotificationManager
 from .server_history import ServerHistoryManager
 from .vehicle_audit import async_register_vehicle_audit_websocket
 from .vehicle_diagnostics import async_register_vehicle_diagnostics_websocket
+from .departure_planning import DeparturePlanning, async_register_departure_planning_websocket
 
 type SvDashboardConfigEntry = ConfigEntry
 
@@ -122,6 +123,7 @@ async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
     async_register_fuel_history_websocket(hass)
     async_register_vehicle_audit_websocket(hass)
     async_register_vehicle_diagnostics_websocket(hass)
+    async_register_departure_planning_websocket(hass)
     return True
 
 
@@ -203,6 +205,14 @@ async def async_setup_entry(
     await notifications.async_initialize()
     coordinator.notifications = notifications
 
+    coordinator.departure_planning = None
+    try:
+        planning = DeparturePlanning(hass, entry)
+        await planning.async_initialize()
+        coordinator.departure_planning = planning
+    except Exception:
+        _LOGGER.exception("Could not load SV departure planning; existing store retained")
+
     hass.data[DOMAIN][entry.entry_id] = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -245,6 +255,7 @@ async def async_remove_entry(
     await Store(hass, 1, f"{DOMAIN}_{slug}_charge_curves").async_remove()
     await Store(hass, 1, f"{DOMAIN}_{slug}_notifications").async_remove()
     await Store(hass, 1, f"{DOMAIN}_{slug}_fuel_history").async_remove()
+    await Store(hass, 1, f"{DOMAIN}_{slug}_departure_plans").async_remove()
     await async_remove_dashboard_marker(hass, entry.entry_id)
 
 
