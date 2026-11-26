@@ -57,3 +57,19 @@ assert m.reminder_candidate([base],evening,"Europe/Berlin",m.normalize_reminder(
 assert m.reminder_candidate([base],datetime(2026,11,26,18,51,tzinfo=UTC),"Europe/Berlin",settings,None,17) is None
 assert m.reminder_candidate([base],evening,"Europe/Berlin",settings,None,30) is None
 print("Departure reminder tests passed")
+
+
+due = datetime(2026,11,27,6,10,30,tzinfo=UTC)
+armed = datetime(2026,11,26,tzinfo=UTC)
+assert len(m.due_occurrences([base], due, "Europe/Berlin", armed, {})) == 1
+key = m.due_occurrences([base], due, "Europe/Berlin", armed, {})[0]["key"]
+assert not m.due_occurrences([base], due, "Europe/Berlin", armed, {key: {}})
+assert not m.due_occurrences([base], due, "Europe/Berlin", due, {})
+assert not m.due_occurrences([base, exception], due, "Europe/Berlin", armed, {})
+assert not m.due_occurrences([base], due, "Europe/Berlin", None, {})
+assert m.climate_gate(base, 35, "off", "off", 0, False, True, True) == "ready"
+assert m.climate_gate(base, 17, "off", "on", 0, False, True, True) == "soc"
+assert m.climate_gate(base, 35, "on", "on", 0, False, True, True) == "engine"
+assert m.climate_gate(base, 35, "off", "on", 0, False, True, False) == "stale"
+assert m.climate_gate(base, 35, "off", "on", 0, True, True, True) == "already_active"
+print("Departure execution gates passed")

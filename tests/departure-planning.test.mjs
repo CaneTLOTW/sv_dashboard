@@ -9,8 +9,10 @@ test("departure planning stays in its own view and never dispatches",()=>{
  assert.match(card,/sv_dashboard\/departure_plans/);
  assert.match(backend,/connection\.user\.is_admin/);
  assert.match(backend,/revision_conflict/);
- assert.match(backend,/"preview_only": True/);
- assert.doesNotMatch(backend,/services\.async_call|button\.press|ThermalPrecond/);
+ assert.match(backend,/"preview_only": self.execution_enabled_at is None/);
+ assert.match(backend,/await asyncio\.wait_for\(self\.hass\.services\.async_call\(/);
+ assert.match(backend,/"button", "press", \{"entity_id": button\.entity_id\}/);
+ assert.doesNotMatch(backend,/ThermalPrecond|number\.set_value|switch\.turn_on/);
  assert.doesNotMatch(card,/callService|button\.press/);
 });
 

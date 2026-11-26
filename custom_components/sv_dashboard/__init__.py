@@ -210,7 +210,7 @@ async def async_setup_entry(
         planning = DeparturePlanning(hass, entry)
         await planning.async_initialize()
         coordinator.departure_planning = planning
-        planning.async_start(notifications)
+        planning.async_start(notifications, coordinator)
     except Exception:
         _LOGGER.exception("Could not load SV departure planning; existing store retained")
 

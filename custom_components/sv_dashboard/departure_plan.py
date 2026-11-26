@@ -169,3 +169,46 @@ def reminder_candidate(profiles: list, now: datetime, timezone_name: str,
             return {"date": today.isoformat(), "departure": departure.strftime("%H:%M"),
                     "start": start.strftime("%H:%M"), "minimum": minimum, "soc": soc}
     return None
+
+
+def due_occurrences(profiles, now, timezone_name, enabled_at, ledger):
+    """Only new, currently due starts; no catch-up after more than two minutes."""
+    now = now.astimezone(UTC)
+    if enabled_at is None:
+        return []
+    result = []
+    for row in preview(profiles, now, timezone_name, 2)["upcoming"]:
+        start = datetime.fromisoformat(row["start"])
+        key = row["profile_id"] + "|" + row["departure"]
+        if start > enabled_at and timedelta(0) <= now - start < timedelta(minutes=2) and key not in ledger:
+            result.append({**row, "key": key})
+    return sorted(result, key=lambda row: (row["start"], row["departure"], row["profile_id"]))
+
+
+def climate_gate(profile, soc, engine, plugged, temperature, climate, button_available, fresh):
+    """Conservative gate; never infer availability from a cable alone."""
+    if not button_available:
+        return "unavailable"
+    if not fresh:
+        return "stale"
+    if engine != "off":
+        return "engine"
+    if climate is True:
+        return "already_active"
+    if climate is not False:
+        return "unknown"
+    if soc is None or not 0 <= soc <= 100 or soc < profile["min_soc"]:
+        return "soc"
+    if profile["only_plugged"] and plugged != "on":
+        return "plug"
+    if profile["below_c"] is not None and (temperature is None or not -70 <= temperature <= 70 or temperature >= profile["below_c"]):
+        return "temperature"
+    return "ready"
+
+
+def climate_state(raw):
+    if str(raw).lower() in ("on", "true", "inprogress", "running", "enabled"):
+        return True
+    if str(raw).lower() in ("off", "false", "disabled", "finished", "stopped"):
+        return False
+    return None
