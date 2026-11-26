@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.3-beta.10 — full profile editor controls
+
+- Add the same ±15-minute time stepper to the full profile editor, and ±5-unit buttons around lead-time and minimum/desired SoC sliders. Desired SoC remains optional (unchecked = null; enabling starts at 80%); no charge commands. Scroll the opened editor into view. Preserve the selected date and exact existing values.
+
 ## 0.7.3-beta.9 — quick departure time stepper
 
 - Add −15 / +15 minute buttons beside the native time picker. Preserve the selected date, disable steps across midnight, retain exact minute editing and server-side future-start checks.
