@@ -10,14 +10,14 @@
  * changes presentation (no heading/self-navigation, optional info button);
  * entity resolution, picture lifecycle and overlay rendering stay shared.
  */
-import { languageFor, textFor } from "./i18n.js?v=0.7.3-beta.13";
-import { climatePresentation } from "./climate-presentation-core.js?v=0.7.3-beta.13";
+import { languageFor, textFor } from "./i18n.js?v=0.7.3-beta.14";
+import { climatePresentation } from "./climate-presentation-core.js?v=0.7.3-beta.14";
 
 const STATUS_DOMAIN = "sv_dashboard";
 const CARD_TAG = "sv-dashboard-vehicle-overview-card";
 const EDITOR_TAG = "sv-dashboard-vehicle-overview-card-editor";
 const FRESH_VEHICLE_DATA_MS = 15 * 60 * 1000;
-const CLIMATE_COMMAND_GUARD_MS = 90 * 1000;
+const CLIMATE_COMMAND_GUARD_MS = 180 * 1000;
 const CLIMATE_TAG = "sv-dashboard-climate-control";
 
 // A single in-browser guard per vehicle survives a Hero remount and prevents
@@ -56,7 +56,7 @@ class SvDashboardClimateControl extends HTMLElement {
     this._hass = undefined;
     this._onChange = () => this._render();
     const root = this.attachShadow({mode:"open"});
-    root.innerHTML = '<style>:host{display:block;width:30px;height:30px}button{box-sizing:border-box;width:30px;height:30px;border:0;border-radius:50%;padding:0;margin:0;display:grid;place-items:center;background:rgba(20,20,20,.62);color:white;box-shadow:0 1px 4px rgba(0,0,0,.25);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}button:active{transform:scale(.92)}button[aria-disabled=true]{cursor:default}button[data-state=heating],button[data-state=cooling]{color:var(--climate-color);background:color-mix(in srgb,var(--climate-color) 20%,rgba(20,20,20,.72))}button[data-state=active],button[data-state=unknown]{color:white}button[data-state=pending]{color:#e5a329;background:color-mix(in srgb,#e5a329 12%,rgba(20,20,20,.72))}button[data-state=pending] ha-icon{animation:kfzClimatePending 1.2s ease-in-out infinite}button[data-state=failed]{color:var(--error-color)}button[data-state=unavailable]{opacity:.72}ha-icon{--mdc-icon-size:18px;width:18px;height:18px}@keyframes kfzClimatePending{0%,100%{opacity:.4}50%{opacity:1}}@media(prefers-reduced-motion:reduce){button[data-state=pending] ha-icon{animation:none}}</style><button type="button"><ha-icon icon="mdi:air-conditioner"></ha-icon></button>';
+    root.innerHTML = '<style>:host{display:block;width:30px;height:30px}button{box-sizing:border-box;width:30px;height:30px;border:0;border-radius:50%;padding:0;margin:0;display:grid;place-items:center;background:rgba(20,20,20,.62);color:white;box-shadow:0 1px 4px rgba(0,0,0,.25);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}button:active{transform:scale(.92)}button[aria-disabled=true]{cursor:default}button[data-state=heating],button[data-state=cooling]{color:var(--climate-color);background:color-mix(in srgb,var(--climate-color) 20%,rgba(20,20,20,.72))}button[data-state=active]{color:var(--success-color,#4caf50)}button[data-state=pending]{color:#e5a329;background:color-mix(in srgb,#e5a329 12%,rgba(20,20,20,.72))}button[data-state=pending] ha-icon{animation:kfzClimatePending 1.2s ease-in-out infinite}button[data-state=failed]{color:var(--error-color)}button[data-state=unavailable]{opacity:.72}ha-icon{--mdc-icon-size:18px;width:18px;height:18px}@keyframes kfzClimatePending{0%,100%{opacity:.4}50%{opacity:1}}@media(prefers-reduced-motion:reduce){button[data-state=pending] ha-icon{animation:none}}</style><button type="button"><ha-icon icon="mdi:air-conditioner"></ha-icon></button>';
     this._button = root.querySelector("button");
     this._icon = root.querySelector("ha-icon");
     for (const eventName of ["pointerdown","pointerup","keydown","keyup","dblclick","contextmenu"]) {
@@ -89,19 +89,19 @@ class SvDashboardClimateControl extends HTMLElement {
   _state() {
     const states = this._hass?.states || {};
     const entity = states[this._config.climate_entity];
-    const active = climateLiveState(entity?.state);
-    const target = active === true ? this._config.stop_entity : this._config.start_entity;
-    const available = active !== null && climateButtonAvailable(states, target);
+    const presentation = climatePresentation(entity, states[this._config.temperature_entity], Date.now(), states[this._config.start_entity], states[this._config.stop_entity]);
+    const active = presentation.active;
+    const target = active ? this._config.stop_entity : this._config.start_entity;
+    const available = climateButtonAvailable(states, target);
     const request = climateRequests.get(this._key);
-    return {states,entity,active,target,available,request};
+    return {states,entity,active,target,available,request,presentation};
   }
 
   _render() {
     if (!this._hass) return;
-    const {states,entity,active,available,request} = this._state();
-    const presentation = climatePresentation(entity, states[this._config.temperature_entity]);
+    const {states,active,available,request,presentation} = this._state();
     const strings = textFor(this._hass,"dashboard");
-    const state = request?.status === "pending" ? "pending" : request?.status === "failed" ? "failed" : presentation.mode;
+    const state = request?.status === "pending" || presentation.pending ? "pending" : presentation.mode;
     const soc = states[this._config.battery_entity]?.state;
     const brand = String(states[this._config.vehicle_info_entity]?.attributes?.brand || "")
       .normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").toLowerCase();
@@ -109,9 +109,8 @@ class SvDashboardClimateControl extends HTMLElement {
       && soc !== undefined && soc !== "" && Number.isFinite(Number(soc)) && Number(soc) < 20
       && climateLiveState(states[this._config.charging_entity]?.state) === false;
     const action = active ? strings.stopClimate : strings.startClimate;
-    const title = state === "pending" ? strings.climatePending : state === "failed" ? strings.climateNotConfirmed
-      : !available ? strings.climateUnavailable + (lowSocHint ? " · " + strings.climateLowSoc : "")
-      : state === "unknown" ? strings.unknown + " · " + action : action;
+    const title = state === "pending" ? strings.climatePending : !available ? strings.climateUnavailable + (lowSocHint ? " · " + strings.climateLowSoc : "")
+      : request?.status === "failed" || presentation.rawActive === true && !presentation.active ? strings.climateNotConfirmed + " · " + action : action;
     this._button.dataset.state = state;
     this._button.setAttribute("aria-disabled", String(state === "pending" || !available));
     if (presentation.color) this._button.style.setProperty("--climate-color", presentation.color);
@@ -119,18 +118,18 @@ class SvDashboardClimateControl extends HTMLElement {
     this._button.setAttribute("aria-busy",String(state === "pending"));
     this._button.setAttribute("aria-label",title);
     this._button.title = title;
-    this._icon.setAttribute("icon", state === "failed" ? "mdi:alert-circle" : state === "pending" ? "mdi:sync" : !available && presentation.mode === "off" ? "mdi:lock" : presentation.icon);
+    this._icon.setAttribute("icon", state === "pending" ? "mdi:sync" : presentation.icon);
   }
 
   async _activate() {
-    const {entity,active,target,available,request} = this._state();
-    if (request?.status === "pending" || !this._hass) return;
+    const {entity,active,target,available,request,presentation} = this._state();
+    if (request?.status === "pending" || presentation.pending || !this._hass) return;
     if (!available) {
       this.dispatchEvent(new CustomEvent("hass-notification",{detail:{message:this._button.title},bubbles:true,composed:true}));
       return;
     }
     const key = this._key;
-    const next = {status:"pending",expectedActive:!active,baselineChanged:Date.parse(entity.last_changed || "")};
+    const next = {status:"pending",expectedActive:!active,baselineChanged:Date.parse(entity?.last_changed || "")};
     // Never manufacture a confirmation from a generic last_updated event.
     // A valid state timestamp is required for authoritative transition proof.
     next.timer = setTimeout(() => {

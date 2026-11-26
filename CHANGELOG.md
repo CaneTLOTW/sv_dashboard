@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.3-beta.14 — compact departure planning and climate UX
+
+- Replace persistent unknown/question mark with neutral idle presentation. Display recent reported ON (source timestamp or HA state transition up to 30 min) as heating/cooling inferred from last reported ambient temperature, or generic active when temperature missing. German source timestamp supported. Neutral idle is not a physical OFF confirmation; no change to scheduler safety checks, source confirmation ledger or raw telemetry. Recent start/stop button timestamps show pending up to three minutes; manual controls retain duplicate guard. Errors remain in command feedback/tooltip rather than replacing normal climate icon.
+- Departure planning spans two HA sections on desktop, uses a two-column internal grid when wide, stacks on narrow screens, and moves automatic execution control into compact lower settings disclosure. Same single per-vehicle store and authorization; no automatic changes to profiles or enable state.
+
 ## 0.7.3-beta.13 — climate presentation and responsive statistics
 
 - Restore inferred red radiator / blue A/C for active climate using recent source-stamped temperature (20 °C heuristic, not measured HVAC mode). Show neutral unknown for stale or missing climate source timestamps; no HA receipt-time fallback. Preserve manual controls and existing command guard. Apply presentation to EV and dual-energy Hero and Quick Actions.

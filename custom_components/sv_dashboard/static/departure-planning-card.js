@@ -1,6 +1,6 @@
 import { LitElement, html, css, nothing } from "./vendor-lit.js?v=0.6.0-beta.7";
-import { localeFor, textFor } from "./i18n.js?v=0.7.3-beta.13";
-import { shiftDepartureTime } from "./departure-time-core.js?v=0.7.3-beta.13";
+import { localeFor, textFor } from "./i18n.js?v=0.7.3-beta.14";
+import { shiftDepartureTime } from "./departure-time-core.js?v=0.7.3-beta.14";
 
 const TAG="sv-dashboard-departure-planning-card";
 const fresh=()=>({name:"",kind:"weekly",enabled:true,time:"07:30",weekdays:[0,1,2,3,4],date:null,override:"none",lead_minutes:20,min_soc:20,only_plugged:false,below_c:null,target_soc:null});
@@ -8,7 +8,7 @@ const fresh=()=>({name:"",kind:"weekly",enabled:true,time:"07:30",weekdays:[0,1,
 class DeparturePlanningCard extends LitElement {
  static properties={_hass:{state:true},_config:{state:true},_data:{state:true},_draft:{state:true},_busy:{state:true},_error:{state:true},_confirm:{state:true},_reminderDraft:{state:true},_quick:{state:true}};
  static styles=css`
- .body{padding:0 16px 16px}.hero,.editor{background:var(--secondary-background-color);border-radius:12px;padding:12px;margin:12px 0}
+ .body{padding:0 16px 16px;container-type:inline-size}.plan-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:0 20px}.plan-column{min-width:0}.plan-column>h3:first-child{margin-top:12px}.settings{border-top:1px solid var(--divider-color);padding-top:10px}.settings summary{font-size:13px}.settings button{min-height:36px}@container (min-width:650px){.plan-grid{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}}.hero,.editor{background:var(--secondary-background-color);border-radius:12px;padding:12px;margin:12px 0}
  .hero strong{display:block;font-size:24px;line-height:1.25;margin:6px 0}.muted{font-size:12px;color:var(--secondary-text-color);line-height:1.45}
  .row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid var(--divider-color)}.info{flex:1;min-width:0;overflow-wrap:anywhere}.info strong{display:block}.time{font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
  .buttons{display:flex;align-items:center;gap:7px;flex-wrap:wrap}button{border:1px solid var(--divider-color);border-radius:8px;background:var(--card-background-color);color:var(--primary-color);font:inherit;font-size:12px;padding:8px;cursor:pointer}button:disabled{opacity:.5;cursor:default}button.primary{background:var(--primary-color);color:var(--text-primary-color,#fff);border-color:transparent}.active{color:var(--success-color);font-size:12px}.error{color:var(--error-color);overflow-wrap:anywhere}
@@ -64,11 +64,12 @@ class DeparturePlanningCard extends LitElement {
   return html`<ha-card header="${text("Title")}"><div class="body">
    ${!data?html`<p class="muted">${text("Preview")}</p>${error}<button ?disabled="${this._busy}" @click="${()=>this._request("get")}">${text("Refresh")}</button>`:nothing}
    ${!data?nothing:html`
-    <div class="editor"><div class="live-head"><strong>${text("LiveTitle")}</strong><button class="${data.execution_enabled?"primary":""}" ?disabled="${this._busy}" @click="${()=>this._request("execution",{enabled:!data.execution_enabled})}">${text(data.execution_enabled?"Active":"Inactive")} · ${text(data.execution_enabled?"Disable":"Enable")}</button></div><details><summary class="muted">${text(data.execution_enabled?"Active":"Inactive")}</summary><p class="muted">${text("LiveNote")}</p></details></div>
-    <div class="hero"><div class="muted">${text("Next")}</div>
+    <div class="plan-grid"><div class="plan-column">
+    <div class="hero"><div class="muted">${text("Next")}</div>${!data.execution_enabled?html`<div class="muted">${text("LiveTitle")} · ${text("Inactive")}</div>`:nothing}
      ${next?html`<strong>${this._fmt(next.departure)}</strong><div>${next.name} · ${text("Start")}: ${this._fmt(next.start)}</div>${next.start_passed?html`<div class="muted">${text("PastStart")}</div>`:nothing}${next.target_soc!==null?html`<div class="muted">${text("Target")}: ${next.target_soc}%</div>`:nothing}`:html`<strong>—</strong><div class="muted">${text("Empty")}</div>`}
     </div>
     ${q?html`<div class="editor"><strong>${text("QuickTitle")}</strong><div class="quick-actions" style="margin-top:10px">${["today","tomorrow","custom"].map(day=>html`<button class="${(day==="custom"?q.custom:!q.custom&&q.date===data.quick_defaults[day])?"primary":""}" aria-pressed="${day==="custom"?q.custom:!q.custom&&q.date===data.quick_defaults[day]}" @click="${()=>this._quickDay(day)}">${text(day==="today"?"QuickToday":day==="tomorrow"?"QuickTomorrow":"Date")}</button>`)}</div><div class="quick-time">${q.custom?html`<label>${text("Date")}<input type="date" min="${data.today}" .value="${q.date}" @input="${e=>this._quickChange({date:e.target.value})}"></label>`:nothing}<div class="${q.custom?"":"wide"}"><label for="quick-clock">${text("Time")}</label><div class="time-stepper"><button type="button" aria-label="−15 min" ?disabled="${this._busy||shiftDepartureTime(q.time,-15)===null}" @click="${()=>this._shiftQuickTime(-15)}">−15</button><input id="quick-clock" type="time" .value="${q.time}" @input="${e=>this._quickChange({time:e.target.value})}"><button type="button" aria-label="+15 min" ?disabled="${this._busy||shiftDepartureTime(q.time,15)===null}" @click="${()=>this._shiftQuickTime(15)}">+15</button></div></div></div><label class="check"><input type="checkbox" .checked="${q.override==="all"}" @change="${e=>this._quickChange({override:e.target.checked?"all":"none"})}">${text("Override")}: ${text("All")}</label><p class="muted">${text("Lead")}: 20 min · ${text("MinSoc")}: 20 %${!data.execution_enabled?html` · ${text("LiveTitle")}: ${text("Inactive")}`:nothing}</p>${error}<button class="primary quick-save" ?disabled="${this._busy||!q.date||!/^([01]\d|2[0-3]):[0-5]\d$/.test(q.time)}" @click="${()=>this._request("quick",this._quickProfile(text))}">${text("QuickSave")}</button><div class="buttons" style="margin-top:8px"><button ?disabled="${this._busy}" @click="${()=>{const profile=this._quickProfile(text);this._quick=null;this._openEditor(profile);}}">${text("Edit")}</button></div></div>`:error}
+    </div><div class="plan-column">
     <h3>${text("Profiles")} · ${data.profiles.filter(p=>p.enabled&&(p.kind==="weekly"||p.date>=data.today)).length}/${data.profiles.length}</h3>
     ${[...data.profiles].sort((a,b)=>Number(b.enabled)-Number(a.enabled)).map(p=>html`
      <div class="row profile-row"><div class="info"><strong>${p.name}</strong><span class="muted">${p.kind==="weekly"?p.weekdays.map(n=>this._day(n)).join(" · "):this._date(p.date)} · −${p.lead_minutes} min</span>
@@ -96,13 +97,17 @@ class DeparturePlanningCard extends LitElement {
      </div><p class="muted">${text(data.execution_enabled?"LiveConditions":"ConditionsNote")}</p>
      <div class="buttons"><button class="primary" ?disabled="${this._busy||!this._valid(d)}" @click="${()=>this._request("save",d,d.id)}">${text("Save")}</button><button @click="${()=>this._draft=null}">${text("Cancel")}</button></div>
     </div>`:nothing}
+    </div><div class="plan-column">
     ${reminder?html`<div class="editor"><strong>${text("ReminderTitle")}</strong><div class="grid"><label class="check full"><input type="checkbox" .checked="${reminder.enabled}" @change="${e=>this._reminderDraft={...reminder,enabled:e.target.checked}}">${text("ReminderEnabled")}</label><label>${text("ReminderTime")}<input type="time" .value="${reminder.time}" @input="${e=>this._reminderDraft={...reminder,time:e.target.value}}"></label></div><p class="muted">${text("ReminderNote")}</p><div class="buttons"><button class="primary" ?disabled="${this._busy||!this._reminderDraft||!/^([01]\d|2[0-3]):[0-5]\d$/.test(reminder.time)}" @click="${()=>this._request("reminder",reminder)}">${text("Save")}</button></div>${data.last_reminder?html`<p class="muted">${this._date(data.last_reminder.date)} · ${text(data.last_reminder.status==="sent"?"ReminderSent":"ReminderAttempt")}</p>`:nothing}</div>`:nothing}
+    <details class="settings"><summary>${text("LiveTitle")} · <span class="${data.execution_enabled?"active":"muted"}">${text(data.execution_enabled?"Active":"Inactive")}</span></summary><p class="muted">${text("LiveNote")}</p><button ?disabled="${this._busy}" @click="${()=>this._request("execution",{enabled:!data.execution_enabled})}">${text(data.execution_enabled?"Disable":"Enable")}</button></details>
+    </div><div class="plan-column">
     <div class="buttons" style="margin-top:12px"><button ?disabled="${this._busy}" @click="${()=>this._request("get")}">${text("Refresh")}</button></div>
     <details class="calendar"><summary>${text("ExecutionLog")} (${(data.execution_log?.length||0)+(data.preparation_log?.length||0)})</summary>${(data.preparation_log||[]).map(row=>html`<div class="row"><div class="info"><strong>${row.name}</strong><span class="muted">${text("Preparation")} · ${this._fmt(row.at)}</span></div><span>${text("Status_"+row.status)||row.status}</span></div>`)}${(data.execution_log||[]).map(row=>html`<div class="row"><div class="info"><strong>${row.name}</strong><span class="muted">${this._fmt(row.at)}</span>${Number.isFinite(row.heartbeat_age_seconds)?html`<div class="muted">${text("DataAge")}: ${Math.round(row.heartbeat_age_seconds/60)} min</div>`:nothing}${row.preparation?html`<div class="muted">${text("Preparation")}: ${text("Status_"+row.preparation.status)||row.preparation.status}</div>`:nothing}</div><span>${text("Status_"+row.status)||row.status}</span></div>`)}</details>
     <details class="calendar"><summary>${text("Calendar")} · 14 d (${data.upcoming.length})</summary>
     ${data.upcoming.map(p=>html`<div class="row"><div class="info"><strong>${p.name}</strong><span class="muted">${text("Start")}: ${this._fmt(p.start)}</span></div><div>${this._fmt(p.departure)}</div></div>`)}
     ${data.skipped.map(p=>html`<div class="row muted"><span>${name(p.profile_id)} · ${this._date(p.date)}</span><span>${text(p.reason==="override"?"Skipped":"Dst")}</span></div>`)}
     </details>
+    </div></div>
    `}
   </div></ha-card>`;
  }

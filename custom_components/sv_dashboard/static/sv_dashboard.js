@@ -4,8 +4,8 @@
  * status entity created by the backend config entry. It never derives IDs from
  * VINs or friendly names.
  */
-import { languageFor, localeFor, textFor } from "./i18n.js?v=0.7.3-beta.13";
-import { climatePresentation } from "./climate-presentation-core.js?v=0.7.3-beta.13";
+import { languageFor, localeFor, textFor } from "./i18n.js?v=0.7.3-beta.14";
+import { climatePresentation } from "./climate-presentation-core.js?v=0.7.3-beta.14";
 
 const STRATEGY_TYPE = "sv-dashboard";
 const STATUS_DOMAIN = "sv_dashboard";
@@ -527,14 +527,15 @@ class SvDashboardStrategy extends HTMLElement {
         bubble("command_status", strings.commandStatus, "mdi:remote"),
         entity("preconditioning") ? {
           ...bubble("preconditioning", strings.climate, "mdi:air-conditioner", [press("preconditioning_start", strings.startClimate, "mdi:fan"), press("preconditioning_stop", strings.stopClimate, "mdi:fan-off")]),
-          styles: `\${(() => {
+          styles: `@keyframes svClimateQuickPending {0%,100%{opacity:.4}50%{opacity:1}} @media (prefers-reduced-motion:reduce){.bubble-icon{animation:none !important}} \${(() => {
             const value = hass.states[entity];
-            const view = (${climatePresentation.toString()})(value, hass.states[${literalText(entity("temperature") || "")}]);
+            const view = (${climatePresentation.toString()})(value, hass.states[${literalText(entity("temperature") || "")}], Date.now(), hass.states[${literalText(entity("preconditioning_start") || "")}], hass.states[${literalText(entity("preconditioning_stop") || "")}]);
             const target = card.querySelector('.bubble-state');
-            if (target) target.innerText = view.confirmed && value ? (typeof hass.formatEntityState === 'function' ? hass.formatEntityState(value) : value.state) : ${literalText(strings.unknown)};
+            if (target) target.innerText = view.pending ? ${literalText(strings.climatePending)} : typeof hass.formatEntityState === 'function' && value ? hass.formatEntityState({...value,state:view.active?'on':'off'}) : view.active ? ${literalText(strings.departureActive)} : ${literalText(strings.departureInactive)};
             if (icon) {
               icon.setAttribute('icon', view.icon);
-              icon.style.setProperty('color', view.color || 'var(--secondary-text-color)', 'important');
+              icon.style.setProperty('color', view.color || (view.active?'var(--success-color)':'var(--secondary-text-color)'), 'important');
+              icon.style.setProperty('animation', view.pending?'svClimateQuickPending 1.2s ease-in-out infinite':'none', 'important');
             }
           })()}`
         } : null,
@@ -912,8 +913,8 @@ class SvDashboardStrategy extends HTMLElement {
 
     if (entity("preconditioning_start") || entity("preconditioning_start_button")) {
       views.push({
-        title: strings.departureTitle, path: "departure", icon: "mdi:calendar-clock", type: "sections", max_columns: 1,
-        sections: [{type:"grid",cards:[{type:"custom:sv-dashboard-departure-planning-card",entry_id:attributes.entry_id,grid_options:{columns:"full"}}]}],
+        title: strings.departureTitle, path: "departure", icon: "mdi:calendar-clock", type: "sections", max_columns: 2,
+        sections: [{type:"grid",column_span:2,cards:[{type:"custom:sv-dashboard-departure-planning-card",entry_id:attributes.entry_id,grid_options:{columns:"full"}}]}],
       });
     }
 

@@ -80,7 +80,7 @@ test("battery bar keeps EV energy semantics without injecting fuel into the EV b
 });
 
 test("EV Hero climate uses one persistent native control with explicit command lifecycle", () => {
-  assert.match(source, /const CLIMATE_COMMAND_GUARD_MS = 90 \* 1000/);
+  assert.match(source, /const CLIMATE_COMMAND_GUARD_MS = 180 \* 1000/);
   assert.match(source, /type: "custom:sv-dashboard-climate-control"/);
   assert.match(source, /climateRequests = new Map/);
   assert.match(source, /await this\._hass\.callService\("button","press",\{\}, \{entity_id:target\}\)/);
@@ -91,12 +91,12 @@ test("EV Hero climate uses one persistent native control with explicit command l
   assert.match(source, /climateButtonAvailable/);
   assert.match(source, /event\.stopPropagation\(\)/);
   assert.match(source, /kfzClimatePending/);
-  assert.match(source, /mdi:lock/);
+  assert.match(source, /strings\.climateUnavailable/);
   assert.match(source, /CustomEvent\("haptic"/);
 });
 
 test("active EV climate uses shared mode styling and the existing 30px overlay", () => {
-  assert.match(source, /climatePresentation\(entity, states\[this\._config\.temperature_entity\]\)/);
+  assert.match(source, /climatePresentation\(entity, states\[this\._config\.temperature_entity\], Date\.now\(\)/);
   assert.match(source, /button\[data-state=heating\],button\[data-state=cooling\]/);
   assert.match(source, /width:30px;height:30px/);
   assert.doesNotMatch(source, /chargingEndEntity \? this\._hass\.states\?\.\[chargingEndEntity\]\?\.state/);
@@ -150,7 +150,7 @@ test("card editor persists the selected config entry instead of a VIN", () => {
 
 
 test("vehicle overview localizes runtime and editor text through the shared catalog", () => {
-  assert.match(source, /import \{ languageFor, textFor \} from "\.\/i18n\.js\?v=0\.7\.3-beta\.13"/);
+  assert.match(source, /import \{ languageFor, textFor \} from "\.\/i18n\.js\?v=0\.7\.3-beta\.14"/);
   assert.match(source, /textFor\(hass, "vehicleOverview"\)/);
   assert.match(source, /languageFor\(this\._hass\)/);
   assert.match(source, /registrationStrings\.cardName/);
