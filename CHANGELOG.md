@@ -1,5 +1,9 @@
 # Changelog
 
+### Marketplace distribution and documentation (development)
+
+- Document the built-in Home Assistant Marketplace from 2026.11 alongside legacy HACS; retain the 2026.5 minimum. Add the Marketplace repository badge, installation/migration/update steps, dependency categories and release/catalog checklist. Hide the default branch as an install option in shared HACS metadata where supported. No runtime code or existing release changes.
+
 ## 0.7.3-beta.7 — opt-in scheduled climate execution
 
 - Add per-vehicle live climate execution switch, bounded due window, durable claims and command/vehicle-confirmation history. Default off; no automatic charging commands or native schedule writes. Require current upstream heartbeat, mapped available button, engine off and profile conditions; no blind retry. Improve iOS profile form with date/time sizing and lead/minimum SoC sliders.

@@ -26,7 +26,7 @@ discussion rules.
 - New dashboard behaviour must handle unavailable or absent upstream entities.
 - Add or update every user-facing string across all 18 supported languages in the same change, including config/options/entity text, frontend labels, notifications, push messages and Logbook text; see
   [localisation](docs/LOCALISATION.en.md).
-- Keep third-party HACS cards as dependencies. Do not vendor or modify them.
+- Keep third-party Marketplace/HACS cards as dependencies. Do not vendor or modify them.
 - Use third-party product and brand names only where needed to describe
   compatibility or interoperability. Do not add manufacturer logos, official
   badges, brand artwork, promotional imagery, or other protected visual assets

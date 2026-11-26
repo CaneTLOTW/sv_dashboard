@@ -2,11 +2,11 @@
 
 ## Prerequisites
 
-SV Dashboard is installed as a HACS **custom integration repository**.
+SV Dashboard is distributed as a community **Integration** repository through the built-in Home Assistant Marketplace (2026.11+) or legacy HACS (2026.5–2026.10).
 
 Required Home Assistant baseline: **2026.5.0 or later**.
 
-Install and configure these projects first:
+Install and configure these projects first through Marketplace or legacy HACS. Install Stellantis Vehicles as an Integration; install the other four as Dashboard cards/plugins (legacy HACS: Dashboard/Frontend). Follow each project's own custom repository instructions if it is not listed.
 
 1. [Stellantis Vehicles](https://github.com/andreadegiovine/homeassistant-stellantis-vehicles)
 2. [Bubble Card](https://github.com/Clooos/Bubble-Card)
@@ -18,18 +18,31 @@ Stellantis Vehicles must already be authenticated and expose a real Home Assista
 
 The four frontend dependencies must also be loaded as Lovelace JavaScript modules.
 
-## Install through HACS
+## Install through Marketplace (Home Assistant 2026.11+)
 
-1. Open **HACS → Integrations → Custom repositories**.
-2. Add `CaneTLOTW/sv_dashboard` as category **Integration**.
-3. Install **[v0.7.2 Final](https://github.com/CaneTLOTW/sv_dashboard/releases/tag/v0.7.2)** through the normal HACS Integration stable channel (no prerelease setting required). v0.7.2 extends the history energy recovery with an evidence-qualified server-SOC fallback ([#130](https://github.com/CaneTLOTW/sv_dashboard/issues/130)). Never install moving `develop` as an external update.
-4. Download **SV Dashboard**.
-5. Restart Home Assistant.
-6. Open **Settings → Devices & services → Add integration**.
-7. Select **SV Dashboard**.
-8. Select the configured Stellantis vehicle and choose the desired modules/options.
-9. Complete setup. SV Dashboard creates a dedicated storage dashboard for that config entry.
-10. Refresh the browser/app once and open the generated dashboard.
+[![Open SV Dashboard in Home Assistant Marketplace](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=CaneTLOTW&repository=sv_dashboard&category=integration)
+
+1. Open **Settings → Marketplace**.
+2. Search for SV Dashboard. If it is not in the catalog, connect GitHub when requested and add `https://github.com/CaneTLOTW/sv_dashboard` under Custom repositories as type **Integration**. See the [official Marketplace custom repository instructions](https://www.home-assistant.io/integrations/marketplace/#custom-repositories).
+3. Install the latest stable release, currently **[v0.7.2](https://github.com/CaneTLOTW/sv_dashboard/releases/tag/v0.7.2)**. Do not choose an untagged development branch.
+4. Follow the Marketplace setup/restart prompt. If needed, use **Settings → Devices & services → Add integration → SV Dashboard**.
+5. Select the configured Stellantis vehicle and choose modules/options. Refresh the client and open the generated dashboard.
+
+Marketplace is built into Home Assistant; do not install legacy HACS on 2026.11 or later.
+
+## Install through legacy HACS (Home Assistant 2026.5–2026.10)
+
+[![Open the SV Dashboard repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=CaneTLOTW&repository=sv_dashboard&category=integration)
+
+1. Open HACS and its Custom repositories menu.
+2. Add `https://github.com/CaneTLOTW/sv_dashboard` as category **Integration**.
+3. Download the latest stable release (v0.7.2).
+4. Restart Home Assistant and open **Settings → Devices & services → Add integration → SV Dashboard**.
+5. Select the vehicle and options, refresh the client and open the generated dashboard.
+
+## Upgrade from HACS to Marketplace
+
+Home Assistant 2026.11 migrates existing HACS installations, including eligible custom repositories. Follow the [official migration guide](https://www.home-assistant.io/integrations/marketplace/). Keep SV Dashboard and its config entries in place. If the custom repository is missing after migration, reconnect GitHub if prompted and add its URL again; check installed version and update discovery. Do not delete history, change the integration domain or duplicate frontend resources.
 
 ## Migration from e-C3 Dashboard
 
@@ -127,7 +140,7 @@ Implausible upstream rows can be excluded from derived metrics while raw source 
 
 ### Missing custom card / setup page
 
-Verify Bubble Card, Button Card, ha-map-card and layout-card are installed **and loaded** as Lovelace resources. Restart Home Assistant if HACS requests it, then hard-refresh the browser.
+Verify Bubble Card, Button Card, ha-map-card and layout-card are installed **and loaded** as Lovelace resources. Follow Marketplace or HACS restart prompts, then hard-refresh the browser.
 
 ### Dashboard still shows an old frontend
 
@@ -151,6 +164,8 @@ Check Recorder retention and include filters. SV Dashboard cannot recreate Recor
 
 ## Updating
 
-Install updates through HACS. Restart Home Assistant when release notes require it and refresh browser/app cache after frontend changes.
+Install updates through **Settings → Updates** / Marketplace on 2026.11+, or legacy HACS on older supported releases. Follow restart prompts and refresh browser/app cache after frontend changes.
+
+For public beta testing, enable the repository's **Pre-release** switch. The published [v0.7.3-beta.2](https://github.com/CaneTLOTW/sv_dashboard/releases/tag/v0.7.3-beta.2) is distinct from unpublished development candidates. Never install moving `develop` as an external update.
 
 Stable `v0.7.2` preserves the v0.7.1 canonical trip-history fixes and adds server-SOC / historic-capacity energy estimates, always marked estimated; see [#130](https://github.com/CaneTLOTW/sv_dashboard/issues/130). The previous `v0.7.0` release was withdrawn. Independent active-charging and external DS N°4 Hybrid validation are still pending.

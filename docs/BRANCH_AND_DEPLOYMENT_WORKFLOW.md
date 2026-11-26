@@ -116,7 +116,7 @@ When an external tester is needed before stable promotion:
 1. freeze an exact validated `develop` SHA;
 2. create an immutable semantic prerelease tag for that SHA;
 3. publish it as a GitHub **Pre-release**;
-4. ask the tester to use HACS **Pre-release**, never a moving `develop` checkout;
+4. ask the tester to use Marketplace or legacy HACS **Pre-release**, never a moving `develop` checkout;
 5. record tester acceptance against that exact tag/SHA;
 6. do not move/recreate the tag if `develop` advances later.
 

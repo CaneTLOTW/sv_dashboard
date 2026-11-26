@@ -2,19 +2,25 @@
 
 **Stellantis Vehicle Dashboard for Home Assistant**
 
-SV Dashboard is a HACS custom integration that builds a vehicle-focused Home Assistant dashboard on top of [Stellantis Vehicles](https://github.com/andreadegiovine/homeassistant-stellantis-vehicles).
+SV Dashboard is a community integration distributed through Home Assistant Marketplace (2026.11+) or legacy HACS (2026.5–2026.10) that builds a vehicle-focused Home Assistant dashboard on top of [Stellantis Vehicles](https://github.com/andreadegiovine/homeassistant-stellantis-vehicles).
 
 > **Current stable release: [v0.7.2](https://github.com/CaneTLOTW/sv_dashboard/releases/tag/v0.7.2).** Restores evidence-qualified server SOC / historical-capacity energy estimates when a completed trip's upstream electric consumption is zero, while preserving the matched-local estimates recovered in v0.7.1. Owner Home Assistant validation: 161 canonical trips, 116 existing local SOC estimates preserved and four additional server-SOC fallbacks. All reconstructed kWh are identified as estimates. The separate live-charging-state/curve issue remains open in [#127](https://github.com/CaneTLOTW/sv_dashboard/issues/127).
 
+[![Open SV Dashboard in Home Assistant Marketplace](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=CaneTLOTW&repository=sv_dashboard&category=integration)
+
 [![Open the SV Dashboard repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=CaneTLOTW&repository=sv_dashboard&category=integration)
+
+Use Marketplace on Home Assistant 2026.11 or newer; the HACS link is retained for older supported installations. If SV Dashboard is not listed in the catalog, add this public repository as a custom Integration repository. Marketplace requires a GitHub connection for custom repositories.
 
 Install this repository as an **Integration**, not as a standalone Lovelace-card repository.
 
-### Updates through HACS
+### Installation and updates through Marketplace / HACS
 
-**Stable channel: v0.7.2.** Install [v0.7.2](https://github.com/CaneTLOTW/sv_dashboard/releases/tag/v0.7.2) through HACS (Integration; prerelease not required). Restart Home Assistant to load the Python integration, then refresh the browser/app. The withdrawn v0.7.0 Git tag remains available for traceability; do not install moving `develop` as a workaround.
+**Stable channel: v0.7.2.** Install [v0.7.2](https://github.com/CaneTLOTW/sv_dashboard/releases/tag/v0.7.2) through Marketplace (Settings → Marketplace) or legacy HACS (Integration; prerelease not required). Follow any restart prompt; then configure SV Dashboard under Settings → Devices & services and refresh the browser/app. The withdrawn v0.7.0 Git tag remains available for traceability; do not install moving `develop` as a workaround.
 
-Older beta versions such as `v0.6.0-beta.40` remain available when HACS **Pre-release** is enabled. Install a published tag for external testing rather than a moving development branch.
+**Public beta:** [v0.7.3-beta.2](https://github.com/CaneTLOTW/sv_dashboard/releases/tag/v0.7.3-beta.2). Enable the repository’s **Pre-release** switch in Marketplace or legacy HACS to receive published beta releases. Use the exact published tag, not a moving branch. Development candidates are not automatically public releases.
+
+Existing HACS installations migrate through Home Assistant's Marketplace migration when upgrading to 2026.11. Do not remove the SV Dashboard integration or manually replace its configuration to migrate the store. See the [official Marketplace guide](https://www.home-assistant.io/integrations/marketplace/).
 
 HACS has previously generated malformed release links lacking GitHub's required `/tag/` segment. A broken external link does not itself prove that HACS installation failed; use the canonical release link above. Historical reference: [#41](https://github.com/CaneTLOTW/sv_dashboard/issues/41).
 
@@ -120,7 +126,7 @@ Advanced users are not limited to the bundled presentation: the mapped Stellanti
 
 SV Dashboard currently targets Home Assistant **2026.5.0 or later**.
 
-Install and configure these dependencies first:
+Install and configure these dependencies first via Marketplace (or legacy HACS). Stellantis Vehicles is an **Integration**; the four dashboard dependencies are **Dashboard cards/plugins** (legacy HACS: Dashboard/Frontend). If a dependency is not in the catalog, follow its own custom repository instructions:
 
 1. [Stellantis Vehicles](https://github.com/andreadegiovine/homeassistant-stellantis-vehicles)
 2. [Bubble Card](https://github.com/Clooos/Bubble-Card)
@@ -209,9 +215,9 @@ CI currently checks:
 - 18-language frontend/backend coverage
 - SV domain/branding rules
 - Hassfest
-- HACS repository validation
+- HACS repository validation (also used by the Marketplace catalog)
 
-Promotion to `main` is fast-forward only after the exact candidate has passed CI and the required acceptance gates. For beta.40, owner backend/runtime, browser UI and natural trip/charge use passed; `main` and `develop` are now aligned on the accepted repository state. The immutable `v0.6.0-beta.40` prerelease remains pinned to its validated product SHA for HACS/external testing. Stable `v0.7.0` is the next release; the exact immutable tag is authoritative, with new real-vehicle acceptance still pending.
+Promotion to `main` is fast-forward only after the exact candidate has passed CI and the required acceptance gates. The latest stable release remains v0.7.2; the published beta.2 tag remains immutable. For installation, the release tag is authoritative, not the current branch contents. The branch, runtime and acceptance rules are documented in [Branch and deployment workflow](docs/BRANCH_AND_DEPLOYMENT_WORKFLOW.md).
 
 ## License and trademarks
 
