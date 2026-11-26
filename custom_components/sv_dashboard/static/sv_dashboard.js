@@ -578,6 +578,7 @@ class SvDashboardStrategy extends HTMLElement {
         canonicalMileage ? { type: "statistics-graph", title: strings.drivenDistanceHistory, entities: [canonicalMileage], days_to_show: LONG_TERM_STATISTICS_DAYS, period: "month", stat_types: ["change"], chart_type: "bar", hide_legend: true, grid_options: { columns: "full", rows: 5 } } : null,
         supportsElectric && trailingElectricConsumption ? { type: "statistics-graph", title: strings.consumptionHistory, entities: [trailingElectricConsumption], days_to_show: LONG_TERM_STATISTICS_DAYS, period: "week", stat_types: ["mean"], chart_type: "line", hide_legend: true, grid_options: { columns: "full", rows: 5 } } : null,
         supportsElectric && !supportsDualEnergy && serverTripEntity ? { type: "custom:sv-dashboard-monthly-statistics-card", entity: serverTripEntity, grid_options: { columns: "full" } } : null,
+        supportsElectric && !supportsDualEnergy && serverTripEntity ? { type: "custom:sv-dashboard-range-calculator-card", entity: serverTripEntity, soc_entity: entity("battery"), soh_entity: entity("battery_health_capacity"), capacity_entity: entity("battery_capacity"), temperature_entity: entity("temperature"), grid_options: { columns: "full" } } : null,
         supportsFuel && trailingFuelConsumption ? { type: "statistics-graph", title: strings.trailingFuelConsumption, entities: [trailingFuelConsumption], days_to_show: LONG_TERM_STATISTICS_DAYS, period: "week", stat_types: ["mean"], chart_type: "line", hide_legend: true, grid_options: { columns: "full", rows: 5 } } : null,
         supportsFuel && entity("fuel_consumption_instant") ? { type: "statistics-graph", title: strings.fuelConsumption, entities: [entity("fuel_consumption_instant")], days_to_show: LONG_TERM_STATISTICS_DAYS, period: "week", stat_types: ["mean"], chart_type: "line", hide_legend: true, grid_options: { columns: "full", rows: 5 } } : null,
       ].filter(Boolean);
@@ -897,7 +898,7 @@ class SvDashboardStrategy extends HTMLElement {
       icon: "mdi:help-circle-outline",
       type: "sections",
       max_columns: 1,
-      sections: [{ type: "grid", cards: [{ type: "heading", heading: strings.help, icon: "mdi:help-circle-outline", heading_style: "title" }, markdown(strings.helpContent)] }],
+      sections: [{ type: "grid", cards: [{ type: "heading", heading: strings.help, icon: "mdi:help-circle-outline", heading_style: "title" }, markdown(strings.helpContent), ...(supportsElectric && !supportsDualEnergy ? [markdown("## "+strings.rangeCalcLowTitle+"\n\n"+strings.rangeCalcLowGeneral), markdown("### Citroën ë-C3 Standard Range\n\n"+strings.rangeCalcLowC3+"\n\n[Citroën handbook](https://service.citroen.com/ACddb/modeles/c3.cc2eu/eGuide_cc21eu_ed01-24/pdfs/9999_9999_530_de-DE.pdf) · [ADAC Autotest](https://assets.adac.de/image/upload/Autodatenbank/Autotest/at6525-citroen-e-c3-standard-range-you/citroen-e-c3-standard-range-you.pdf)")] : [])] }],
     });
 
     views.push({

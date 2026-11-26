@@ -65,6 +65,8 @@ jobs:
           node --check custom_components/sv_dashboard/static/charge-history-core.js
           node --check custom_components/sv_dashboard/static/monthly-statistics-core.js
           node --check custom_components/sv_dashboard/static/monthly-statistics-card.js
+          node --check custom_components/sv_dashboard/static/range-calculator-card.js
+          node --check custom_components/sv_dashboard/static/range-calculator-core.js
 
       - name: Run Node regression tests
         run: node --test tests/*.test.mjs

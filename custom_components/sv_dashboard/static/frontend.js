@@ -15,6 +15,7 @@ const DEPENDENCY_GRACE_MS = 10000;
 const INTERNAL_CARD_TYPES = new Set([
   "sv-dashboard-trip-history-card",
   "sv-dashboard-monthly-statistics-card",
+  "sv-dashboard-range-calculator-card",
   "sv-dashboard-charge-history-card",
   "sv-dashboard-charge-curve-card",
   "sv-dashboard-charge-curve-browser-card",
@@ -90,6 +91,7 @@ installTransparentMapMarkerCompatibility();
 const packageModules = Promise.allSettled([
   import("./trip-history-card.js?v=0.7.3-beta.3"),
   import("./monthly-statistics-card.js?v=0.7.3-beta.3"),
+  import("./range-calculator-card.js?v=0.7.3-beta.4"),
   import("./charge-history-card.js?v=0.7.3-beta.3"),
   import("./gps-history-card.js?v=0.6.0-beta.28"),
   import("./vehicle-overview-card.js?v=0.7.3-beta.3"),
@@ -116,7 +118,7 @@ window.__svDashboardDependencyReadiness = Promise.all(
 // Register the Strategy independently of the card bundle. A rejected or
 // stalled card import must not turn into an opaque HA strategy timeout.
 const packageNames = [
-  "trip-history-card.js", "monthly-statistics-card.js", "charge-history-card.js", "gps-history-card.js",
+  "trip-history-card.js", "monthly-statistics-card.js", "range-calculator-card.js", "charge-history-card.js", "gps-history-card.js",
   "vehicle-overview-card.js", "dual-energy-overview-card.js", "fuel-history-card.js",
   "vehicle-audit-card.js", "vehicle-diagnostics-card.js",
 ];

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.3-beta.4 — development: range planning and low battery information
+
+- Add BEV range planning based on qualified own trips, with bounded temperature/startup model only after chronological holdout improvement; otherwise an explicitly assumed scenario. Adjustable SoC, SoH, current/new usable capacity, temperature, target distance, reserve, speed and route surcharge. No vehicle writes or range guarantee.
+- Add low-battery guidance and model-specific Citroën ë-C3/ADAC evidence in Help; no guaranteed distance beyond 0%. Preserve existing Live layout. Includes beta.3 monthly chart.
+
 ## 0.7.3-beta.3 — development: monthly consumption statistics
 
 - Add a BEV-only monthly consumption bar chart and drive-time ambient-temperature line in Statistics, retaining the existing rolling 500-km graph. Consumption uses distance-weighted qualified canonical trips; missing energy/temperature remains missing and coverage is disclosed. Temperature evidence uses bounded Home Assistant Recorder observations, not measured battery temperature. Retain matched per-trip summaries after Recorder expiry.
