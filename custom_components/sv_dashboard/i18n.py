@@ -15,6 +15,7 @@ from homeassistant.core import HomeAssistant
 
 _MESSAGES: dict[str, dict[str, str]] = {
     "de": {
+        "departure_wakeup": "Wake-up für geplante Abfahrt angefordert",
         "departure_reminder_title": "Ladehinweis für morgen",
         "departure_reminder_message": "Abfahrt {departure}, geplanter Klimastart {start}. Zuletzt gemeldeter SoC {soc} %, Profilminimum {minimum} %. Bitte prüfen, ob über Nacht ausreichend geladen wird; Vorklimatisierung könnte sonst ausfallen.",
         "manual_wakeup": "Manueller Wake-up angefordert",
@@ -49,6 +50,7 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "unknown": "Unbekannt",
     },
     "en": {
+        "departure_wakeup": "Wake-up requested for scheduled departure",
         "departure_reminder_title": "Charging reminder for tomorrow",
         "departure_reminder_message": "Departure {departure}, planned climate start {start}. Last reported SoC {soc}%, profile minimum {minimum}%. Check overnight charging; preconditioning may otherwise be unavailable.",
         "manual_wakeup": "Manual wake-up requested",
@@ -83,6 +85,7 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "unknown": "Unknown",
     },
     "fr": {
+        "departure_wakeup": "Réveil demandé pour le départ planifié",
         "departure_reminder_title": "Rappel de recharge pour demain",
         "departure_reminder_message": "Départ {departure}, climatisation prévue {start}. Dernier SoC signalé {soc} %, minimum du profil {minimum} %. Vérifiez la recharge de nuit ; le préconditionnement pourrait sinon être indisponible.",
         "manual_wakeup": "Réveil manuel demandé",
@@ -117,6 +120,7 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "unknown": "Inconnu",
     },
     "it": {
+        "departure_wakeup": "Risveglio richiesto per la partenza programmata",
         "departure_reminder_title": "Promemoria ricarica per domani",
         "departure_reminder_message": "Partenza {departure}, clima previsto {start}. Ultimo SoC segnalato {soc}%, minimo profilo {minimum}%. Verificare la ricarica notturna; il precondizionamento potrebbe non essere disponibile.",
         "manual_wakeup": "Riattivazione manuale richiesta",
@@ -151,6 +155,7 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "unknown": "Sconosciuto",
     },
     "es": {
+        "departure_wakeup": "Activación solicitada para la salida programada",
         "departure_reminder_title": "Recordatorio de carga para mañana",
         "departure_reminder_message": "Salida {departure}, climatización prevista {start}. Último SoC comunicado {soc} %, mínimo del perfil {minimum} %. Comprueba la carga nocturna; el preacondicionamiento podría no estar disponible.",
         "manual_wakeup": "Activación manual solicitada",
@@ -185,6 +190,7 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "unknown": "Desconocido",
     },
     "pt": {
+        "departure_wakeup": "Ativação solicitada para a partida programada",
         "departure_reminder_title": "Lembrete de carregamento para amanhã",
         "departure_reminder_message": "Partida {departure}, climatização prevista {start}. Último SoC comunicado {soc}%, mínimo do perfil {minimum}%. Verifique o carregamento noturno; o pré-condicionamento pode não estar disponível.",
         "manual_wakeup": "Ativação manual solicitada",
@@ -219,6 +225,7 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "unknown": "Desconhecido",
     },
     "nl": {
+        "departure_wakeup": "Wake-up aangevraagd voor geplande vertrektijd",
         "departure_reminder_title": "Laadherinnering voor morgen",
         "departure_reminder_message": "Vertrek {departure}, geplande klimaatstart {start}. Laatst gemelde SoC {soc}%, profielminimum {minimum}%. Controleer het laden vannacht; voorverwarming kan anders niet beschikbaar zijn.",
         "manual_wakeup": "Handmatige wake-up aangevraagd",
@@ -253,6 +260,7 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "unknown": "Onbekend",
     },
     "da": {
+        "departure_wakeup": "Wake-up anmodet til planlagt afgang",
         "departure_reminder_title": "Ladepåmindelse til i morgen",
         "departure_reminder_message": "Afgang {departure}, planlagt klimastart {start}. Sidst rapporteret SoC {soc}%, profilminimum {minimum}%. Kontrollér opladning i nat; forvarmning kan ellers være utilgængelig.",
         "manual_wakeup": "Manuel vækning anmodet",
@@ -287,6 +295,7 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "unknown": "Ukendt",
     },
     "nb": {
+        "departure_wakeup": "Wake-up forespurt for planlagt avreise",
         "departure_reminder_title": "Ladepåminnelse for i morgen",
         "departure_reminder_message": "Avreise {departure}, planlagt klimastart {start}. Sist rapportert SoC {soc}%, profilminimum {minimum}%. Sjekk lading i natt; forvarming kan ellers være utilgjengelig.",
         "manual_wakeup": "Manuell vekking forespurt",
@@ -321,6 +330,7 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "unknown": "Ukjent",
     },
     "sv": {
+        "departure_wakeup": "Wake-up begärd inför planerad avresa",
         "departure_reminder_title": "Laddpåminnelse för imorgon",
         "departure_reminder_message": "Avresa {departure}, planerad klimatstart {start}. Senast rapporterad SoC {soc}%, profilminimum {minimum}%. Kontrollera nattladdning; förkonditionering kan annars vara otillgänglig.",
         "manual_wakeup": "Manuell väckning begärd",
@@ -355,6 +365,7 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "unknown": "Okänd",
     },
     "fi": {
+        "departure_wakeup": "Herätys pyydetty suunniteltua lähtöä varten",
         "departure_reminder_title": "Latausmuistutus huomiselle",
         "departure_reminder_message": "Lähtö {departure}, suunniteltu ilmastoinnin aloitus {start}. Viimeksi ilmoitettu SoC {soc} %, profiilin minimi {minimum} %. Tarkista yölataus; esilämmitys ei ehkä muuten toimi.",
         "manual_wakeup": "Manuaalinen herätys pyydetty",
@@ -389,6 +400,7 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "unknown": "Tuntematon",
     },
     "pl": {
+        "departure_wakeup": "Wybudzenie żądane przed planowanym odjazdem",
         "departure_reminder_title": "Przypomnienie o ładowaniu na jutro",
         "departure_reminder_message": "Wyjazd {departure}, planowana klimatyzacja {start}. Ostatni zgłoszony SoC {soc}%, minimum profilu {minimum}%. Sprawdź nocne ładowanie; przygotowanie auta może być niedostępne.",
         "manual_wakeup": "Zażądano ręcznego wybudzenia",
@@ -423,6 +435,7 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "unknown": "Nieznane",
     },
     "cs": {
+        "departure_wakeup": "Probuzení vyžádáno před plánovaným odjezdem",
         "departure_reminder_title": "Připomínka nabíjení na zítra",
         "departure_reminder_message": "Odjezd {departure}, plánovaný start klimatizace {start}. Poslední hlášený SoC {soc} %, minimum profilu {minimum} %. Zkontrolujte noční nabíjení; předehřev jinak nemusí fungovat.",
         "manual_wakeup": "Požadováno ruční probuzení",
@@ -457,6 +470,7 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "unknown": "Neznámé",
     },
     "sk": {
+        "departure_wakeup": "Prebudenie vyžiadané pred plánovaným odchodom",
         "departure_reminder_title": "Pripomienka nabíjania na zajtra",
         "departure_reminder_message": "Odchod {departure}, plánovaný štart klimatizácie {start}. Posledný hlásený SoC {soc} %, minimum profilu {minimum} %. Skontrolujte nočné nabíjanie; predohrev inak nemusí fungovať.",
         "manual_wakeup": "Požadované ručné prebudenie",
@@ -491,6 +505,7 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "unknown": "Neznáme",
     },
     "hu": {
+        "departure_wakeup": "Ébresztés kérve a tervezett induláshoz",
         "departure_reminder_title": "Töltési emlékeztető holnapra",
         "departure_reminder_message": "Indulás {departure}, tervezett klímaindítás {start}. Utolsó jelentett SoC {soc}%, profilminimum {minimum}%. Ellenőrizze az éjszakai töltést; az előkondicionálás különben elmaradhat.",
         "manual_wakeup": "Kézi ébresztés kérve",
@@ -525,6 +540,7 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "unknown": "Ismeretlen",
     },
     "ro": {
+        "departure_wakeup": "Trezire solicitată pentru plecarea planificată",
         "departure_reminder_title": "Memento de încărcare pentru mâine",
         "departure_reminder_message": "Plecare {departure}, climatizare planificată {start}. Ultimul SoC raportat {soc}%, minim profil {minimum}%. Verificați încărcarea nocturnă; precondiționarea ar putea fi indisponibilă.",
         "manual_wakeup": "Trezire manuală solicitată",
@@ -559,6 +575,7 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "unknown": "Necunoscut",
     },
     "sl": {
+        "departure_wakeup": "Prebujanje zahtevano za načrtovani odhod",
         "departure_reminder_title": "Opomnik za polnjenje za jutri",
         "departure_reminder_message": "Odhod {departure}, načrtovani začetek klimatizacije {start}. Zadnji sporočeni SoC {soc}%, minimum profila {minimum}%. Preverite nočno polnjenje; predgretje sicer morda ne bo na voljo.",
         "manual_wakeup": "Zahtevano ročno prebujanje",
@@ -593,6 +610,7 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "unknown": "Neznano",
     },
     "hr": {
+        "departure_wakeup": "Buđenje zatraženo za planirani polazak",
         "departure_reminder_title": "Podsjetnik za punjenje sutra",
         "departure_reminder_message": "Polazak {departure}, planirani početak klimatizacije {start}. Posljednji prijavljeni SoC {soc}%, minimum profila {minimum}%. Provjerite noćno punjenje; predgrijavanje inače možda neće biti dostupno.",
         "manual_wakeup": "Zatraženo ručno buđenje",

@@ -15,7 +15,7 @@ _LOGGER = logging.getLogger(__name__)
 from homeassistant.util import dt as dt_util
 
 from .const import CONF_VEHICLE_SLUG, DOMAIN
-from .departure_plan import edit_profiles, normalize_profile, preview, normalize_reminder, reminder_candidate, due_occurrences, climate_gate, climate_state, quick_defaults, add_quick_profile
+from .departure_plan import edit_profiles, normalize_profile, preview, normalize_reminder, reminder_candidate, due_occurrences, climate_gate, climate_state, quick_defaults, add_quick_profile, execution_candidates, fresh_heartbeat
 
 
 class DeparturePlanning:
@@ -31,6 +31,7 @@ class DeparturePlanning:
         self._task = None
         self.execution_enabled_at = None
         self.ledger = {}
+        self.preparation = {}
 
     async def async_initialize(self):
         data = await self.store.async_load()
@@ -44,7 +45,8 @@ class DeparturePlanning:
             self.last_reminder = data.get("last_reminder")
             self.execution_enabled_at = dt_util.parse_datetime(data.get("execution_enabled_at") or "")
             self.ledger = data.get("ledger", {})
-            if not isinstance(self.ledger, dict):
+            self.preparation = data.get("preparation", {})
+            if not isinstance(self.ledger, dict) or not isinstance(self.preparation, dict):
                 raise ValueError("invalid_store")
 
     def async_start(self, notifications, coordinator):
@@ -69,7 +71,7 @@ class DeparturePlanning:
         await self.store.async_save({"revision": revision, "profiles": rows,
                                      "reminder": reminder, "last_reminder": last_reminder,
                                      "execution_enabled_at": self.execution_enabled_at.isoformat() if self.execution_enabled_at else None,
-                                     "ledger": self.ledger})
+                                     "ledger": self.ledger, "preparation": self.preparation})
 
     async def _async_tick(self):
         try:
@@ -101,8 +103,16 @@ class DeparturePlanning:
             old = dict(self.ledger)
             self.ledger = {key: value for key, value in old.items()
                            if (dt_util.parse_datetime(value.get("at", "")) or now) >= cutoff}
-            for row in due_occurrences(self.profiles, now, self.hass.config.time_zone,
-                                       self.execution_enabled_at, self.ledger):
+            self.preparation = {key: value for key, value in self.preparation.items()
+                                if (dt_util.parse_datetime(value.get("at", "")) or now) >= cutoff}
+            for row in execution_candidates(self.profiles, now, self.hass.config.time_zone,
+                                            self.execution_enabled_at, self.ledger, self.preparation):
+                # Recompute after awaited work on a prior occurrence.
+                now = dt_util.utcnow()
+                if now >= datetime.fromisoformat(row["departure"]):
+                    continue
+                if row["phase"] != "prepare" and now >= datetime.fromisoformat(row["deadline"]):
+                    row["phase"] = "missed"
                 profile = next(p for p in self.profiles if p["id"] == row["profile_id"])
                 button = self._state("preconditioning_start", "button")
                 climate = self._state("preconditioning")
@@ -115,11 +125,39 @@ class DeparturePlanning:
                     unit = temp.attributes.get("unit_of_measurement")
                     temperature = (temperature - 32) * 5 / 9 if unit == "°F" else temperature if unit == "°C" else None
                 heartbeat, source = self.notifications._heartbeat()
-                fresh = (heartbeat is not None and source == "upstream_payload_timestamp"
-                         and timedelta(0) <= now - heartbeat <= timedelta(minutes=15))
+                fresh = fresh_heartbeat(now, heartbeat, source)
+                key = row["key"]
+                if row["phase"] == "prepare" or (row["phase"] == "due" and not fresh):
+                    if not fresh and key not in self.preparation:
+                        wake = self._state("wakeup", "button")
+                        # Claim the preparation before sending, including failures.
+                        item = {"at": now.isoformat(), "status": "claimed",
+                                "heartbeat": heartbeat.isoformat() if heartbeat else None,
+                                "heartbeat_source": source}
+                        self.preparation[key] = item
+                        try:
+                            await self._persist(self.profiles, self.revision, self.reminder, self.last_reminder)
+                        except Exception:
+                            self.preparation.pop(key, None)
+                            raise
+                        if getattr(engine, "state", None) == "on":
+                            item["status"] = "engine"
+                        elif wake is None or wake.state == "unavailable":
+                            item["status"] = "unavailable"
+                        else:
+                            try:
+                                item["status"] = await asyncio.wait_for(
+                                    self.notifications.async_departure_wakeup(), timeout=30)
+                            except Exception:
+                                item["status"] = "failed"
+                        await self._persist(self.profiles, self.revision, self.reminder, self.last_reminder)
+                    # No climate command before start, or on an unrefreshed sample.
+                    continue
                 status = climate_gate(profile, self._numeric(battery), getattr(engine, "state", None),
                     getattr(plug, "state", None), temperature, climate_state(getattr(climate, "state", None)),
                     button is not None and button.state != "unavailable", fresh)
+                if row["phase"] == "missed":
+                    status = "stale" if key in self.preparation and not fresh else "missed"
                 # No second command within 45 minutes, even if profiles overlap.
                 recent = any(value.get("status") in ("claimed", "submitted", "confirmed", "unconfirmed", "failed")
                     and timedelta(0) <= now - (dt_util.parse_datetime(value.get("at", "")) or cutoff) < timedelta(minutes=45)
@@ -127,7 +165,11 @@ class DeparturePlanning:
                 if status == "ready" and recent:
                     status = "overlap"
                 item = {"at": now.isoformat(), "name": row["name"], "departure": row["departure"],
-                        "status": "claimed" if status == "ready" else status}
+                        "status": "claimed" if status == "ready" else status,
+                        "heartbeat": heartbeat.isoformat() if heartbeat else None,
+                        "heartbeat_source": source,
+                        "heartbeat_age_seconds": round((now - heartbeat).total_seconds()) if heartbeat and heartbeat.tzinfo else None,
+                        "preparation": self.preparation.get(key)}
                 self.ledger[row["key"]] = item
                 try:
                     await self._persist(self.profiles, self.revision, self.reminder, self.last_reminder)
@@ -138,9 +180,12 @@ class DeparturePlanning:
                     continue
                 # Durable claim precedes the only service call; no blind retry.
                 try:
-                    await asyncio.wait_for(self.hass.services.async_call(
-                        "button", "press", {"entity_id": button.entity_id}, blocking=True), timeout=30)
-                    item["status"] = "submitted"
+                    if dt_util.utcnow() >= datetime.fromisoformat(row["deadline"]):
+                        item["status"] = "missed"
+                    else:
+                        await asyncio.wait_for(self.hass.services.async_call(
+                            "button", "press", {"entity_id": button.entity_id}, blocking=True), timeout=30)
+                        item["status"] = "submitted"
                 except Exception:
                     item["status"] = "failed"
                 await self._persist(self.profiles, self.revision, self.reminder, self.last_reminder)
@@ -151,7 +196,7 @@ class DeparturePlanning:
                 if item.get("status") not in ("claimed", "submitted"):
                     continue
                 stamp = dt_util.parse_datetime(item["at"])
-                if climate and climate_state(climate.state) is True and climate.last_changed > stamp:
+                if climate and climate_state(climate.state) is True and climate.last_changed > stamp and climate.last_changed <= stamp + timedelta(minutes=3):
                     item["status"] = "confirmed"
                     changed = True
                 elif now - stamp >= timedelta(minutes=3):

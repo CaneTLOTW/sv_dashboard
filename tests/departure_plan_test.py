@@ -1,3 +1,4 @@
+from datetime import timedelta
 from datetime import UTC, datetime
 from pathlib import Path
 import importlib.util
@@ -86,3 +87,22 @@ for vals, current, expected in [({**q,"time":"15:50"},[], "quick_past"),(q,qr,"q
     except ValueError as exc: assert str(exc)==expected
     else: raise AssertionError(expected)
 print("Quick departure tests passed")
+
+
+# 16:00 CET reproduction: armed shortly before start, stale heartbeat.
+armed_late = datetime(2026,11,27,6,7,5,tzinfo=UTC)
+start = datetime(2026,11,27,6,10,tzinfo=UTC)
+k = m.execution_candidates([base],armed_late+timedelta(seconds=30),"Europe/Berlin",armed_late,{}, {})[0]["key"]
+assert m.execution_candidates([base],armed_late+timedelta(seconds=30),"Europe/Berlin",armed_late,{}, {})[0]["phase"]=="prepare"
+assert m.execution_candidates([base],start+timedelta(seconds=42),"Europe/Berlin",armed_late,{}, {})[0]["phase"]=="due"
+assert m.execution_candidates([base],start+timedelta(minutes=3),"Europe/Berlin",armed_late,{}, {k:{}})[0]["phase"]=="due"
+assert m.execution_candidates([base],start+timedelta(minutes=3),"Europe/Berlin",armed_late,{}, {})[0]["phase"]=="missed"
+assert m.execution_candidates([base],start+timedelta(minutes=5),"Europe/Berlin",armed_late,{}, {k:{}})[0]["phase"]=="missed"
+assert not m.execution_candidates([base],start+timedelta(minutes=20),"Europe/Berlin",armed_late,{}, {k:{}})
+assert not m.execution_candidates([base],start,"Europe/Berlin",None,{}, {})
+assert not m.execution_candidates([base,exception],start,"Europe/Berlin",armed_late,{}, {})
+assert not m.execution_candidates([base],start,"Europe/Berlin",armed_late,{k:{}},{})
+assert not m.fresh_heartbeat(start,start-timedelta(minutes=78),"upstream_payload_timestamp")
+assert not m.fresh_heartbeat(start,start,"ha_last_updated")
+assert m.fresh_heartbeat(start,start-timedelta(minutes=1),"upstream_payload_timestamp")
+print("Departure preparation windows passed")

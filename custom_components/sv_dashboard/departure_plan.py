@@ -239,3 +239,32 @@ def add_quick_profile(profiles, value, now, timezone_name):
            and p["time"] == profile["time"] for p in profiles):
         raise ValueError("quick_duplicate")
     return edit_profiles(profiles, "save", profile, None)
+
+
+def execution_candidates(profiles, now, timezone_name, enabled_at, ledger, preparation):
+    """Effective upcoming occurrences with bounded preparation and late-start window."""
+    now = now.astimezone(UTC)
+    if enabled_at is None:
+        return []
+    result = []
+    for row in preview(profiles, now, timezone_name, 2)["upcoming"]:
+        start = datetime.fromisoformat(row["start"])
+        departure = datetime.fromisoformat(row["departure"])
+        key = row["profile_id"] + "|" + row["departure"]
+        if start <= enabled_at or key in ledger or now >= departure or now < start - timedelta(minutes=10):
+            continue
+        deadline = min(start + timedelta(minutes=5), departure)
+        if now < start:
+            phase = "prepare"
+        elif now >= deadline or (now >= start + timedelta(minutes=2) and key not in preparation):
+            phase = "missed"
+        else:
+            phase = "due"
+        result.append({**row, "key": key, "phase": phase, "deadline": deadline.isoformat()})
+    return sorted(result, key=lambda row: (row["start"], row["departure"], row["profile_id"]))
+
+
+def fresh_heartbeat(now, stamp, source):
+    return bool(stamp is not None and stamp.tzinfo is not None and
+                source == "upstream_payload_timestamp" and
+                timedelta(0) <= now - stamp <= timedelta(minutes=15))

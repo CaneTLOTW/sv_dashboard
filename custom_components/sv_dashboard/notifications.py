@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
+import asyncio
 import logging
 from typing import Any
 
@@ -144,6 +145,7 @@ class VehicleNotificationManager:
             "wakeup_counter_date": None,
             "settings": dict(SETTING_DEFAULTS),
         }
+        self._wakeup_lock = asyncio.Lock()
         self._entities: list[Any] = []
         self._unsub: list[callable] = []
 
@@ -828,9 +830,22 @@ class VehicleNotificationManager:
         ):
             await self._async_wakeup(text(self.hass, "wakeup_hourly"))
 
+    async def async_departure_wakeup(self) -> str:
+        """Use the existing wake-up path with a shared cooldown and no blind retry."""
+        async with self._wakeup_lock:
+            last = self._parse_time(self.data.get("last_wakeup"))
+            if last and timedelta(0) <= dt_util.utcnow() - last < timedelta(minutes=10):
+                return "recent"
+            return "submitted" if await self._async_wakeup_locked(text(self.hass, "departure_wakeup")) else "failed"
+
     async def _async_wakeup(self, message: str) -> bool:
-        wakeup = self._entity("wakeup")
-        if not wakeup or self.hass.states.get(wakeup) is None:
+        async with self._wakeup_lock:
+            return await self._async_wakeup_locked(message)
+
+    async def _async_wakeup_locked(self, message: str) -> bool:
+        wakeup = self._entity("wakeup_button", "wakeup")
+        state = self.hass.states.get(wakeup) if wakeup else None
+        if not wakeup or not wakeup.startswith("button.") or state is None or state.state == "unavailable":
             return False
         try:
             await self.hass.services.async_call(

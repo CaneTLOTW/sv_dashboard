@@ -27,3 +27,6 @@ test("quick planner shifts the selected day time exactly 15 minutes without roll
 
 
 test("full profile editor offers time stepper, numeric slider buttons and optional target",()=>{const card=read("static/departure-planning-card.js");assert.match(card,/_shiftDraftTime\(-15\)/);assert.match(card,/_shiftDraftTime\(15\)/);assert.match(card,/_slider\(text\("MinSoc"\),"min_soc",0,100,"%"/);assert.match(card,/_slider\(label,"target_soc",1,100,"%",5\)/);assert.match(card,/e\.target\.checked\?80:null/);assert.match(card,/Math\.max\(min,value-delta\)/);assert.match(card,/Math\.min\(max,value\+delta\)/);assert.match(card,/scrollIntoView\(/);assert.match(card,/_openEditor\(p\)/);});
+
+
+test("scheduled stale preparation uses persisted claim and mapped wake path",()=>{const backend=read("departure_planning.py"),notifications=read("notifications.py");assert.match(backend,/self\.preparation\[key\] = item/);assert.match(backend,/self\.notifications\.async_departure_wakeup\(\)/);assert.match(backend,/fresh_heartbeat\(now, heartbeat, source\)/);assert.match(backend,/datetime\.fromisoformat\(row\["deadline"\]\)/);assert.match(notifications,/async with self\._wakeup_lock/);});

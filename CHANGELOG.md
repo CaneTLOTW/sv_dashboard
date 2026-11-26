@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.3-beta.11 — scheduled climate preparation
+
+- Prepare effective departures up to ten minutes before climate start. For stale upstream heartbeat, persist one wake-up attempt per occurrence and use the existing mapped wake-up path with a ten-minute recent-wake check. Re-evaluate source freshness until a bounded five-minute late-start deadline (never at/after departure); no duplicate climate commands and no bypass of existing profile gates. Record heartbeat age and preparation outcome. Failure push and per-field source freshness remain follow-up work.
+
 ## 0.7.3-beta.10 — full profile editor controls
 
 - Add the same ±15-minute time stepper to the full profile editor, and ±5-unit buttons around lead-time and minimum/desired SoC sliders. Desired SoC remains optional (unchecked = null; enabling starts at 80%); no charge commands. Scroll the opened editor into view. Preserve the selected date and exact existing values.
