@@ -173,3 +173,22 @@ async def check_cleanup():
     assert s.ledger[k]["status"]=="missed" and s.ledger[k]["preparation"]["status"]=="submitted"
 asyncio.run(check_cleanup())
 print("Cleanup persistence, history retention and rollback tests passed")
+
+# Source time must follow dispatch, even if HA observes a later ON transition.
+dispatch = datetime.fromisoformat("2026-11-26T16:00:30+00:00")
+observed = dispatch + timedelta(seconds=153)
+fresh = {"Zuletzt aktualisiert": "2026-11-26T16:02:00Z"}
+for attrs in (
+    {},
+    {"Zuletzt aktualisiert": "2026-11-26T15:54:37Z", "Last updated": fresh["Zuletzt aktualisiert"]},
+    {"Last updated": "2026-11-26T16:00:30Z"},
+    {"Last updated": "2026-11-26T16:02:00"},
+    {"Last updated": "2026-11-26T16:04:00Z"},
+):
+    assert not m.climate_source_confirms("on", attrs, observed, dispatch, observed)
+assert m.climate_source_confirms("on", fresh, observed, dispatch, observed)
+assert m.climate_source_confirms("on", {"Last updated": fresh["Zuletzt aktualisiert"]}, observed, dispatch, observed)
+assert not m.climate_source_confirms("off", fresh, observed, dispatch, observed)
+assert not m.climate_source_confirms("on", fresh, dispatch, dispatch, observed)
+assert not m.climate_source_confirms("on", fresh, dispatch + timedelta(minutes=4), dispatch, dispatch + timedelta(minutes=4))
+print("Climate source confirmation tests passed")
