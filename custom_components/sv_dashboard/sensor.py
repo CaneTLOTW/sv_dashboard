@@ -17,6 +17,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import (
     DOMAIN,
+    FRONTEND_VERSION,
     METRIC_CURRENT_CHARGE_POWER,
     METRIC_CURRENT_TRIP_CONSUMPTION,
     METRIC_CANONICAL_MILEAGE,
@@ -346,6 +347,7 @@ class SvDashboardStatusSensor(CoordinatorEntity, SensorEntity):
 
         return {
             "integration_domain": DOMAIN,
+            "installed_version": FRONTEND_VERSION,
             "entry_id": self._entry.entry_id,
             "vehicle_slug": self.coordinator.data["vehicle_slug"],
             "dashboard_url_path": self.coordinator.data.get("dashboard_url_path"),

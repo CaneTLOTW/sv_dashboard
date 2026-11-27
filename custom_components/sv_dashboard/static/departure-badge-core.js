@@ -13,8 +13,8 @@ export function plannedClimateLabel(plan, now, locale, strings, active, pending)
     const tomorrow = new Date(Date.parse(today+"T00:00:00Z")+86400000).toISOString().slice(0,10);
     const day = key(start) === today ? strings.departureQuickToday : key(start) === tomorrow ? strings.departureQuickTomorrow
       : new Intl.DateTimeFormat(locale,{timeZone,day:"numeric",month:"numeric"}).format(start);
-    const clock = new Intl.DateTimeFormat(locale,{timeZone,hour:"2-digit",minute:"2-digit"}).format(start);
-    const target = new Intl.DateTimeFormat(locale,{timeZone,hour:"2-digit",minute:"2-digit",day:"numeric",month:"short"}).format(departure);
+    const clock = new Intl.DateTimeFormat(locale,{timeZone,hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(start);
+    const target = new Intl.DateTimeFormat(locale,{timeZone,hour:"2-digit",minute:"2-digit",hourCycle:"h23",day:"numeric",month:"short"}).format(departure);
     const label = day+" "+clock;
     return {label,title:strings.departureStart+": "+label+" · "+strings.departureTime+": "+target};
   } catch (_) { return null; }

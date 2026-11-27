@@ -26,3 +26,5 @@ test("both heroes use shared planner summary; no direct schedule command",()=>{
   assert.match(read("departure_planning.py"),/departure_confirmation\(item/);
   assert.match(read("notifications.py"),/"departure_climate_result", SWITCH_ALERTS/);
 });
+
+test("planned badge uses a 24-hour clock even with en-US locale",()=>{const now=Date.parse("2026-11-27T09:00:00Z");assert.equal(plannedClimateLabel(plan,now,"en-US",strings,false,false).label,"Heute 12:10");});

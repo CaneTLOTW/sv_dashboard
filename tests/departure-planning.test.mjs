@@ -5,7 +5,7 @@ const read=p=>fs.readFileSync("custom_components/sv_dashboard/"+p,"utf8");
 test("departure planning stays in its own view and uses mapped climate dispatch only",()=>{
  const strategy=read("static/sv_dashboard.js"),frontend=read("static/frontend.js"),card=read("static/departure-planning-card.js"),backend=read("departure_planning.py");
  assert.match(strategy,/path: "departure", icon: "mdi:calendar-clock"/);
- assert.match(frontend,/import\("\.\/departure-planning-card\.js\?v=0\.7\.3-beta\.22"\)/);
+ assert.match(frontend,/import\("\.\/departure-planning-card\.js\?v=0\.7\.3-beta\.23"\)/);
  assert.match(card,/sv_dashboard\/departure_plans/);
  assert.match(backend,/connection\.user\.is_admin/);
  assert.match(backend,/revision_conflict/);
@@ -34,7 +34,7 @@ test("scheduled stale preparation uses persisted claim and mapped wake path",()=
 
 test("one-time cleanup runs independently of UI and preserves date exceptions",()=>{const backend=read("departure_planning.py");assert.match(backend,/await self\._async_cleanup_locked\(dt_util\.utcnow\(\)\)/);assert.match(backend,/await self\._async_cleanup_locked\(now\)/);assert.match(backend,/_held_only/);assert.match(backend,/revision = self\.revision \+ int\(rows != self\.profiles\)/);assert.match(backend,/"held_overrides": self\.held_overrides/);});
 
-test("wide departure planner uses one shared store and a compact lower settings disclosure",()=>{const strategy=read("static/sv_dashboard.js"),card=read("static/departure-planning-card.js");assert.match(strategy,/column_span:2,cards:\[\{type:"custom:sv-dashboard-departure-planning-card"/);assert.match(card,/@container \(min-width:650px\)/);assert.match(card,/<details class="settings"><summary>/);assert.ok(card.indexOf('<details class="settings">')>card.indexOf('text("QuickTitle")'));});
+test("wide departure planner uses one shared store and a compact lower settings disclosure",()=>{const strategy=read("static/sv_dashboard.js"),card=read("static/departure-planning-card.js");assert.match(strategy,/column_span:2,cards:\[\{type:"custom:sv-dashboard-departure-planning-card"/);assert.match(card,/@container \(min-width:650px\)/);assert.match(card,/<details class="settings"><summary>/);assert.ok(card.indexOf('<details class="settings">')>card.indexOf('class="plan-column management-column"'));assert.ok(card.indexOf('text("Calendar")')<card.indexOf('text("ExecutionLog")'));assert.ok(card.indexOf('text("ExecutionLog")')<card.indexOf('<details class="settings">'));});
 
 test("departure panels use two independent stacks and theme cards without a giant white shell",()=>{const card=read("static/departure-planning-card.js");assert.match(card,/ha-card\.shell\{background:transparent;border:0;box-shadow:none\}/);assert.match(card,/class="plan-column planning-column"/);assert.match(card,/class="plan-column management-column"/);assert.equal((card.match(/class="plan-column /g)||[]).length,2);assert.match(card,/\.plan-column\{min-width:0;display:flex;flex-direction:column;gap:12px\}/);assert.match(card,/class="panel profile-panel"/);assert.match(card,/\.hero,\.editor,\.panel,\.calendar,\.settings\{background:var\(--secondary-background-color\)/);assert.match(card,/\.section-heading::after/);assert.ok(card.indexOf('text("Configuration")')<card.indexOf('text("ReminderTitle")'));});
 
@@ -45,3 +45,5 @@ test("global climate reserve is configured once, outside profiles",()=>{const ca
 test("climate SOC history is passive, isolated and estimated",()=>{const card=read("static/departure-planning-card.js"),backend=read("departure_planning.py"),pure=read("departure_plan.py");assert.match(card,/row\.climate_soc\?this\._climateSoc/);assert.match(backend,/self\._soc_observed = set\(\)/);assert.match(backend,/self\._soc_observed\.clear\(\)/);assert.match(backend,/key in self\._soc_observed and self\._soc_guards_clean\(\)/);assert.match(pure,/"loss_pp": round\(before - after, 3\)/);});
 
 test("one redundant climate start is claimed before service and rechecks cancellation",()=>{const backend=read("departure_planning.py"),pure=read("departure_plan.py");assert.match(pure,/def departure_retry_due/);assert.match(backend,/item\["retry"\] = \{"at": now\.isoformat\(\), "status": "claimed"\}/);assert.match(backend,/self\._retry_observed\.clear\(\)/);assert.match(backend,/\(stop\.state, stop\.last_changed\) != observed/);assert.match(backend,/profile != item\.get\("profile_snapshot"\)/);});
+
+test("installed version shown in help from backend status",()=>{assert.match(read("sensor.py"),/"installed_version": FRONTEND_VERSION/);assert.match(read("static/sv_dashboard.js"),/attributes\.installed_version/);});

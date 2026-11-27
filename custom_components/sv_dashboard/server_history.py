@@ -49,6 +49,7 @@ from .history_reconcile import (
     AUTO_RECONCILE_DELAYS_SECONDS,
     completion_key,
     completion_represented,
+    merge_server_trip_archive,
 )
 from .server_history_transport import (
     HistoricalTripsTransportUnavailable,
@@ -1372,13 +1373,11 @@ class ServerHistoryManager:
                 item for item in result.get("trips", [])
                 if isinstance(item, dict) and item.get("id")
             ]
-            raw_by_id = {} if _force_full else {
-                item.get("id"): item
-                for item in self.data.get("server_trips_raw", [])
-                if isinstance(item, dict) and item.get("id")
-            }
-            raw_by_id.update({item["id"]: item for item in incoming})
-            self.data["server_trips_raw"] = sorted(raw_by_id.values(), key=_trip_sort_key)
+            # Full sync means all available pages, not deletion of local history.
+            self.data["server_trips_raw"] = sorted(
+                merge_server_trip_archive(self.data.get("server_trips_raw", []), incoming),
+                key=_trip_sort_key,
+            )
             self._rebuild_canonical()
             try:
                 await self._async_monthly_statistics()

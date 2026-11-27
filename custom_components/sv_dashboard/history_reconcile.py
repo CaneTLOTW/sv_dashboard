@@ -134,3 +134,12 @@ def completion_represented(
         for candidate in rows
         if isinstance(candidate, dict)
     )
+
+
+def merge_server_trip_archive(existing, incoming):
+    """Absence from an upstream response is not evidence of local deletion."""
+    by_id = {}
+    for row in [*existing, *incoming]:
+        if isinstance(row, dict) and row.get("id"):
+            by_id[str(row["id"])] = row
+    return list(by_id.values())

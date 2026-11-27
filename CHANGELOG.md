@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.3-beta.23 — compact planner polish and history preservation
+
+- Match planned A/C pill height to the other Hero badges; keep idle/active round button unchanged. Move configuration to the end of the management column after preview and execution history on desktop and mobile. Show installed backend version in Help and explicitly use a 24-hour clock in the planned badge.
+- Full server-trip sync now merges all returned pages into local history by stable trip ID instead of deleting locally archived IDs absent from the upstream response. No restore or data migration; existing same-ID update behavior retained. Detailed Recorder GPS route retention remains a separate audit/recovery task.
+
 ## 0.7.3-beta.22 — bounded redundant climate start
 
 - At most one retry for the same unconfirmed automatic occurrence, from five minutes after initial dispatch within the original ten-minute confirmation window. Requires unchanged enabled profile/authorization, a known OFF climate state and existing dispatch gates, plus continuous local observation of climate and the mapped stop button. No retry after observed activity, local stop, restart or claim; claim is durable and result notification remains single. A late confirmation can belong to either attempt. Unknown upstream idempotency remains a limitation; the retry may extend conditioning. No new polling.

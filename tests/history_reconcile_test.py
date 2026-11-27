@@ -76,3 +76,11 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+# Full sync may return a shorter server retention window or even no rows.
+old_trip = {"id": "august", "startedAt": "2026-08-08T08:00:00Z", "startPosition": {"latitude": 1, "longitude": 2}}
+recent_trip = {"id": "november", "startedAt": "2026-11-27T12:00:00Z"}
+assert history.merge_server_trip_archive([old_trip, recent_trip], []) == [old_trip, recent_trip]
+assert history.merge_server_trip_archive([old_trip, recent_trip], [{**recent_trip, "updatedAt": "2026-11-27T13:00:00Z"}]) == [old_trip, {**recent_trip, "updatedAt": "2026-11-27T13:00:00Z"}]
+assert history.merge_server_trip_archive([old_trip], [recent_trip]) == [old_trip, recent_trip]
+assert history.merge_server_trip_archive([old_trip], [None, {}]) == [old_trip]

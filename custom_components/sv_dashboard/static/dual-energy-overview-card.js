@@ -1,7 +1,7 @@
 import { LitElement, html, css, nothing } from "./vendor-lit.js?v=0.6.0-beta.7";
-import { localeFor, textFor } from "./i18n.js?v=0.7.3-beta.22";
-import { climatePresentation } from "./climate-presentation-core.js?v=0.7.3-beta.22";
-import { plannedClimateLabel } from "./departure-badge-core.js?v=0.7.3-beta.22";
+import { localeFor, textFor } from "./i18n.js?v=0.7.3-beta.23";
+import { climatePresentation } from "./climate-presentation-core.js?v=0.7.3-beta.23";
+import { plannedClimateLabel } from "./departure-badge-core.js?v=0.7.3-beta.23";
 
 const STATUS_DOMAIN = "sv_dashboard";
 const CARD_TAG = "sv-dashboard-dual-energy-overview-card";
@@ -83,9 +83,9 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
       display: grid; place-items: center; padding: 0; cursor: pointer; box-shadow: 0 2px 9px rgba(0,0,0,.10);
     }
     .climate-composite {left:18px;display:inline-flex;align-items:center;border-radius:24px;max-width:calc(100% - 175px);color:var(--primary-text-color);white-space:nowrap;overflow:hidden;}
-    .climate-composite.planned {background:color-mix(in srgb,var(--card-background-color) 92%,transparent);border:1px solid var(--divider-color);}
+    .climate-composite.planned {box-sizing:border-box;height:36px;border-radius:18px;background:color-mix(in srgb,var(--card-background-color) 92%,transparent);border:1px solid var(--divider-color);}
     .climate-composite .climate-control {position:static;flex:0 0 auto;}
-    .climate-composite.planned .climate-control {background:transparent;border:0;box-shadow:none;}
+    .climate-composite.planned .climate-control {width:34px;height:34px;background:transparent;border:0;box-shadow:none;}
     .climate-plan-label {font-size:12px;font-weight:600;border-left:1px solid var(--divider-color);padding:0 9px 0 7px;overflow:hidden;text-overflow:ellipsis;}
     .climate-control ha-icon { --mdc-icon-size: 24px; color: var(--secondary-text-color); }
     .climate-control.active { background: color-mix(in srgb, var(--climate-color, var(--secondary-text-color)) 13%, var(--card-background-color)); border-color: color-mix(in srgb, var(--climate-color, var(--secondary-text-color)) 32%, var(--divider-color)); }
@@ -148,7 +148,9 @@ class SvDashboardDualEnergyOverviewCard extends LitElement {
       .picture img { width: min(108%, 640px); max-height: 270px; transform: translateX(14px) scale(1.65); }
       .top-control { top: 12px; }
       .climate-control { left: 12px; width: 44px; height: 44px; }
-      .climate-composite {left:12px;max-width:calc(100% - 155px);}
+       .climate-composite {left:12px;max-width:calc(100% - 155px);}
+      .climate-composite.planned {height:34px;border-radius:17px;}
+      .climate-composite.planned .climate-control {width:32px;height:32px;}
       .temperature-badge { right: 12px; min-height: 34px; padding: 0 10px; }
       .temperature-badge.with-info { right: 58px; }
       .info-control { right: 12px; width: 34px; height: 34px; }

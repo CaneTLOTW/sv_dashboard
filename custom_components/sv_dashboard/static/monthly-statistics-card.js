@@ -1,6 +1,6 @@
 import { LitElement, html, css, nothing } from "./vendor-lit.js?v=0.6.0-beta.7";
-import { localeFor, textFor } from "./i18n.js?v=0.7.3-beta.22";
-import { finite, monthSeries, chartGeometry } from "./monthly-statistics-core.js?v=0.7.3-beta.22";
+import { localeFor, textFor } from "./i18n.js?v=0.7.3-beta.23";
+import { finite, monthSeries, chartGeometry } from "./monthly-statistics-core.js?v=0.7.3-beta.23";
 
 const TAG = "sv-dashboard-monthly-statistics-card";
 const SOURCE = "https://www.frontera-forum.de/forum/thread/292-verr%C3%BCckte-hypothese-der-44kwh-akku-hat-eine-undokumentierte-akkuheizung/";
