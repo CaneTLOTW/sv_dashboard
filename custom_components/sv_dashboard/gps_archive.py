@@ -25,6 +25,7 @@ class GpsArchive:
         self.points = []
         self.pending = []
         self.cursor = None
+        self.last_attempt = None
         self.lock = asyncio.Lock()
         self.unsubscribers = []
         self.task = None
@@ -60,7 +61,8 @@ class GpsArchive:
             async with self.lock:
                 now = dt_util.utcnow()
                 # Seed all retained Recorder points, then repeat hourly with overlap.
-                if self.cursor is None or now - self.cursor >= timedelta(hours=1):
+                if (self.last_attempt is None or now - self.last_attempt >= timedelta(hours=1)) and (self.cursor is None or now - self.cursor >= timedelta(hours=1)):
+                    self.last_attempt = now
                     start = max(now - timedelta(days=90, minutes=15), self.cursor - timedelta(minutes=10)) if self.cursor else now - timedelta(days=90, minutes=15)
                     try:
                         result = await get_instance(self.hass).async_add_executor_job(
@@ -71,7 +73,9 @@ class GpsArchive:
                             sample = position_sample(state)
                             if sample and start <= dt_util.parse_datetime(sample["at"]) <= now:
                                 self.pending.append(sample)
-                        await self._save(now)
+                        # An empty initial response does not prove historical coverage.
+                        if self.cursor is not None or result.get(self.tracker):
+                            await self._save(now)
                     except Exception:
                         _LOGGER.exception("SV GPS Recorder archive import failed; will retry")
                 await self._save(self.cursor)

@@ -1289,7 +1289,7 @@ class ServerHistoryManager:
         if archived is None:
             archived = empty_trip_archive()
         current = self.data.get("server_trips_raw", [])
-        merged = merge_trip_versions(archived, current, prefer_incoming=False)
+        merged = merge_trip_versions(archived, current, prefer_incoming=archived.get("recovery_pending") is True)
         if archived != merged:
             await self._trip_archive_store.async_save(merged)
         self._trip_archive = merged

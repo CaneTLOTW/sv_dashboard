@@ -44,6 +44,8 @@ def main():
         raise ValueError("current row conflict; stop")
     if hashlib.sha256(args.current.read_bytes()).hexdigest() != current_hash:
         raise ValueError("current input changed; stop")
+    # During first hydration, any current rows updated since staging take precedence.
+    merged["recovery_pending"] = True
     result = {"version": 1, "minor_version": 1, "key": key.removesuffix("_server_history") + "_trip_archive", "data": merged}
     # Exclusive output: never overwrite a source or an existing archive.
     with args.output.open("x", encoding="utf-8") as stream:

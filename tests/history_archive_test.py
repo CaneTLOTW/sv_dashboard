@@ -44,6 +44,11 @@ with tempfile.TemporaryDirectory() as directory:
     assert result["key"]=="sv_dashboard_test_trip_archive"
     assert {r["id"]:r for r in m.archive_rows(result["data"])}=={"old":old,"new":new}
     assert len(result["data"]["versions"])==3
+    assert result["data"]["recovery_pending"] is True
+    newer={**new,"updatedAt":"2026-11-28T08:00:00Z"}
+    hydrated=m.merge_trip_versions(result["data"],[newer],prefer_incoming=result["data"]["recovery_pending"])
+    assert "recovery_pending" not in hydrated and m.digest(new) in hydrated["versions"]
+    assert {r["id"]:r for r in m.archive_rows(hydrated)}["new"]==newer
     assert current.read_bytes()==original
     assert subprocess.run(cmd,capture_output=True).returncode!=0
     backup.write_text(json.dumps(store([old],"sv_dashboard_other_server_history")))
