@@ -317,3 +317,30 @@ async def check_retry():
     assert calls==[] and "retry" not in current
 asyncio.run(check_retry())
 print("Bounded climate retry tests passed")
+
+# Exercise real retry guard and cancellation, not just the claim wrapper.
+guard_methods=[n for n in manager.body if isinstance(n,ast.FunctionDef) and n.name in ("_retry_button","_retry_state_changed")]
+guard_ns={"callback":lambda f:f,"datetime":datetime,"preview":m.preview,"climate_gate":m.climate_gate,"climate_state":m.climate_state,"fresh_heartbeat":m.fresh_heartbeat}
+exec(compile(ast.Module(body=guard_methods,type_ignores=[]),"<retry-guard-test>","exec"),guard_ns)
+retry_now=stamp+timedelta(minutes=5)
+profile=m.normalize_profile({"name":"Retry","kind":"once","date":"2026-11-27","time":"07:30"},"retry")
+key="retry|"+(stamp+timedelta(minutes=20)).isoformat()
+current={**item,"profile_snapshot":profile}
+def state(entity_id,value,changed=stamp-timedelta(minutes=1)):
+    return SimpleNamespace(entity_id=entity_id,state=value,last_changed=changed,attributes={})
+states={"preconditioning":state("binary_sensor.climate","off"),"preconditioning_stop":state("button.stop","unknown"),"preconditioning_start":state("button.start","unknown"),"engine":state("binary_sensor.engine","off"),"battery":state("sensor.battery","85"),"battery_plugged":state("binary_sensor.plug","off")}
+s=SimpleNamespace(_retry_observed={key:("unknown",states["preconditioning_stop"].last_changed)},_retry_watch=("binary_sensor.climate","button.stop"),execution_enabled_at=stamp-timedelta(hours=1),profiles=[profile],hass=SimpleNamespace(config=SimpleNamespace(time_zone=tz)),_effective_profiles=lambda:[profile],_state=lambda k,*args:states.get(k),_numeric=lambda v:float(v.state) if v else None,notifications=SimpleNamespace(_heartbeat=lambda:(retry_now,"upstream_payload_timestamp")),climate_min_soc=20)
+guard=lambda:guard_ns["_retry_button"](s,key,current,retry_now)
+assert guard() is states["preconditioning_start"]
+states["battery"].state="19";assert guard() is None;states["battery"].state="85"
+states["engine"].state="on";assert guard() is None;states["engine"].state="off"
+states["preconditioning"].state="on";assert guard() is None;states["preconditioning"].state="off"
+states["preconditioning_stop"].state="2026-11-27T06:13:00Z";assert guard() is None;states["preconditioning_stop"].state="unknown"
+s.execution_enabled_at=None;assert guard() is None;s.execution_enabled_at=stamp-timedelta(hours=1)
+s.profiles=[];assert guard() is None;s.profiles=[profile]
+guard_ns["_retry_state_changed"](s,SimpleNamespace(data={"entity_id":"binary_sensor.climate","new_state":state("binary_sensor.climate","on"),"old_state":states["preconditioning"]}))
+assert guard() is None
+s._retry_observed[key]=("unknown",states["preconditioning_stop"].last_changed)
+guard_ns["_retry_state_changed"](s,SimpleNamespace(data={"entity_id":"button.stop","new_state":state("button.stop","2026-11-27T06:13:00Z"),"old_state":states["preconditioning_stop"]}))
+assert guard() is None
+print("Retry guard, manual cancellation and active observation tests passed")

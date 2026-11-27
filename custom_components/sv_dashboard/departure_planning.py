@@ -72,10 +72,10 @@ class DeparturePlanning:
         watched = [mapping[k] for k in ("engine", "battery_plugged", "battery_charging") if mapping.get(k)]
         if watched:
             self._soc_unsubscribe = async_track_state_change_event(self.hass, watched, self._soc_guard_changed)
-        climate = self._state("preconditioning")
-        stop = self._state("preconditioning_stop", "button")
-        if climate is not None and stop is not None:
-            self._retry_watch = (climate.entity_id, stop.entity_id)
+        climate_id = mapping.get("preconditioning")
+        stop_id = mapping.get("preconditioning_stop_button") or mapping.get("preconditioning_stop")
+        if climate_id and stop_id and stop_id.startswith("button."):
+            self._retry_watch = (climate_id, stop_id)
             self._retry_unsubscribe = async_track_state_change_event(self.hass, list(self._retry_watch), self._retry_state_changed)
 
     @callback
