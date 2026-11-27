@@ -35,6 +35,7 @@ from .entity_identity import (
 from .fuel_history import FuelHistoryManager, async_register_fuel_history_websocket
 from .notifications import VehicleNotificationManager
 from .server_history import ServerHistoryManager
+from .gps_archive import GpsArchive
 from .vehicle_audit import async_register_vehicle_audit_websocket
 from .vehicle_diagnostics import async_register_vehicle_diagnostics_websocket
 from .departure_planning import DeparturePlanning, async_register_departure_planning_websocket
@@ -216,6 +217,12 @@ async def async_setup_entry(
 
     hass.data[DOMAIN][entry.entry_id] = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    coordinator.gps_archive = GpsArchive(hass, entry, coordinator)
+    metrics.gps_archive = coordinator.gps_archive
+    try:
+        await coordinator.gps_archive.async_start()
+    except Exception:
+        _LOGGER.exception("Could not load SV GPS archive; existing store retained")
 
     await notifications.async_refresh_entities()
 
@@ -239,6 +246,8 @@ async def async_unload_entry(
         coordinator = hass.data[DOMAIN][entry.entry_id]
         if coordinator.server_history is not None:
             coordinator.server_history.async_cancel_background_tasks()
+        if getattr(coordinator, "gps_archive", None) is not None:
+            await coordinator.gps_archive.async_shutdown()
         await coordinator.fuel_history.async_shutdown()
         if coordinator.departure_planning is not None:
             await coordinator.departure_planning.async_shutdown()

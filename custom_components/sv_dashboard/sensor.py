@@ -497,7 +497,7 @@ class SvServerGpsHistorySensor(SvMetricSensor):
     @property
     def native_value(self):
         history, status = _ready_server_history(self.metrics)
-        trips = history.data.get("canonical_trips", []) if status["server_history_ready"] else []
+        trips = history.data.get("canonical_trips", []) if history else []
         return sum(
             1
             for trip in trips
@@ -508,12 +508,16 @@ class SvServerGpsHistorySensor(SvMetricSensor):
     def extra_state_attributes(self):
         data = super().extra_state_attributes
         history, status = _ready_server_history(self.metrics)
-        trips = history.data.get("canonical_trips", []) if status["server_history_ready"] else []
+        trips = history.data.get("canonical_trips", []) if history else []
         geojson = _trip_position_geojson(trips)
+        archive = getattr(self.metrics, "gps_archive", None)
+        archive_geojson = archive.geojson() if archive and archive.loaded else {"type": "FeatureCollection", "features": []}
         data.update(
             {
                 "geojson": geojson,
-                "source": status["server_history_source"],
+                "archive_geojson": archive_geojson,
+                "archived_point_count": len(archive_geojson["features"]),
+                "source": status["server_history_source"] if status["server_history_ready"] else "local_archive",
                 "route_detail": "start_stop_only",
                 "trip_count": self.native_value,
                 "feature_count": len(geojson["features"]),

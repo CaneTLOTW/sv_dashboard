@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.3-beta.24 — independent history archives
+
+- Separate per-vehicle raw trip archive retains IDs and distinct payload revisions; hydrate the derived history from it, including recovered historical rows. Offline non-overwriting recovery staging utility. Separate GPS point archive seeds retained Recorder observations and captures local tracker events, with hourly Recorder catch-up and no automatic pruning. Map shows observed points separately from approximate trip endpoints. No new vehicle requests or fabricated routes.
+
 ## 0.7.3-beta.23 — compact planner polish and history preservation
 
 - Match planned A/C pill height to the other Hero badges; keep idle/active round button unchanged. Move configuration to the end of the management column after preview and execution history on desktop and mobile. Show installed backend version in Help and explicitly use a 24-hour clock in the planned badge.

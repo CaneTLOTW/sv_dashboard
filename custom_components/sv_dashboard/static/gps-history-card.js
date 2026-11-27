@@ -135,7 +135,8 @@ class Ec3GpsDateCard extends HTMLElement {
 
   _serverGeoJson() {
     const entityId = findServerGpsEntity(this._hass, this._config?.storage_key);
-    return entityId ? this._hass?.states?.[entityId]?.attributes?.geojson : null;
+    const attrs = entityId ? this._hass?.states?.[entityId]?.attributes : null;
+    return attrs ? {type:"FeatureCollection",features:[...(attrs.geojson?.features || []),...(attrs.archive_geojson?.features || [])]} : null;
   }
 
   _updateAllButton() {
@@ -288,6 +289,7 @@ class Ec3GpsMapCard extends HTMLElement {
       attributes: {
         ...source.attributes,
         geojson: filterGeoJsonByWindow(source.attributes?.geojson, this._window()),
+        archive_geojson: filterGeoJsonByWindow(source.attributes?.archive_geojson, this._window()),
       },
     };
     return patched;

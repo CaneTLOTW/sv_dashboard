@@ -39,7 +39,7 @@ test("full sync never clears archived server rows before capability/sync success
 
 test("callable history keeps incremental/full sync and preserves rows on failure", () => {
   assert.match(history, /if parsed and not _force_full:/);
-  assert.match(history, /merge_server_trip_archive\(self\.data\.get\("server_trips_raw", \[\]\), incoming\)/);
+  assert.match(history, /merge_trip_versions\(self\._trip_archive, incoming\)/);
   assert.doesNotMatch(history, /raw_by_id = \{\} if _force_full else/);
   assert.match(history, /self\._mark_server_history_ready\(\)/);
   assert.match(history, /HistoricalTripsTransportUnavailable/);

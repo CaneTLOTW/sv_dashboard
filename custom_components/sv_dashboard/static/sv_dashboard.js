@@ -4,8 +4,8 @@
  * status entity created by the backend config entry. It never derives IDs from
  * VINs or friendly names.
  */
-import { languageFor, localeFor, textFor } from "./i18n.js?v=0.7.3-beta.23";
-import { climatePresentation } from "./climate-presentation-core.js?v=0.7.3-beta.23";
+import { languageFor, localeFor, textFor } from "./i18n.js?v=0.7.3-beta.24";
+import { climatePresentation } from "./climate-presentation-core.js?v=0.7.3-beta.24";
 
 const STRATEGY_TYPE = "sv-dashboard";
 const STATUS_DOMAIN = "sv_dashboard";
@@ -694,6 +694,11 @@ class SvDashboardStrategy extends HTMLElement {
             entity: serverGpsEntity,
             display: "state",
             geojson: { attribute: "geojson", color: "#ff9800", weight: 3, opacity: 0.8, hide_marker: true },
+            focus_on_fit: false,
+            tap_action: { action: "more-info" },
+          }, {
+            entity: serverGpsEntity, display: "state",
+            geojson: { attribute: "archive_geojson", color: "#03a9f4", weight: 3, opacity: 0.7, hide_marker: true },
             focus_on_fit: false,
             tap_action: { action: "more-info" },
           }] : []),

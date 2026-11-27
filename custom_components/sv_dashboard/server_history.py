@@ -45,11 +45,11 @@ from .trip_repair import (
 from .trip_speed import resolve_trip_speed
 from .trip_field_resolution import resolve_canonical_trip_fields
 from .entity_identity import vehicle_vin
+from .history_archive import empty_trip_archive, merge_trip_versions, archive_rows
 from .history_reconcile import (
     AUTO_RECONCILE_DELAYS_SECONDS,
     completion_key,
     completion_represented,
-    merge_server_trip_archive,
 )
 from .server_history_transport import (
     HistoricalTripsTransportUnavailable,
@@ -684,6 +684,8 @@ class ServerHistoryManager:
         self.metrics = metrics
         slug = entry.data[CONF_VEHICLE_SLUG]
         self._store = Store(hass, _STORE_VERSION, f"{DOMAIN}_{slug}_server_history")
+        self._trip_archive_store = Store(hass, 1, f"{DOMAIN}_{slug}_trip_archive")
+        self._trip_archive = None
         self._curve_store = Store(hass, _CURVE_STORE_VERSION, f"{DOMAIN}_{slug}_charge_curves")
         self._curve_data: dict[str, Any] = self._empty_curve_data()
         self.data: dict[str, Any] = self._empty_data()
@@ -1283,6 +1285,18 @@ class ServerHistoryManager:
         self.data["server_history_source"] = "local_fallback"
         self.data["server_history_reason"] = "initializing"
         await self._load_curve_store()
+        archived = await self._trip_archive_store.async_load()
+        if archived is None:
+            archived = empty_trip_archive()
+        current = self.data.get("server_trips_raw", [])
+        merged = merge_trip_versions(archived, current, prefer_incoming=False)
+        if archived != merged:
+            await self._trip_archive_store.async_save(merged)
+        self._trip_archive = merged
+        restored = sorted(archive_rows(merged), key=_trip_sort_key)
+        if restored != current:
+            self.data["server_trips_raw"] = restored
+            self._rebuild_canonical()
         if self.data.get("legacy_live_snapshot") is None and self.metrics:
             # Preserve the pre-migration local results in the new store as a
             # restore/comparison artifact. The original metrics Store remains
@@ -1374,10 +1388,11 @@ class ServerHistoryManager:
                 if isinstance(item, dict) and item.get("id")
             ]
             # Full sync means all available pages, not deletion of local history.
-            self.data["server_trips_raw"] = sorted(
-                merge_server_trip_archive(self.data.get("server_trips_raw", []), incoming),
-                key=_trip_sort_key,
-            )
+            archived = merge_trip_versions(self._trip_archive, incoming)
+            if archived != self._trip_archive:
+                await self._trip_archive_store.async_save(archived)
+            self._trip_archive = archived
+            self.data["server_trips_raw"] = sorted(archive_rows(archived), key=_trip_sort_key)
             self._rebuild_canonical()
             try:
                 await self._async_monthly_statistics()
