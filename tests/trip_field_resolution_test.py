@@ -76,12 +76,6 @@ def _install_stubs():
     stub("const", **{key: getattr(const, key) for key in dir(const) if key.isupper()})
     stub("charge_policy", allow_soc_only_charge_reconstruction=lambda *_args: False)
     stub("entity_identity", vehicle_vin=lambda *_args: None)
-    stub(
-        "history_reconcile",
-        AUTO_RECONCILE_DELAYS_SECONDS=(1, 2, 3),
-        completion_key=lambda *_args: "",
-        completion_represented=lambda *_args, **_kwargs: False,
-    )
     class TransportUnavailable(Exception):
         pass
 
