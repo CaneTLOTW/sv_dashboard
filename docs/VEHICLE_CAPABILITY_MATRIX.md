@@ -150,3 +150,7 @@ Use a newer offset-aware climate-field source timestamp after dispatch for a pos
 ## Automatic climate battery use (beta.20)
 
 The SOC delta is an estimated net battery loss, not a metered heater-only consumption. Only a confirmed automatic climate occurrence with a field-dated pre-dispatch baseline and a post-OFF SOC sample within five minutes, continuously observed engine off, cable off and charging off, may produce a delta. Unknown signals, observed conflicting activity, restart and missing samples are not measurable. The observation does not trigger wakeups, requests, commands or change scheduler decisions. Owner reports that the active indication in the 27 November screenshot corresponded to the scheduled 12:30 departure; outdoor temperature updates are irregular (reported by owner, exact timestamp not verified).
+
+## Scheduled confirmation and cleanup (beta.21)
+
+Confirmation window up to ten minutes after dispatch, capped at departure. No second command based on missing/late response, as rejection/idempotency is not established. An attempted call that errors may still have reached the vehicle; await source evidence. Positive confirmation deletes only the unchanged matching one-off; exceptions retained for the original date, execution and SOC tracking independent of profile lifetime.

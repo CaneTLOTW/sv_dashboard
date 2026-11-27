@@ -95,11 +95,11 @@ class DeparturePlanning:
 
     def _effective_profiles(self):
         # Hidden expired exceptions still suppress the original calendar date.
-        return self.profiles + self.held_overrides
+        return self.profiles + [{**p, "_held_only": True} for p in self.held_overrides]
 
     async def _async_cleanup_locked(self, now):
         rows, held, expired = expire_one_time_profiles(
-            self.profiles, self.held_overrides, now, self.hass.config.time_zone)
+            self.profiles, self.held_overrides, now, self.hass.config.time_zone, self.ledger)
         cutoff = now - timedelta(days=30)
         ledger = {key: value for key, value in self.ledger.items()
                   if (dt_util.parse_datetime(value.get("at", "")) or now) >= cutoff}
@@ -110,11 +110,14 @@ class DeparturePlanning:
             if departure is None:
                 continue
             key = profile["id"] + "|" + departure.isoformat()
-            if key in preparation and key not in ledger:
+            armed = getattr(self, "execution_enabled_at", None)
+            scheduled = (profile["enabled"] and armed is not None and
+                         departure - timedelta(minutes=profile["lead_minutes"]) > armed)
+            if key not in ledger and (key in preparation or scheduled):
                 ledger[key] = {"at": now.isoformat(), "name": profile["name"],
                                "departure": departure.isoformat(), "status": "missed",
-                               "preparation": preparation[key]}
-                if preparation[key].get("notify_result"):
+                               "preparation": preparation.get(key)}
+                if now <= departure + timedelta(minutes=5) and (scheduled or preparation.get(key, {}).get("notify_result")):
                     ledger[key]["result_notification"] = "pending"
         if (rows, held, ledger, preparation) == (self.profiles, self.held_overrides, self.ledger, self.preparation):
             return
@@ -302,6 +305,7 @@ class DeparturePlanning:
                 item = {"at": now.isoformat(), "name": row["name"], "departure": row["departure"],
                         "status": "claimed" if status == "ready" else status,
                         "result_notification": "pending",
+                        "profile_snapshot": dict(profile),
                         "heartbeat": heartbeat.isoformat() if heartbeat else None,
                         "heartbeat_source": source,
                         "heartbeat_age_seconds": round((now - heartbeat).total_seconds()) if heartbeat and heartbeat.tzinfo else None,
@@ -315,6 +319,7 @@ class DeparturePlanning:
                 if status != "ready":
                     continue
                 # Durable claim precedes the only service call; no blind retry.
+                attempted = False
                 try:
                     if dt_util.utcnow() >= datetime.fromisoformat(row["deadline"]):
                         item["status"] = "missed"
@@ -330,11 +335,15 @@ class DeparturePlanning:
                             item["status"] = "missed"
                             await self._persist(self.profiles, self.revision, self.reminder, self.last_reminder)
                             continue
+                        attempted = True
                         await asyncio.wait_for(self.hass.services.async_call(
                             "button", "press", {"entity_id": button.entity_id}, blocking=True), timeout=30)
                         item["status"] = "submitted"
                 except Exception:
-                    item["status"] = "failed"
+                    # A transport timeout is not proof that the vehicle rejected the command.
+                    item["status"] = "submitted" if attempted else "failed"
+                    if attempted:
+                        item["dispatch_error"] = True
                 await self._persist(self.profiles, self.revision, self.reminder, self.last_reminder)
             # A receipt or HA restore timestamp is not vehicle confirmation.
             changed = False
@@ -350,6 +359,7 @@ class DeparturePlanning:
                     changed = True
             if changed:
                 await self._persist(self.profiles, self.revision, self.reminder, self.last_reminder)
+            await self._async_cleanup_locked(now)
 
     async def _async_reminder(self):
         async with self.lock:

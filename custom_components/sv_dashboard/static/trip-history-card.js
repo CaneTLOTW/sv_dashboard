@@ -1,6 +1,6 @@
 import { LitElement, html, css, nothing } from "./vendor-lit.js?v=0.6.0-beta.7";
-import { localeFor, textFor } from "./i18n.js?v=0.7.3-beta.20";
-import { insertOdometerGapRows, semanticTripTime, tripFilterTime } from "./trip-gap-core.js?v=0.7.3-beta.20";
+import { localeFor, textFor } from "./i18n.js?v=0.7.3-beta.21";
+import { insertOdometerGapRows, semanticTripTime, tripFilterTime } from "./trip-gap-core.js?v=0.7.3-beta.21";
 
 /**
  * Standalone Lovelace card for the historic Stellantis "last trip" sensor.

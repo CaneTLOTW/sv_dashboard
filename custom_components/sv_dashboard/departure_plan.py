@@ -111,6 +111,8 @@ def preview(profiles: list, now: datetime, timezone_name: str, days: int = 14) -
         overrides = {p["override"] for p in once}
         weekly = [p for p in enabled if p["kind"] == "weekly" and day.weekday() in p["weekdays"]]
         for p in weekly + once:
+            if p.get("_held_only"):
+                continue
             if p["kind"] == "weekly" and ("all" in overrides or p["id"] in overrides):
                 skipped.append({"profile_id": p["id"], "date": day.isoformat(), "reason": "override"})
                 continue
@@ -267,8 +269,9 @@ def fresh_heartbeat(now, stamp, source):
                 timedelta(0) <= now - stamp <= timedelta(minutes=15))
 
 
-def expire_one_time_profiles(profiles, held_overrides, now, timezone_name):
-    """Remove elapsed one-offs; preserve their date-wide series exceptions until midnight."""
+def expire_one_time_profiles(profiles, held_overrides, now, timezone_name, ledger=None):
+    """Remove confirmed or elapsed one-offs; preserve date-wide series exceptions."""
+    ledger = ledger or {}
     now = now.astimezone(UTC)
     tz = ZoneInfo(timezone_name)
     today = now.astimezone(tz).date()
@@ -281,7 +284,9 @@ def expire_one_time_profiles(profiles, held_overrides, now, timezone_name):
         day = date.fromisoformat(p["date"])
         departure = _local_departure(day, p["time"], tz)
         # A nonexistent DST wall-clock time has no instant; remove after its date.
-        if day < today or (departure is not None and departure <= now):
+        result = ledger.get(p["id"] + "|" + departure.isoformat(), {}) if departure else {}
+        confirmed = result.get("status") == "confirmed" and result.get("profile_snapshot") == p
+        if confirmed or day < today or (departure is not None and departure <= now):
             expired.append((p, departure))
             if day == today and departure is not None and p["enabled"] and p["override"] != "none":
                 held[p["id"]] = p
@@ -331,7 +336,7 @@ def departure_confirmation(item, raw_state, attributes, now):
     if item.get("status") not in ("claimed", "submitted"):
         return item.get("status")
     dispatch = datetime.fromisoformat(sent or item["at"])
-    deadline = min(dispatch + timedelta(minutes=3), datetime.fromisoformat(item["departure"]))
+    deadline = min(dispatch + timedelta(minutes=10), datetime.fromisoformat(item["departure"]))
     source = climate_source_time(attributes or {})
     if item["status"] == "submitted" and sent and climate_state(raw_state) is True and source and dispatch < source <= min(now, deadline):
         return "confirmed"

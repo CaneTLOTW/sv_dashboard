@@ -210,8 +210,10 @@ item = {"at":stamp.isoformat(),"dispatched_at":stamp.isoformat(),"departure":(st
 new = stamp + timedelta(minutes=2)
 assert m.departure_confirmation(item,"on",{"Zuletzt aktualisiert":new.isoformat()},new) == "confirmed"
 assert m.departure_confirmation(item,"on",{"Zuletzt aktualisiert":(stamp-timedelta(hours=3)).isoformat()},new) == "submitted"
-assert m.departure_confirmation(item,"on",{},stamp+timedelta(minutes=3)) == "unconfirmed"
-assert m.departure_confirmation(item,"on",{"Last updated":(stamp+timedelta(minutes=4)).isoformat()},stamp+timedelta(minutes=4)) == "unconfirmed"
+assert m.departure_confirmation(item,"on",{},stamp+timedelta(minutes=3)) == "submitted"
+assert m.departure_confirmation(item,"on",{},stamp+timedelta(minutes=10)) == "unconfirmed"
+assert m.departure_confirmation(item,"on",{"Last updated":(stamp+timedelta(minutes=4)).isoformat()},stamp+timedelta(minutes=4)) == "confirmed"
+assert m.departure_confirmation(item,"on",{"Last updated":(stamp+timedelta(minutes=11)).isoformat()},stamp+timedelta(minutes=11)) == "unconfirmed"
 assert not m.departure_result_due(item,new)
 assert m.departure_result_due({**item,"status":"confirmed"},new)
 assert not m.departure_result_due({**item,"status":"confirmed","result_notification":"attempted"},new)
@@ -242,3 +244,33 @@ assert finish(None,True,end+timedelta(minutes=11))["status"] == "unavailable"
 assert m.climate_soc_advance(confirmed_item,sample(83,end),"off",{},end,True)["status"] == "pending"
 assert m.climate_soc_advance({**confirmed_item,"status":"unconfirmed"},sample(83,end),"off",end_attrs,end,True)["status"] == "unavailable"
 print("Climate SOC observation tests passed")
+
+# Early removal only for the unchanged, positively confirmed one-off.
+early=at-timedelta(minutes=15)
+key="one|"+at.isoformat()
+confirmed_row={"status":"confirmed","profile_snapshot":one}
+rows,held,expired=m.expire_one_time_profiles([weekly_later,one],[],early,tz,{key:confirmed_row})
+assert rows==[weekly_later] and held==[one] and expired==[(one,at)]
+effective=rows+[{**p,"_held_only":True} for p in held]
+assert not any(r["profile_id"]=="one" for r in m.preview(effective,early,tz)["upcoming"])
+assert not any(r["profile_id"]=="series" and r["departure"].startswith("2026-11-26") for r in m.preview(effective,early,tz)["upcoming"])
+assert m.expire_one_time_profiles([one],[],early,tz,{key:{"status":"submitted","profile_snapshot":one}})[0]==[one]
+edited={**one,"name":"Edited"}
+assert m.expire_one_time_profiles([edited],[],early,tz,{key:confirmed_row})[0]==[edited]
+assert m.expire_one_time_profiles([weekly_later],[],early,tz,{key:confirmed_row})[0]==[weekly_later]
+assert m.departure_confirmation({**item,"dispatch_error":True},"on",{"Last updated":(stamp+timedelta(minutes=7)).isoformat()},stamp+timedelta(minutes=7))=="confirmed"
+assert m.departure_confirmation({**item,"departure":(stamp+timedelta(minutes=5)).isoformat()},"off",{},stamp+timedelta(minutes=5))=="unconfirmed"
+async def check_early_cleanup():
+    calls=[]
+    async def save(*args): calls.append(args)
+    entry={"at":early.isoformat(),"name":"One","departure":at.isoformat(),"status":"confirmed","profile_snapshot":one,"climate_soc":{"status":"pending"}}
+    s=SimpleNamespace(profiles=[one,weekly_later],held_overrides=[],ledger={key:entry},preparation={},revision=1,reminder={},last_reminder=None,execution_enabled_at=early-timedelta(hours=1),hass=SimpleNamespace(config=SimpleNamespace(time_zone=tz)),_persist=save)
+    await cleanup(s,early)
+    assert s.profiles==[weekly_later] and s.ledger[key]==entry and s.revision==2
+    await cleanup(s,early)
+    assert len(calls)==1
+    s.profiles=[one];s.ledger={};s.held_overrides=[]
+    await cleanup(s,at)
+    assert s.ledger[key]["status"]=="missed" and s.ledger[key]["result_notification"]=="pending"
+asyncio.run(check_early_cleanup())
+print("Confirmed profile cleanup and ten-minute confirmation tests passed")

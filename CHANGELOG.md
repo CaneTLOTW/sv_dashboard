@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.3-beta.21 — delayed departure confirmation and early one-off cleanup
+
+- Wait up to ten minutes after dispatch (never beyond departure) for source-dated ON, including ambiguous service failures after attempted dispatch. Evaluate on existing minute ticks; one result alert only. No blind resend on timeout: no independently proven command rejection/idempotency contract. Delete an unchanged one-off on confirmed start, otherwise at departure, retain history and same-day series exceptions without displaying or dispatching the hidden occurrence. Record missed armed one-offs even without a preparation record. Existing weekly profiles remain intact.
+
 ## 0.7.3-beta.20 — climate display temperature fallback
 
 - Record estimated battery SOC loss per newly dispatched automatic climate occurrence in the execution history, from field-dated baseline and post-OFF samples. Only continuously observed parked, unplugged, non-charging sessions qualify; missing data, restart, driving/charging/cable activity or increasing SOC invalidate the estimate. No extra upstream queries or retroactive fabrication.
