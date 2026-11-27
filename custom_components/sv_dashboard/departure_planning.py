@@ -15,7 +15,7 @@ _LOGGER = logging.getLogger(__name__)
 from homeassistant.util import dt as dt_util
 
 from .const import CONF_VEHICLE_SLUG, DOMAIN
-from .departure_plan import edit_profiles, normalize_profile, preview, normalize_reminder, reminder_candidate, due_occurrences, climate_gate, climate_state, quick_defaults, add_quick_profile, execution_candidates, fresh_heartbeat, expire_one_time_profiles, normalize_climate_min_soc, migrate_climate_min_soc
+from .departure_plan import edit_profiles, normalize_profile, preview, normalize_reminder, reminder_candidate, due_occurrences, climate_gate, climate_state, quick_defaults, add_quick_profile, execution_candidates, fresh_heartbeat, expire_one_time_profiles, normalize_climate_min_soc, migrate_climate_min_soc, next_climate_badge, departure_confirmation, departure_result_due
 
 
 class DeparturePlanning:
@@ -34,6 +34,7 @@ class DeparturePlanning:
         self.ledger = {}
         self.preparation = {}
         self.held_overrides = []
+        self._published_badge = None
 
     async def async_initialize(self):
         data = await self.store.async_load()
@@ -104,6 +105,8 @@ class DeparturePlanning:
                 ledger[key] = {"at": now.isoformat(), "name": profile["name"],
                                "departure": departure.isoformat(), "status": "missed",
                                "preparation": preparation[key]}
+                if preparation[key].get("notify_result"):
+                    ledger[key]["result_notification"] = "pending"
         if (rows, held, ledger, preparation) == (self.profiles, self.held_overrides, self.ledger, self.preparation):
             return
         revision = self.revision + int(rows != self.profiles)
@@ -121,7 +124,45 @@ class DeparturePlanning:
             await self._async_execute()
         except Exception:
             _LOGGER.exception("SV departure climate evaluation failed; no retry requested")
-        await self._async_reminder()
+        try:
+            await self._async_result_notifications()
+            await self._async_reminder()
+        finally:
+            self.publish_badge()
+
+    def planned_climate(self):
+        return next_climate_badge(self._effective_profiles(), dt_util.utcnow(),
+            self.hass.config.time_zone, self.execution_enabled_at, self.ledger)
+
+    def publish_badge(self):
+        badge = self.planned_climate()
+        if badge != self._published_badge:
+            self._published_badge = badge
+            self.coordinator.async_update_listeners()
+
+    async def _async_result_notifications(self):
+        async with self.lock:
+            for item in self.ledger.values():
+                if item.get("result_notification") != "pending" or item.get("status") in ("claimed", "submitted"):
+                    continue
+                if not departure_result_due(item, dt_util.utcnow()):
+                    item["result_notification"] = "expired"
+                    await self._persist(self.profiles, self.revision, self.reminder, self.last_reminder)
+                    continue
+                # Persist the claim before any send; never retry a claimed event.
+                item["result_notification"] = "attempted"
+                try:
+                    await self._persist(self.profiles, self.revision, self.reminder, self.last_reminder)
+                except Exception:
+                    item["result_notification"] = "pending"
+                    raise
+                try:
+                    sent = await self.notifications.async_departure_result(item)
+                except Exception:
+                    _LOGGER.exception("SV departure result notification failed")
+                    sent = False
+                item["result_notification"] = "sent" if sent else "not_sent"
+                await self._persist(self.profiles, self.revision, self.reminder, self.last_reminder)
 
     def _state(self, key, domain=None):
         mapping = self.coordinator.data.get("entity_mapping", {})
@@ -174,7 +215,7 @@ class DeparturePlanning:
                             for value in self.preparation.values())
                         item = {"at": now.isoformat(), "status": "claimed", "name": row["name"], "departure": row["departure"],
                                 "heartbeat": heartbeat.isoformat() if heartbeat else None,
-                                "heartbeat_source": source}
+                                "heartbeat_source": source, "notify_result": True}
                         self.preparation[key] = item
                         try:
                             await self._persist(self.profiles, self.revision, self.reminder, self.last_reminder)
@@ -209,6 +250,7 @@ class DeparturePlanning:
                     status = "overlap"
                 item = {"at": now.isoformat(), "name": row["name"], "departure": row["departure"],
                         "status": "claimed" if status == "ready" else status,
+                        "result_notification": "pending",
                         "heartbeat": heartbeat.isoformat() if heartbeat else None,
                         "heartbeat_source": source,
                         "heartbeat_age_seconds": round((now - heartbeat).total_seconds()) if heartbeat and heartbeat.tzinfo else None,
@@ -226,24 +268,27 @@ class DeparturePlanning:
                     if dt_util.utcnow() >= datetime.fromisoformat(row["deadline"]):
                         item["status"] = "missed"
                     else:
+                        item["dispatched_at"] = dt_util.utcnow().isoformat()
+                        await self._persist(self.profiles, self.revision, self.reminder, self.last_reminder)
+                        if dt_util.utcnow() >= datetime.fromisoformat(row["deadline"]):
+                            item["status"] = "missed"
+                            await self._persist(self.profiles, self.revision, self.reminder, self.last_reminder)
+                            continue
                         await asyncio.wait_for(self.hass.services.async_call(
                             "button", "press", {"entity_id": button.entity_id}, blocking=True), timeout=30)
                         item["status"] = "submitted"
                 except Exception:
                     item["status"] = "failed"
                 await self._persist(self.profiles, self.revision, self.reminder, self.last_reminder)
-            # Reconcile a newer actual vehicle climate transition on later ticks.
+            # A receipt or HA restore timestamp is not vehicle confirmation.
             changed = False
             climate = self._state("preconditioning")
+            now = dt_util.utcnow()
             for item in self.ledger.values():
-                if item.get("status") not in ("claimed", "submitted"):
-                    continue
-                stamp = dt_util.parse_datetime(item["at"])
-                if climate and climate_state(climate.state) is True and climate.last_changed > stamp and climate.last_changed <= stamp + timedelta(minutes=3):
-                    item["status"] = "confirmed"
-                    changed = True
-                elif now - stamp >= timedelta(minutes=3):
-                    item["status"] = "unconfirmed"
+                status = departure_confirmation(item, getattr(climate, "state", None),
+                    getattr(climate, "attributes", {}), now)
+                if status != item.get("status"):
+                    item["status"] = status
                     changed = True
             if changed:
                 await self._persist(self.profiles, self.revision, self.reminder, self.last_reminder)
@@ -336,6 +381,7 @@ async def websocket_departure_plans(hass, connection, msg):
         return
     try:
         result = await manager.async_apply(msg)
+        manager.publish_badge()
     except ValueError as exc:
         connection.send_error(msg["id"], str(exc), "Departure plan rejected")
         return

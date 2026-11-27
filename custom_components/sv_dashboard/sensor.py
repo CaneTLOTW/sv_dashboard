@@ -358,6 +358,8 @@ class SvDashboardStatusSensor(CoordinatorEntity, SensorEntity):
             "metric_entities": metric_entities,
             "control_entities": control_entities,
             "server_history_entities": server_history_entities,
+            "planned_climate": (self.coordinator.departure_planning.planned_climate()
+                                if getattr(self.coordinator, "departure_planning", None) is not None else None),
             "notification_status": self.coordinator.notifications.data.get(
                 "last_notification"
             ),

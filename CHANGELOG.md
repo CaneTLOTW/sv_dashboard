@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.3-beta.19 — scheduled climate preview and result notifications
+
+- Merge planned climate start into the Hero A/C badge; one-offs within the existing 14-day preview and weekly occurrences within three hours, hidden during pending/active or disabled automation. Shared local vehicle summary, no new upstream calls; EV and dual-energy Hero. Reorder navigation and clarify view icons.
+- Send one terminal automatic departure result using existing alert recipients and quiet hours, with planned departure time, never a separate end notification. Confirm only from a new climate-field source timestamp after actual dispatch, not HA restore timestamps; MQTT-only updates without source time remain unconfirmed. Persist notification attempt before sending; no replay of old entries. No charge control or vehicle command path changes.
+
 ## 0.7.3-beta.18 — shared departure configuration
 
 - Per-vehicle global minimum SoC for automatic climate starts (20–100%, default 20%), no profile-specific control. Existing legacy profile fields retained for compatibility; migration adopts the largest existing minimum or 20%, whichever is higher, so no existing reserve is lowered at upgrade. Existing profiles use the global value at execution; no charging control. Consolidate automatic climate authorization, global reserve and independent evening reminder into a collapsible configuration section below the quick planner. History and preview remain in profile column. Preserve scheduler gates and ledgers.

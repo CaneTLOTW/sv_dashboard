@@ -10,8 +10,9 @@
  * changes presentation (no heading/self-navigation, optional info button);
  * entity resolution, picture lifecycle and overlay rendering stay shared.
  */
-import { languageFor, textFor } from "./i18n.js?v=0.7.3-beta.18";
-import { climatePresentation } from "./climate-presentation-core.js?v=0.7.3-beta.18";
+import { languageFor, textFor } from "./i18n.js?v=0.7.3-beta.19";
+import { climatePresentation } from "./climate-presentation-core.js?v=0.7.3-beta.19";
+import { plannedClimateLabel } from "./departure-badge-core.js?v=0.7.3-beta.19";
 
 const STATUS_DOMAIN = "sv_dashboard";
 const CARD_TAG = "sv-dashboard-vehicle-overview-card";
@@ -58,9 +59,12 @@ class SvDashboardClimateControl extends HTMLElement {
     this._hass = undefined;
     this._onChange = () => this._render();
     const root = this.attachShadow({mode:"open"});
-    root.innerHTML = '<style>:host{display:block;width:30px;height:30px}button{box-sizing:border-box;width:30px;height:30px;border:0;border-radius:50%;padding:0;margin:0;display:grid;place-items:center;background:rgba(20,20,20,.62);color:white;box-shadow:0 1px 4px rgba(0,0,0,.25);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}button:active{transform:scale(.92)}button[aria-disabled=true]{cursor:default}button[data-state=heating],button[data-state=cooling]{color:var(--climate-color);background:color-mix(in srgb,var(--climate-color) 20%,rgba(20,20,20,.72))}button[data-state=active]{color:var(--success-color,#4caf50)}button[data-state=pending]{color:#e5a329;background:color-mix(in srgb,#e5a329 12%,rgba(20,20,20,.72))}button[data-state=pending] ha-icon{animation:kfzClimatePending 1.2s ease-in-out infinite}button[data-state=failed]{color:var(--error-color)}button[data-state=unavailable]{opacity:.72}ha-icon{--mdc-icon-size:18px;width:18px;height:18px}@keyframes kfzClimatePending{0%,100%{opacity:.4}50%{opacity:1}}@media(prefers-reduced-motion:reduce){button[data-state=pending] ha-icon{animation:none}}</style><button type="button"><ha-icon icon="mdi:air-conditioner"></ha-icon></button>';
+    root.innerHTML = '<style>:host{display:block;width:max-content;max-width:100%;height:30px}.climate-composite{display:inline-flex;align-items:center;height:30px;border-radius:15px;background:rgba(20,20,20,.62);color:white;white-space:nowrap;overflow:hidden}.climate-composite:not([data-planned]){background:transparent}.climate-composite[data-planned] button{background:transparent;box-shadow:none}.plan-label{font-size:12px;font-weight:600;line-height:18px;padding:0 9px 0 7px;border-left:1px solid rgba(255,255,255,.28);max-width:135px;overflow:hidden;text-overflow:ellipsis}.plan-label[hidden]{display:none}button{box-sizing:border-box;width:30px;height:30px;border:0;border-radius:50%;padding:0;margin:0;display:grid;place-items:center;background:rgba(20,20,20,.62);color:white;box-shadow:0 1px 4px rgba(0,0,0,.25);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}button:active{transform:scale(.92)}button[aria-disabled=true]{cursor:default}button[data-state=heating],button[data-state=cooling]{color:var(--climate-color);background:color-mix(in srgb,var(--climate-color) 20%,rgba(20,20,20,.72))}button[data-state=active]{color:var(--success-color,#4caf50)}button[data-state=pending]{color:#e5a329;background:color-mix(in srgb,#e5a329 12%,rgba(20,20,20,.72))}button[data-state=pending] ha-icon{animation:kfzClimatePending 1.2s ease-in-out infinite}button[data-state=failed]{color:var(--error-color)}button[data-state=unavailable]{opacity:.72}ha-icon{--mdc-icon-size:18px;width:18px;height:18px}@keyframes kfzClimatePending{0%,100%{opacity:.4}50%{opacity:1}}@media(prefers-reduced-motion:reduce){button[data-state=pending] ha-icon{animation:none}}</style><div class="climate-composite"><button type="button"><ha-icon icon="mdi:air-conditioner"></ha-icon></button><span class="plan-label" hidden></span></div>';
     this._button = root.querySelector("button");
     this._icon = root.querySelector("ha-icon");
+    this._planLabel = root.querySelector(".plan-label");
+    this._composite = root.querySelector(".climate-composite");
+    for (const eventName of ["click","pointerdown","pointerup","dblclick","contextmenu"]) this._planLabel.addEventListener(eventName,event=>event.stopPropagation());
     for (const eventName of ["pointerdown","pointerup","keydown","keyup","dblclick","contextmenu"]) {
       this._button.addEventListener(eventName, event => event.stopPropagation());
     }
@@ -121,6 +125,11 @@ class SvDashboardClimateControl extends HTMLElement {
     this._button.setAttribute("aria-label",title);
     this._button.title = title;
     this._icon.setAttribute("icon", state === "pending" ? "mdi:sync" : presentation.icon);
+    const plan = plannedClimateLabel(states[this._config.status_entity]?.attributes?.planned_climate, Date.now(), languageFor(this._hass), strings, active, state === "pending");
+    this._planLabel.hidden = !plan;
+    this._composite.toggleAttribute("data-planned",Boolean(plan));
+    this._planLabel.textContent = plan?.label || "";
+    this._planLabel.title = plan?.title || "";
   }
 
   async _activate() {
@@ -262,6 +271,7 @@ function buildConfig(hass, config, statusState) {
       : temperature;
 
   const trackedEntities = [
+    statusState.entity_id,
     primaryLevel,
     battery,
     batteryResidual,
@@ -326,7 +336,7 @@ function buildConfig(hass, config, statusState) {
         ],
         climate: [
           { position: "absolute" }, { top: "48px" }, { left: "12px" }, { "z-index": 20 },
-          { width: "30px" }, { height: "30px" }, { display: climateDisplay },
+          { width: "max-content" }, { "max-width": "calc(100% - 58px)" }, { height: "30px" }, { display: climateDisplay },
         ],
         cable: [
           { position: "absolute" }, { top: "48px" }, { right: "12px" }, { "z-index": 10 },
@@ -443,6 +453,7 @@ function buildConfig(hass, config, statusState) {
       climate: (preconditioningStart || preconditioningStop) ? {
         card: {
           type: "custom:sv-dashboard-climate-control",
+          status_entity: statusState.entity_id,
           climate_entity: preconditioning,
           temperature_entity: temperature,
           start_entity: preconditioningStart,

@@ -346,6 +346,29 @@ class VehicleNotificationManager:
             "departure_reminder", SWITCH_ALERTS,
         )
 
+    async def async_departure_result(self, item: dict) -> bool:
+        """One terminal result, respecting existing alerts and quiet hours."""
+        if self._in_quiet_hours():
+            return False
+        departure = dt_util.as_local(dt_util.parse_datetime(item["departure"])).strftime("%H:%M")
+        status = item["status"]
+        if status == "confirmed":
+            message = text(self.hass, "departure_result_confirmed", departure=departure)
+        elif status == "unconfirmed":
+            message = text(self.hass, "departure_result_unconfirmed", departure=departure)
+        elif status == "already_active":
+            message = text(self.hass, "departure_result_active", departure=departure)
+        elif status == "soc":
+            message = text(self.hass, "departure_result_soc", departure=departure)
+        elif status == "stale":
+            message = text(self.hass, "departure_result_stale", departure=departure)
+        elif status == "failed":
+            message = text(self.hass, "departure_result_failed", departure=departure)
+        else:
+            message = text(self.hass, "departure_result_skipped", departure=departure)
+        return await self._async_notify(text(self.hass, "departure_result_title"),
+            message, "departure_climate_result", SWITCH_ALERTS)
+
     async def async_test_notification(self) -> None:
         await self._async_notify(
             text(self.hass, "test_title"),

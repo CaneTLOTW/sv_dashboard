@@ -288,3 +288,61 @@ def expire_one_time_profiles(profiles, held_overrides, now, timezone_name):
         else:
             kept.append(p)
     return kept, list(held.values()), expired
+
+def next_climate_badge(profiles, now, timezone_name, enabled_at, ledger):
+    """A compact, read-only view of the next eligible planned start."""
+    if enabled_at is None:
+        return None
+    now = now.astimezone(UTC)
+    visible = []
+    for row in preview(profiles, now, timezone_name)["upcoming"]:
+        start = datetime.fromisoformat(row["start"])
+        key = row["profile_id"] + "|" + row["departure"]
+        if start <= now or start <= enabled_at or key in ledger:
+            continue
+        if row["kind"] == "weekly" and start - now > timedelta(hours=3):
+            continue
+        visible.append((start, row))
+    if not visible:
+        return None
+    _, row = min(visible, key=lambda item: item[0])
+    return {k: row[k] for k in ("start", "departure", "kind")} | {"timezone": timezone_name}
+
+
+def climate_source_time(attributes):
+    """Accept offset-aware vehicle-field time, not HA receipt/restore time."""
+    for key in ("Zuletzt aktualisiert", "Last updated", "last_updated", "updatedAt", "updated_at",
+                "createdAt", "created_at", "source_timestamp", "source_time"):
+        raw = attributes.get(key)
+        if not isinstance(raw, str):
+            continue
+        try:
+            stamp = datetime.fromisoformat(raw)
+        except ValueError:
+            continue
+        if stamp.tzinfo is not None:
+            return stamp.astimezone(UTC)
+    return None
+
+
+def departure_confirmation(item, raw_state, attributes, now):
+    """No success on restored ON, command receipt or a pre-dispatch sample."""
+    sent = item.get("dispatched_at")
+    if item.get("status") not in ("claimed", "submitted"):
+        return item.get("status")
+    dispatch = datetime.fromisoformat(sent or item["at"])
+    deadline = min(dispatch + timedelta(minutes=3), datetime.fromisoformat(item["departure"]))
+    source = climate_source_time(attributes or {})
+    if item["status"] == "submitted" and sent and climate_state(raw_state) is True and source and dispatch < source <= min(now, deadline):
+        return "confirmed"
+    if now >= deadline:
+        return "unconfirmed"
+    return item["status"]
+
+
+def departure_result_due(item, now):
+    """Never notify old ledger entries or replay a result after a restart."""
+    if item.get("result_notification") != "pending" or item.get("status") in ("claimed", "submitted"):
+        return False
+    departure = datetime.fromisoformat(item["departure"])
+    return now <= departure + timedelta(minutes=5)

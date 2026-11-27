@@ -4,8 +4,8 @@
  * status entity created by the backend config entry. It never derives IDs from
  * VINs or friendly names.
  */
-import { languageFor, localeFor, textFor } from "./i18n.js?v=0.7.3-beta.18";
-import { climatePresentation } from "./climate-presentation-core.js?v=0.7.3-beta.18";
+import { languageFor, localeFor, textFor } from "./i18n.js?v=0.7.3-beta.19";
+import { climatePresentation } from "./climate-presentation-core.js?v=0.7.3-beta.19";
 
 const STRATEGY_TYPE = "sv-dashboard";
 const STATUS_DOMAIN = "sv_dashboard";
@@ -608,7 +608,7 @@ class SvDashboardStrategy extends HTMLElement {
       views.push({
         title: strings.tripHistory,
         path: "trips",
-        icon: "mdi:car-clock",
+        icon: "mdi:routes",
         type: "sections",
         max_columns: 2,
         sections: [{
@@ -628,7 +628,7 @@ class SvDashboardStrategy extends HTMLElement {
       views.push({
         title: strings.chargeCurves,
         path: "charging",
-        icon: "mdi:chart-bell-curve-cumulative",
+        icon: "mdi:battery-charging",
         type: "sections",
         max_columns: 2,
         sections: [
@@ -704,7 +704,7 @@ class SvDashboardStrategy extends HTMLElement {
       views.push({
         title: strings.gps,
         path: "gps",
-        icon: "mdi:map-marker-path",
+        icon: "mdi:map-marker-outline",
         type: "sections",
         max_columns: 2,
         sections: [
@@ -775,7 +775,7 @@ class SvDashboardStrategy extends HTMLElement {
       views.push({
         title: strings.wakeup,
         path: "wakeup",
-        icon: "mdi:power-sleep",
+        icon: "mdi:remote",
         type: "sections",
         max_columns: 3,
         sections: [
@@ -884,7 +884,7 @@ class SvDashboardStrategy extends HTMLElement {
       views.push({
         title: strings.notifications,
         path: "notifications",
-        icon: "mdi:bell-cog-outline",
+        icon: "mdi:bell-outline",
         type: "sections",
         max_columns: 2,
         sections: [{
@@ -930,7 +930,7 @@ class SvDashboardStrategy extends HTMLElement {
     views.push({
       title: strings.system,
       path: "system",
-      icon: "mdi:car-cog",
+      icon: "mdi:cog-outline",
       type: "sections",
       max_columns: 2,
       sections: [{ type: "grid", cards: present([
@@ -953,7 +953,7 @@ class SvDashboardStrategy extends HTMLElement {
     // Home Assistant renders this array left-to-right. Keep Vehicle on the
     // left and Help on the far right, matching the requested right-to-left
     // reading order: Help → System → Notifications → … → Vehicle.
-    const viewOrder = ["vehicle", "charging", "departure", "statistics", "trips", "gps", "wakeup", "notifications", "system", "help"];
+    const viewOrder = ["vehicle", "departure", "trips", "charging", "statistics", "gps", "wakeup", "notifications", "system", "help"];
     views.sort((left, right) => viewOrder.indexOf(left.path) - viewOrder.indexOf(right.path));
     return { title: strings.name, icon: vehicleIcon, views };
   }

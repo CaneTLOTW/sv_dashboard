@@ -198,3 +198,22 @@ for profile in (base, exception):
     assert m.climate_gate(profile, 29, "off", "on", 0, False, True, True, climate_min_soc=30) == "soc"
     assert m.climate_gate(profile, 30, "off", "off", 0, False, True, True, climate_min_soc=30) == "ready"
 print("Global climate reserve tests passed")
+
+# Planned display and source-stamped confirmation, no HA receipt fallback.
+armed = datetime(2026,11,26,0,tzinfo=UTC)
+assert m.next_climate_badge([base], datetime(2026,11,27,3,9,tzinfo=UTC),tz,armed,{}) is None
+assert m.next_climate_badge([base], datetime(2026,11,27,3,10,tzinfo=UTC),tz,armed,{})["kind"] == "weekly"
+assert m.next_climate_badge([exception], datetime(2026,11,26,12,tzinfo=UTC),tz,armed,{})["kind"] == "once"
+assert m.next_climate_badge([exception], datetime(2026,11,26,12,tzinfo=UTC),tz,None,{}) is None
+stamp = datetime(2026,11,27,6,10,tzinfo=UTC)
+item = {"at":stamp.isoformat(),"dispatched_at":stamp.isoformat(),"departure":(stamp+timedelta(minutes=20)).isoformat(),"status":"submitted","result_notification":"pending"}
+new = stamp + timedelta(minutes=2)
+assert m.departure_confirmation(item,"on",{"Zuletzt aktualisiert":new.isoformat()},new) == "confirmed"
+assert m.departure_confirmation(item,"on",{"Zuletzt aktualisiert":(stamp-timedelta(hours=3)).isoformat()},new) == "submitted"
+assert m.departure_confirmation(item,"on",{},stamp+timedelta(minutes=3)) == "unconfirmed"
+assert m.departure_confirmation(item,"on",{"Last updated":(stamp+timedelta(minutes=4)).isoformat()},stamp+timedelta(minutes=4)) == "unconfirmed"
+assert not m.departure_result_due(item,new)
+assert m.departure_result_due({**item,"status":"confirmed"},new)
+assert not m.departure_result_due({**item,"status":"confirmed","result_notification":"attempted"},new)
+assert not m.departure_result_due({**item,"status":"confirmed"},stamp+timedelta(minutes=26))
+print("Planned climate badge and terminal result evidence tests passed")
