@@ -2300,6 +2300,120 @@ for (const [language, labels] of Object.entries(DEPARTURE_REMINDER_TEXT)) {
   const keys = ["departureReminderTitle","departureReminderEnabled","departureReminderTime","departureReminderNote","departureReminderThreshold","departureReminderSent","departureReminderAttempt"];
   Object.assign(FRONTEND_TEXT.dashboard[language], Object.fromEntries(keys.map((key,index)=>[key,labels[index]])));
 }
+const DEPARTURE_SOC_TEXT = {
+  "de": [
+    "Akkuverbrauch (geschätzt)",
+    "%-Pkt.",
+    "Erfassung läuft",
+    "Nicht ermittelbar"
+  ],
+  "en": [
+    "Battery use (estimated)",
+    "pp",
+    "Measuring",
+    "Not measurable"
+  ],
+  "fr": [
+    "Batterie consommée (estimée)",
+    "pts %",
+    "Mesure en cours",
+    "Non mesurable"
+  ],
+  "it": [
+    "Consumo batteria (stimato)",
+    "pp",
+    "Misurazione in corso",
+    "Non misurabile"
+  ],
+  "es": [
+    "Consumo de batería (estimado)",
+    "pp",
+    "Midiendo",
+    "No medible"
+  ],
+  "pt": [
+    "Consumo da bateria (estimado)",
+    "pp",
+    "A medir",
+    "Não mensurável"
+  ],
+  "nl": [
+    "Accuverbruik (geschat)",
+    "pp",
+    "Meting loopt",
+    "Niet meetbaar"
+  ],
+  "da": [
+    "Batteriforbrug (estimeret)",
+    "pp",
+    "Måler",
+    "Kan ikke måles"
+  ],
+  "nb": [
+    "Batteriforbruk (estimert)",
+    "pp",
+    "Måler",
+    "Ikke målbart"
+  ],
+  "sv": [
+    "Batteriförbrukning (uppskattad)",
+    "pp",
+    "Mäter",
+    "Ej mätbar"
+  ],
+  "fi": [
+    "Akun kulutus (arvio)",
+    "%-yks.",
+    "Mittaus käynnissä",
+    "Ei mitattavissa"
+  ],
+  "pl": [
+    "Zużycie akumulatora (szac.)",
+    "p.p.",
+    "Pomiar trwa",
+    "Nie do ustalenia"
+  ],
+  "cs": [
+    "Spotřeba baterie (odhad)",
+    "p. b.",
+    "Probíhá měření",
+    "Nelze změřit"
+  ],
+  "sk": [
+    "Spotreba batérie (odhad)",
+    "p. b.",
+    "Prebieha meranie",
+    "Nedá sa zmerať"
+  ],
+  "hu": [
+    "Akkufogyasztás (becsült)",
+    "százalékpont",
+    "Mérés folyamatban",
+    "Nem mérhető"
+  ],
+  "ro": [
+    "Consum baterie (estimat)",
+    "pp",
+    "Măsurare în curs",
+    "Nu se poate măsura"
+  ],
+  "sl": [
+    "Poraba baterije (ocena)",
+    "odst. t.",
+    "Merjenje poteka",
+    "Ni merljivo"
+  ],
+  "hr": [
+    "Potrošnja baterije (procjena)",
+    "pp",
+    "Mjerenje u tijeku",
+    "Nije mjerljivo"
+  ]
+};
+for (const [language, labels] of Object.entries(DEPARTURE_SOC_TEXT)) {
+  const keys = ["departureSocUsage","departureSocPoints","departureSocPending","departureSocUnavailable"];
+  Object.assign(FRONTEND_TEXT.dashboard[language], Object.fromEntries(keys.map((key,index)=>[key,labels[index]])));
+}
 const DEPARTURE_CONFIGURATION_TEXT = {
   "de": [
     "Konfiguration",

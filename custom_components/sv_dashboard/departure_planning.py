@@ -6,7 +6,7 @@ import voluptuous as vol
 from homeassistant.components import websocket_api
 from homeassistant.core import callback
 from homeassistant.helpers.storage import Store
-from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.helpers.event import async_track_time_interval, async_track_state_change_event
 from datetime import timedelta, datetime
 import math
 import logging
@@ -15,7 +15,7 @@ _LOGGER = logging.getLogger(__name__)
 from homeassistant.util import dt as dt_util
 
 from .const import CONF_VEHICLE_SLUG, DOMAIN
-from .departure_plan import edit_profiles, normalize_profile, preview, normalize_reminder, reminder_candidate, due_occurrences, climate_gate, climate_state, quick_defaults, add_quick_profile, execution_candidates, fresh_heartbeat, expire_one_time_profiles, normalize_climate_min_soc, migrate_climate_min_soc, next_climate_badge, departure_confirmation, departure_result_due
+from .departure_plan import edit_profiles, normalize_profile, preview, normalize_reminder, reminder_candidate, due_occurrences, climate_gate, climate_state, quick_defaults, add_quick_profile, execution_candidates, fresh_heartbeat, expire_one_time_profiles, normalize_climate_min_soc, migrate_climate_min_soc, next_climate_badge, departure_confirmation, departure_result_due, climate_source_time, climate_soc_sample, climate_soc_begin, climate_soc_advance
 
 
 class DeparturePlanning:
@@ -35,6 +35,8 @@ class DeparturePlanning:
         self.preparation = {}
         self.held_overrides = []
         self._published_badge = None
+        self._soc_observed = set()
+        self._soc_unsubscribe = None
 
     async def async_initialize(self):
         data = await self.store.async_load()
@@ -63,6 +65,10 @@ class DeparturePlanning:
         self.coordinator = coordinator
         self.notifications = notifications
         self._unsubscribe = async_track_time_interval(self.hass, self._tick, timedelta(minutes=1))
+        mapping = coordinator.data.get("entity_mapping", {})
+        watched = [mapping[k] for k in ("engine", "battery_plugged", "battery_charging") if mapping.get(k)]
+        if watched:
+            self._soc_unsubscribe = async_track_state_change_event(self.hass, watched, self._soc_guard_changed)
 
     @callback
     def _tick(self, _now):
@@ -70,6 +76,9 @@ class DeparturePlanning:
             self._task = self.hass.async_create_task(self._async_tick())
 
     async def async_shutdown(self):
+        if self._soc_unsubscribe:
+            self._soc_unsubscribe()
+            self._soc_unsubscribe = None
         if self._unsubscribe:
             self._unsubscribe()
             self._unsubscribe = None
@@ -127,6 +136,7 @@ class DeparturePlanning:
         try:
             await self._async_result_notifications()
             await self._async_reminder()
+            await self._async_climate_soc()
         finally:
             self.publish_badge()
 
@@ -163,6 +173,47 @@ class DeparturePlanning:
                     sent = False
                 item["result_notification"] = "sent" if sent else "not_sent"
                 await self._persist(self.profiles, self.revision, self.reminder, self.last_reminder)
+
+    def _soc_guards_clean(self, sample=None):
+        for key in ("engine", "battery_plugged", "battery_charging"):
+            state = self._state(key)
+            if state is None or climate_state(state.state) is not False:
+                return False
+            # Do not use a baseline which predates a known change in any guard.
+            if sample is not None and state.last_changed > datetime.fromisoformat(sample["at"]):
+                return False
+        return True
+
+    @callback
+    def _soc_guard_changed(self, event):
+        state = event.data.get("new_state")
+        if state is None or climate_state(state.state) is not False:
+            self._soc_observed.clear()
+
+    async def _async_climate_soc(self):
+        async with self.lock:
+            now = dt_util.utcnow()
+            sample = climate_soc_sample(self._state("battery"))
+            climate = self._state("preconditioning")
+            for key, item in self.ledger.items():
+                measurement = item.get("climate_soc")
+                if not measurement or measurement.get("status") != "pending":
+                    continue
+                # In-memory observation token is deliberately lost on restart.
+                # A gap in observation cannot support a climate-only estimate.
+                result = climate_soc_advance(item, sample, getattr(climate, "state", None),
+                    getattr(climate, "attributes", {}), now,
+                    key in self._soc_observed and self._soc_guards_clean())
+                if result == measurement:
+                    continue
+                item["climate_soc"] = result
+                try:
+                    await self._persist(self.profiles, self.revision, self.reminder, self.last_reminder)
+                except Exception:
+                    item["climate_soc"] = measurement
+                    raise
+                if result["status"] != "pending":
+                    self._soc_observed.discard(key)
 
     def _state(self, key, domain=None):
         mapping = self.coordinator.data.get("entity_mapping", {})
@@ -268,7 +319,12 @@ class DeparturePlanning:
                     if dt_util.utcnow() >= datetime.fromisoformat(row["deadline"]):
                         item["status"] = "missed"
                     else:
-                        item["dispatched_at"] = dt_util.utcnow().isoformat()
+                        dispatched = dt_util.utcnow()
+                        item["dispatched_at"] = dispatched.isoformat()
+                        sample = climate_soc_sample(self._state("battery"))
+                        item["climate_soc"] = climate_soc_begin(sample, dispatched, self._soc_guards_clean(sample))
+                        if item["climate_soc"]["status"] == "pending":
+                            self._soc_observed.add(key)
                         await self._persist(self.profiles, self.revision, self.reminder, self.last_reminder)
                         if dt_util.utcnow() >= datetime.fromisoformat(row["deadline"]):
                             item["status"] = "missed"
@@ -289,6 +345,8 @@ class DeparturePlanning:
                     getattr(climate, "attributes", {}), now)
                 if status != item.get("status"):
                     item["status"] = status
+                    if status == "confirmed":
+                        item["climate_confirmed_at"] = climate_source_time(climate.attributes).isoformat()
                     changed = True
             if changed:
                 await self._persist(self.profiles, self.revision, self.reminder, self.last_reminder)

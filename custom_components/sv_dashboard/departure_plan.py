@@ -346,3 +346,61 @@ def departure_result_due(item, now):
         return False
     departure = datetime.fromisoformat(item["departure"])
     return now <= departure + timedelta(minutes=5)
+
+
+def climate_soc_sample(state):
+    """Use only field-dated SOC samples; receipt time is not measurement time."""
+    if state is None:
+        return None
+    try:
+        value = float(state.state)
+    except (ValueError, TypeError, AttributeError):
+        return None
+    stamp = climate_source_time(state.attributes)
+    if stamp is None or not 0 <= value <= 100:
+        return None
+    return {"soc": value, "at": stamp.isoformat()}
+
+
+def climate_soc_begin(sample, now, guards_clean):
+    """Capture the pre-dispatch battery level, without fetching vehicle data."""
+    if not guards_clean or sample is None:
+        return {"status": "unavailable"}
+    stamp = datetime.fromisoformat(sample["at"])
+    if not timedelta(0) <= now - stamp <= timedelta(minutes=15):
+        return {"status": "unavailable"}
+    return {"status": "pending", "before": sample}
+
+
+def climate_soc_advance(item, sample, climate_raw, climate_attributes, now, guards_clean):
+    """Estimate net battery SOC loss only across a locally observed clean session."""
+    measurement = item["climate_soc"]
+    if measurement["status"] != "pending":
+        return measurement
+    unavailable = {**measurement, "status": "unavailable"}
+    dispatch = datetime.fromisoformat(item["dispatched_at"])
+    deadline = min(dispatch + timedelta(minutes=45),
+                   datetime.fromisoformat(item["departure"]) + timedelta(minutes=10))
+    if not guards_clean or now > deadline:
+        return unavailable
+    if item["status"] in ("claimed", "submitted"):
+        return measurement
+    if item["status"] != "confirmed" or not item.get("climate_confirmed_at"):
+        return unavailable
+    confirmed = datetime.fromisoformat(item["climate_confirmed_at"])
+    ended = climate_source_time(climate_attributes or {})
+    if climate_state(climate_raw) is not False or not ended or not confirmed < ended <= now:
+        return measurement
+    if sample is None:
+        return measurement
+    stamp = datetime.fromisoformat(sample["at"])
+    if stamp < ended:
+        return measurement
+    if stamp > now or stamp - ended > timedelta(minutes=5):
+        return unavailable
+    before = measurement["before"]["soc"]
+    after = sample["soc"]
+    if after > before:
+        return unavailable
+    return {**measurement, "status": "estimated", "after": sample,
+            "ended_at": ended.isoformat(), "loss_pp": round(before - after, 3)}

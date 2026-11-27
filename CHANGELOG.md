@@ -2,6 +2,7 @@
 
 ## 0.7.3-beta.20 — climate display temperature fallback
 
+- Record estimated battery SOC loss per newly dispatched automatic climate occurrence in the execution history, from field-dated baseline and post-OFF samples. Only continuously observed parked, unplugged, non-charging sessions qualify; missing data, restart, driving/charging/cable activity or increasing SOC invalidate the estimate. No extra upstream queries or retroactive fabrication.
 - Use the last available numeric outdoor temperature for the heating/cooling icon, without a freshness requirement. Retain generic active only for missing/invalid temperature. Climate ON freshness, pending, stop handling, scheduler confirmation and notifications are unchanged from beta.19. No extra polling or historical reads.
 
 ## 0.7.3-beta.19 — scheduled climate preview and result notifications

@@ -146,3 +146,7 @@ Canonical external vehicle test thread: #2.
 ## Scheduled climate result confirmation
 
 Use a newer offset-aware climate-field source timestamp after dispatch for a positive result; HA restore/receipt timestamps and command acknowledgement alone are insufficient. A genuine MQTT-only change without updated field source time remains unconfirmed. A scheduled departure is a planning deadline, not a verified cabin-temperature or completion ETA. The Hero preview uses local departure planning, never a new vehicle API request.
+
+## Automatic climate battery use (beta.20)
+
+The SOC delta is an estimated net battery loss, not a metered heater-only consumption. Only a confirmed automatic climate occurrence with a field-dated pre-dispatch baseline and a post-OFF SOC sample within five minutes, continuously observed engine off, cable off and charging off, may produce a delta. Unknown signals, observed conflicting activity, restart and missing samples are not measurable. The observation does not trigger wakeups, requests, commands or change scheduler decisions. Owner reports that the active indication in the 27 November screenshot corresponded to the scheduled 12:30 departure; outdoor temperature updates are irregular (reported by owner, exact timestamp not verified).

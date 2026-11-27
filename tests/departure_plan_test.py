@@ -217,3 +217,28 @@ assert m.departure_result_due({**item,"status":"confirmed"},new)
 assert not m.departure_result_due({**item,"status":"confirmed","result_notification":"attempted"},new)
 assert not m.departure_result_due({**item,"status":"confirmed"},stamp+timedelta(minutes=26))
 print("Planned climate badge and terminal result evidence tests passed")
+
+# Estimated SOC loss needs a source-dated baseline/end and continuous clean observation.
+from types import SimpleNamespace
+sample = lambda soc, at: m.climate_soc_sample(SimpleNamespace(state=str(soc), attributes={"Zuletzt aktualisiert":at.isoformat()}))
+baseline = sample(85, stamp-timedelta(minutes=1))
+before = m.climate_soc_begin(baseline, stamp, True)
+assert before["status"] == "pending"
+assert m.climate_soc_begin(sample(85,stamp-timedelta(minutes=16)),stamp,True)["status"] == "unavailable"
+assert m.climate_soc_begin(baseline,stamp,False)["status"] == "unavailable"
+assert m.climate_soc_sample(SimpleNamespace(state="85",attributes={})) is None
+assert m.climate_soc_sample(SimpleNamespace(state="nan",attributes={"Last updated":stamp.isoformat()})) is None
+confirmed_item = {**item,"status":"confirmed","climate_confirmed_at":new.isoformat(),"climate_soc":before}
+end = stamp + timedelta(minutes=20)
+end_attrs={"Last updated":end.isoformat()}
+finish = lambda s,guard=True,at=end: m.climate_soc_advance(confirmed_item,s,"off",end_attrs,at,guard)
+assert finish(sample(83,end))["loss_pp"] == 2
+assert finish(sample(85,end))["loss_pp"] == 0
+assert finish(sample(86,end))["status"] == "unavailable"
+assert finish(sample(83,end),False)["status"] == "unavailable"
+assert finish(sample(83,end-timedelta(minutes=1)))["status"] == "pending"
+assert finish(sample(83,end+timedelta(minutes=6)),True,end+timedelta(minutes=6))["status"] == "unavailable"
+assert finish(None,True,end+timedelta(minutes=11))["status"] == "unavailable"
+assert m.climate_soc_advance(confirmed_item,sample(83,end),"off",{},end,True)["status"] == "pending"
+assert m.climate_soc_advance({**confirmed_item,"status":"unconfirmed"},sample(83,end),"off",end_attrs,end,True)["status"] == "unavailable"
+print("Climate SOC observation tests passed")
