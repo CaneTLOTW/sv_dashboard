@@ -130,6 +130,21 @@ Frontend behavior changes must use a new cache/resource version. Internal `?v=` 
 
 Documentation-only changes do not require a runtime version bump.
 
+## Python bytecode and frontend identity during deployment or rollback
+
+Timestamp-based Python bytecode can remain valid when a source replacement preserves its old mtime and size. A previous version's bytecode can therefore be imported from an otherwise correct package tree. See [Issue #136](https://github.com/CaneTLOTW/sv_dashboard/issues/136#issuecomment-7213957163).
+
+For normal package deployments and recovery:
+
+1. Verify exact candidate SHA, successful CI, package path, complete rollback backup (including relevant store and resource evidence), and current HA readiness. A retained/unknown climate sensor is not a deployment gate; do not poll the vehicle. Schedule around a known in-flight command or imminent dispatch.
+2. Stage and verify candidate source/assets; replace only the intended package files, preserving ownership, permissions and ACLs. Do not copy generated caches from staging or backup. Use fresh source mtimes for changed files when possible; mtime alone is not sufficient.
+3. Before requesting a Core restart, invalidate generated Python caches only below the verified `custom_components/sv_dashboard` directory: remove actual package-local `__pycache__` directories and generated `.pyc` files without following symlinks or touching other integrations, storage, dependencies or source. Verify the package boundary and cache absence; report counts. A currently running process can regenerate caches, so recheck after restart and validate loaded identity, not merely the cleanup command.
+4. Request one normal Core restart and observe process replacement/readiness; a management timeout is not evidence that a second request is needed. Verify tracked package hashes, HA configuration/health, integration readiness, and expected backend behavior using an existing read-only live API. For beta.18, the authenticated departure-plans `get` response includes the new global `climate_min_soc` field; check this alongside the versioned resource. Do not invoke a settings mutation to test identity.
+5. The package's frontend registration must converge to exactly one expected versioned SV resource in storage-mode Lovelace, with matching served assets. Inspect authenticated resource and asset responses when available; do not edit `.storage` manually or mask a stale resource by adding a second one. Browser reload/behavior is a separate acceptance check. Report missing evidence as NOT_TESTED; do not claim validated runtime solely from source hashes or `ready`.
+6. If a restart/deployment fails, report the evidence. When an authorized rollback is required, restore the verified previous source/assets and invalidate package-local bytecode again. A separate controlled recovery restart is required to reload restored code when the process may have imported the failed candidate; do not call a disk-only rollback a verified running rollback. Verify previous backend identity, resource and health after recovery. If a recovery restart cannot be completed, explicitly report running identity UNKNOWN and stop rather than cycling restarts.
+
+No vehicle command, manual store edit, source hotfix or stable promotion is authorized by this procedure. Normal startup-managed resource and store changes are distinct from manual edits and must be documented.
+
 ## Runtime deployment contract
 
 A deployment result should record at least:
