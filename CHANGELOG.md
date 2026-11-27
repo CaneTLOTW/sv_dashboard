@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.3-beta.25 — immutable vehicle evidence journal
+
+- Independent SQLite journal of selected mapped upstream sensor and button observations with original value, units and available timestamps; Recorder seed and hourly catch-up, local state event capture and minute flush. No interpolation or new upstream requests. Preserve local trip/charge/refuel revisions, charge samples, departure result/preparation and wake-up/notification history separately from bounded operational stores. Existing canonical calculations and scheduler behavior retained. Offline evidence recovery from verified same-vehicle Store snapshots.
+
 ## 0.7.3-beta.24 — independent history archives
 
 - Separate per-vehicle raw trip archive retains IDs and distinct payload revisions; hydrate the derived history from it, including recovered historical rows. Offline non-overwriting recovery staging utility. Separate GPS point archive seeds retained Recorder observations and captures local tracker events, with hourly Recorder catch-up and no automatic pruning. Map shows observed points separately from approximate trip endpoints. No new vehicle requests or fabricated routes.

@@ -348,6 +348,7 @@ class SvDashboardStatusSensor(CoordinatorEntity, SensorEntity):
         return {
             "integration_domain": DOMAIN,
             "installed_version": FRONTEND_VERSION,
+            "evidence_archive": (self.coordinator.evidence_archive.status() if getattr(self.coordinator, "evidence_archive", None) else None),
             "entry_id": self._entry.entry_id,
             "vehicle_slug": self.coordinator.data["vehicle_slug"],
             "dashboard_url_path": self.coordinator.data.get("dashboard_url_path"),

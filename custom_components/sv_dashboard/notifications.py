@@ -154,6 +154,9 @@ class VehicleNotificationManager:
         stored = await self._store.async_load()
         if isinstance(stored, dict):
             self.data.update(stored)
+        evidence = getattr(self, "evidence_archive", None)
+        if evidence:
+            evidence.queue_store("notifications", self.data)
         self.data.setdefault("switches", {})
         self.data.setdefault("markers", {})
         settings = self.data.setdefault("settings", {})
@@ -1004,6 +1007,9 @@ class VehicleNotificationManager:
 
     async def _save(self) -> None:
         await self._store.async_save(self.data)
+        evidence = getattr(self, "evidence_archive", None)
+        if evidence:
+            evidence.queue_store("notifications", self.data)
         for entity in self._entities:
             entity.async_write_ha_state()
 

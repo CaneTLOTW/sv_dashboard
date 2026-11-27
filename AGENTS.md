@@ -12,6 +12,11 @@ This file is a compact operating guide for AI-assisted and automated changes. It
 - Codex must never turn an uncommitted/runtime-only patch into a candidate. A runtime copy is not a source of truth.
 - Repository mutations that are not deployment evidence comments are outside the Codex role unless the maintainer gives an explicit one-off instruction for a non-development administrative action.
 
+## Historical evidence and CI guard
+
+- Never purge, overwrite or reconstruct raw vehicle observations as measured data. Preserve original field units, source and HA observation times, raw anomalies, and distinct payload revisions; keep derived history and executable control state separate. Back up the trip, GPS, evidence and charge-curve archives privately before deployments and recovery. Do not copy private data to GitHub.
+- History regression tests that stub HA must import the real package-owned history/merge modules, not incomplete fake modules. When adding a production import, verify all isolated test loaders; retain the f15f141 fix removing the incomplete history_reconcile stub. CI must pass for the exact candidate. Codex reports failures, ChatGPT fixes source/tests.
+
 ## Codex handoff default
 
 - ChatGPT → Codex handoffs are **Issue-driven**. The canonical GitHub Issue must already contain the complete deployment runbook, exact Candidate SHA/version, runtime steps, acceptance criteria, abort conditions and prohibited actions before Codex is started.

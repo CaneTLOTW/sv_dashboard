@@ -36,6 +36,8 @@ jobs:
           python3 tests/consumption_metrics_test.py
           python3 tests/history_reconcile_test.py
           python3 tests/history_archive_test.py
+          python3 tests/evidence_archive_test.py
+          python3 -m py_compile scripts/stage_evidence_recovery.py
           python3 -m py_compile scripts/stage_history_recovery.py
           python3 tests/state_contract_test.py
           python3 tests/charge_policy_test.py

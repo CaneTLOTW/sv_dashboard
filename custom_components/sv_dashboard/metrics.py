@@ -173,6 +173,10 @@ class VehicleMetricsManager:
         stored = await self._store.async_load()
         if isinstance(stored, dict):
             self.data.update(stored)
+        evidence = getattr(self, "evidence_archive", None)
+        if evidence:
+            evidence.queue_store("metrics", self.data)
+            await evidence.async_flush()
         if not isinstance(self.data.get("pending_trips"), list):
             self.data["pending_trips"] = []
         # v0.4.11 briefly imported historical Last trip states. They are not
@@ -748,6 +752,9 @@ class VehicleMetricsManager:
             # Preserve repeated whole-percent SOC reports as raw timeline
             # points; only co-timestamp entity fan-out is merged above.
             samples.append(sample)
+        evidence = getattr(self, "evidence_archive", None)
+        if evidence:
+            evidence.queue_row("local_charge_sample", active.get("id") or active.get("start_time") or "unkeyed", sample)
         active["samples"] = samples[-_MAX_CHARGE_SAMPLES:]
         await self._save_and_refresh()
 
@@ -1313,19 +1320,27 @@ class VehicleMetricsManager:
     async def _save_and_refresh(self) -> None:
         self.data["updated_at"] = dt_util.utcnow().isoformat()
         await self._store.async_save(self.data)
+        evidence = getattr(self, "evidence_archive", None)
+        if evidence:
+            await evidence.async_flush()
         for entity in self._entities:
             entity.async_write_ha_state()
 
     def _normalise_trips(self) -> None:
         trips = [item for item in self.data.get("trips", []) if isinstance(item, dict)]
         trips.sort(key=lambda item: str(item.get("end_time") or item.get("id") or ""))
-        # Store a modest buffer beyond the trailing window. Recorder retains
-        # result-sensor history separately for the configured retention period.
+        evidence = getattr(self, "evidence_archive", None)
+        if evidence:
+            evidence.queue_store("metrics", {"trips": trips})
+        # Keep the bounded live working set; all original rows are journaled.
         self.data["trips"] = trips[-250:]
 
     def _normalise_charges(self) -> None:
         charges = [item for item in self.data.get("charges", []) if isinstance(item, dict)]
         charges.sort(key=lambda item: str(item.get("end_time") or item.get("id") or ""))
+        evidence = getattr(self, "evidence_archive", None)
+        if evidence:
+            evidence.queue_store("metrics", {"charges": charges})
         self.data["charges"] = charges[-250:]
 
     def _number(self, mapping_key: str) -> float | None:

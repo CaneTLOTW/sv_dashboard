@@ -62,6 +62,9 @@ class DeparturePlanning:
             self.held_overrides = [normalize_profile(p, p["id"]) for p in held]
             if any(p["kind"] != "once" for p in self.held_overrides):
                 raise ValueError("invalid_store")
+        evidence = getattr(self, "evidence_archive", None)
+        if evidence:
+            evidence.queue_store("departure_plans", {"ledger": self.ledger, "preparation": self.preparation})
         await self._async_cleanup_locked(dt_util.utcnow())
 
     def async_start(self, notifications, coordinator):
@@ -104,6 +107,9 @@ class DeparturePlanning:
                                      "climate_min_soc": self.climate_min_soc,
                                      "execution_enabled_at": self.execution_enabled_at.isoformat() if self.execution_enabled_at else None,
                                      "ledger": self.ledger, "preparation": self.preparation, "held_overrides": self.held_overrides})
+        evidence = getattr(self, "evidence_archive", None)
+        if evidence:
+            evidence.queue_store("departure_plans", {"ledger": self.ledger, "preparation": self.preparation})
 
     def _effective_profiles(self):
         # Hidden expired exceptions still suppress the original calendar date.
@@ -112,6 +118,9 @@ class DeparturePlanning:
     async def _async_cleanup_locked(self, now):
         rows, held, expired = expire_one_time_profiles(
             self.profiles, self.held_overrides, now, self.hass.config.time_zone, self.ledger)
+        evidence = getattr(self, "evidence_archive", None)
+        if evidence:
+            evidence.queue_store("departure_plans", {"ledger": self.ledger, "preparation": self.preparation})
         cutoff = now - timedelta(days=30)
         ledger = {key: value for key, value in self.ledger.items()
                   if (dt_util.parse_datetime(value.get("at", "")) or now) >= cutoff}

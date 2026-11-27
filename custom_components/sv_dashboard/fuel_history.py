@@ -93,6 +93,10 @@ class FuelHistoryManager:
         stored = await self._store.async_load()
         if isinstance(stored, dict):
             self.data.update(stored)
+        evidence = getattr(self.metrics, "evidence_archive", None)
+        if evidence:
+            evidence.queue_store("fuel_history", self.data)
+            await evidence.async_flush()
         self._normalise_events()
         fuel = self.mapping.get("fuel")
         if fuel:
@@ -162,6 +166,11 @@ class FuelHistoryManager:
                 event_time = _parse_datetime(event.get("source_time")) if isinstance(event, dict) else None
                 if event_time is not None and event_time < start:
                     retained.append(event)
+            evidence = getattr(self.metrics, "evidence_archive", None)
+            if evidence:
+                evidence.queue_store("fuel_history", self.data)
+                evidence.queue_store("fuel_history", {"events": rebuilt})
+                await evidence.async_flush()
             self.data["events"] = retained + rebuilt
             self._normalise_events()
             self.data["updated_at"] = dt_util.utcnow().isoformat()

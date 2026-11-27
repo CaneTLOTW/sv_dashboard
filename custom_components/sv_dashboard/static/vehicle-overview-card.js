@@ -10,9 +10,9 @@
  * changes presentation (no heading/self-navigation, optional info button);
  * entity resolution, picture lifecycle and overlay rendering stay shared.
  */
-import { languageFor, textFor } from "./i18n.js?v=0.7.3-beta.24";
-import { climatePresentation } from "./climate-presentation-core.js?v=0.7.3-beta.24";
-import { plannedClimateLabel } from "./departure-badge-core.js?v=0.7.3-beta.24";
+import { languageFor, textFor } from "./i18n.js?v=0.7.3-beta.25";
+import { climatePresentation } from "./climate-presentation-core.js?v=0.7.3-beta.25";
+import { plannedClimateLabel } from "./departure-badge-core.js?v=0.7.3-beta.25";
 
 const STATUS_DOMAIN = "sv_dashboard";
 const CARD_TAG = "sv-dashboard-vehicle-overview-card";

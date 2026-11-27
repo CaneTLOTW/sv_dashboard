@@ -36,6 +36,7 @@ from .fuel_history import FuelHistoryManager, async_register_fuel_history_websoc
 from .notifications import VehicleNotificationManager
 from .server_history import ServerHistoryManager
 from .gps_archive import GpsArchive
+from .telemetry_archive import TelemetryArchive
 from .vehicle_audit import async_register_vehicle_audit_websocket
 from .vehicle_diagnostics import async_register_vehicle_diagnostics_websocket
 from .departure_planning import DeparturePlanning, async_register_departure_planning_websocket
@@ -177,6 +178,14 @@ async def async_setup_entry(
         coordinator.data["entity_mapping"],
         coordinator.data.get("capabilities"),
     )
+    evidence = TelemetryArchive(hass, entry, coordinator.data["entity_mapping"])
+    coordinator.evidence_archive = evidence
+    metrics.evidence_archive = evidence
+    try:
+        await evidence.async_start()
+    except Exception:
+        evidence.error = "startup_failed"
+        _LOGGER.exception("Could not start SV evidence archive; existing data retained")
     await metrics.async_initialize()
     coordinator.metrics = metrics
 
@@ -203,12 +212,14 @@ async def async_setup_entry(
         metrics,
         server_history=server_history,
     )
+    notifications.evidence_archive = evidence
     await notifications.async_initialize()
     coordinator.notifications = notifications
 
     coordinator.departure_planning = None
     try:
         planning = DeparturePlanning(hass, entry)
+        planning.evidence_archive = evidence
         await planning.async_initialize()
         coordinator.departure_planning = planning
         planning.async_start(notifications, coordinator)
@@ -253,6 +264,8 @@ async def async_unload_entry(
             await coordinator.departure_planning.async_shutdown()
         await coordinator.notifications.async_shutdown()
         await coordinator.metrics.async_shutdown()
+        if getattr(coordinator, "evidence_archive", None) is not None:
+            await coordinator.evidence_archive.async_shutdown()
         hass.data[DOMAIN].pop(entry.entry_id, None)
     return unloaded
 
