@@ -141,7 +141,7 @@ Canonical external vehicle test thread: #2.
 
 - **Confirmed:** HA restore/restart can renew `last_changed` for a retained ON state without renewing the underlying localized climate-field source timestamp. The observed UI-only false activation is reproduced in [#136](https://github.com/CaneTLOTW/sv_dashboard/issues/136#issuecomment-7204668180). Physical HVAC activity and initiator of the earlier start command remain **unknown**.
 - **Confirmed field presence:** the localized `Zuletzt aktualisiert` exposes `preconditioning.airConditioning.createdAt` in the observed integration. MQTT status changes may arrive without a newer REST field timestamp. A source-dated independent MQTT event is not established by this evidence.
-- Presentation policy: neutral idle when source evidence is insufficient; fresh source-stamped ON permits active display; color is inferred only from recent source-stamped temperature. Receipt/restore time and command acknowledgement do not prove current physical operation. The scheduler ledger is separate.
+- Presentation policy: neutral idle when source evidence is insufficient; fresh source-stamped ON permits active display; color is inferred from the last available numeric temperature regardless of age or source timestamp (beta.20); when no valid numeric value is exposed, the generic active icon remains. This is a display heuristic, not a reported HVAC mode. Receipt/restore time and command acknowledgement do not prove current physical operation. The scheduler ledger is separate.
 
 ## Scheduled climate result confirmation
 

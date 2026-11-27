@@ -1,6 +1,7 @@
 // Display only: neutral OFF is the idle/default presentation, not proof of physical OFF.
 // HA last_changed/last_updated/last_reported can be renewed by restore or restart.
 // Without a source-dated observation, do not infer HVAC activity from those fields.
+// Temperature only selects a display color; use the last numeric sensor value irrespective of its age.
 // Never feed this heuristic into scheduling, safety gates or confirmation history.
 export function climatePresentation(climate, temperature, now = Date.now(), startButton, stopButton) {
   const sourceTime = entity => {
@@ -32,7 +33,7 @@ export function climatePresentation(climate, temperature, now = Date.now(), star
   const observed = rawActive === expected && recent(source, 30 * 60000) && source > actionAt;
   const pending = recent(actionAt, 180000) && !observed;
   const mode = pending ? "pending" : !active ? "off"
-    : !recent(sourceTime(temperature), 30 * 60000) || !Number.isFinite(temp) ? "active" : temp > 20 ? "cooling" : "heating";
+    : !Number.isFinite(temp) ? "active" : temp > 20 ? "cooling" : "heating";
   const icon = mode === "pending" ? "mdi:sync" : mode === "heating" ? "mdi:radiator" : "mdi:air-conditioner";
   const color = mode === "pending" ? "#e5a329" : mode === "heating" ? "rgb(244,67,54)" : mode === "cooling" ? "rgb(33,150,243)" : null;
   return {active, rawActive, confirmed, pending, mode, icon, color, sourceAt: source};

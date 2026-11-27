@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.3-beta.20 — climate display temperature fallback
+
+- Use the last available numeric outdoor temperature for the heating/cooling icon, without a freshness requirement. Retain generic active only for missing/invalid temperature. Climate ON freshness, pending, stop handling, scheduler confirmation and notifications are unchanged from beta.19. No extra polling or historical reads.
+
 ## 0.7.3-beta.19 — scheduled climate preview and result notifications
 
 - Merge planned climate start into the Hero A/C badge; one-offs within the existing 14-day preview and weekly occurrences within three hours, hidden during pending/active or disabled automation. Shared local vehicle summary, no new upstream calls; EV and dual-energy Hero. Reorder navigation and clarify view icons.

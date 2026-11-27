@@ -9,7 +9,7 @@ test("reported ON uses heating/cooling; missing temperature uses neutral active"
   assert.equal(climatePresentation(e("on"),e("20"),now).mode,"heating");
   assert.equal(climatePresentation(e("on"),e("21"),now).mode,"cooling");
   assert.equal(climatePresentation(e("on"),e("77",0,{unit_of_measurement:"°F"}),now).mode,"cooling");
-  assert.equal(climatePresentation(e("on"),e("25",120),now).mode,"active");
+  assert.equal(climatePresentation(e("on"),e("25",120),now).mode,"cooling");
   for(const temp of [undefined,e("unknown"),e("")]) assert.equal(climatePresentation(e("on"),temp,now).mode,"active");
 });
 test("idle is the visual default; stale ON and unknown never become a question mark",()=>{
@@ -68,4 +68,19 @@ test("restore during a pending request cannot confirm it; recent stop suppresses
 });
 test("naive source time and fresh HA receipt time cannot make restored ON active",()=>{
   assert.equal(climatePresentation({state:"on",attributes:{"Zuletzt aktualisiert":"2026-11-26T16:00:00"},last_changed:new Date(now).toISOString()},e("-4"),now).mode,"off");
+});
+
+test("temperature age is irrelevant to the color, never to climate activation",()=>{
+  for(const age of [31,120,1440,10080]){
+    assert.equal(climatePresentation(e("on"),e("-3.5",age),now).mode,"heating");
+    assert.equal(climatePresentation(e("on"),e("25",age),now).mode,"cooling");
+    assert.equal(climatePresentation(e("on",31),e("-3.5",age),now).mode,"off");
+  }
+  assert.equal(climatePresentation(e("on"),{state:"-3.5"},now).mode,"heating");
+  assert.equal(climatePresentation(e("on"),{state:"77",attributes:{unit_of_measurement:"°F"}},now).mode,"cooling");
+  for(const temp of [undefined,e("unavailable"),e("unknown"),e(""),e("25",0,{unit_of_measurement:"K"})]){
+    assert.equal(climatePresentation(e("on"),temp,now).mode,"active");
+  }
+  const start={state:new Date(now-60000).toISOString()};
+  assert.equal(climatePresentation(e("off",2),e("-3.5",1440),now,start).mode,"pending");
 });
