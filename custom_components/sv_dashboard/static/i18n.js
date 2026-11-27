@@ -2300,6 +2300,102 @@ for (const [language, labels] of Object.entries(DEPARTURE_REMINDER_TEXT)) {
   const keys = ["departureReminderTitle","departureReminderEnabled","departureReminderTime","departureReminderNote","departureReminderThreshold","departureReminderSent","departureReminderAttempt"];
   Object.assign(FRONTEND_TEXT.dashboard[language], Object.fromEntries(keys.map((key,index)=>[key,labels[index]])));
 }
+const DEPARTURE_CONFIGURATION_TEXT = {
+  "de": [
+    "Konfiguration",
+    "Mindest-SoC für Klimastart",
+    "Gilt für alle automatischen Abfahrten. Unter diesem Ladestand kein Klimastart; keine Ladesteuerung."
+  ],
+  "en": [
+    "Configuration",
+    "Minimum SoC for climate start",
+    "Applies to all automatic departures. No climate start below this charge level; no charging control."
+  ],
+  "fr": [
+    "Configuration",
+    "SoC minimal pour la climatisation",
+    "Valable pour tous les départs automatiques. Pas de démarrage sous ce seuil ; pas de commande de recharge."
+  ],
+  "it": [
+    "Configurazione",
+    "SoC minimo per la climatizzazione",
+    "Vale per tutte le partenze automatiche. Nessun avvio sotto questa soglia; nessun controllo della ricarica."
+  ],
+  "es": [
+    "Configuración",
+    "SoC mínimo para climatización",
+    "Se aplica a todas las salidas automáticas. Sin arranque por debajo del umbral; sin control de carga."
+  ],
+  "pt": [
+    "Configuração",
+    "SoC mínimo para climatização",
+    "Aplica-se a todas as partidas automáticas. Sem início abaixo do limite; sem controlo de carregamento."
+  ],
+  "nl": [
+    "Configuratie",
+    "Minimale SoC voor klimaatstart",
+    "Geldt voor alle automatische vertrekken. Geen klimaatstart onder deze grens; geen laadregeling."
+  ],
+  "da": [
+    "Konfiguration",
+    "Minimum-SoC for klimastart",
+    "Gælder alle automatiske afgange. Ingen klimastart under grænsen; ingen ladestyring."
+  ],
+  "nb": [
+    "Konfigurasjon",
+    "Minimum SoC for klimastart",
+    "Gjelder alle automatiske avganger. Ingen klimastart under grensen; ingen ladestyring."
+  ],
+  "sv": [
+    "Konfiguration",
+    "Minsta SoC för klimatstart",
+    "Gäller alla automatiska avresor. Ingen klimatstart under gränsen; ingen laddstyrning."
+  ],
+  "fi": [
+    "Asetukset",
+    "Vähimmäis-SoC ilmastoinnin aloitukseen",
+    "Koskee kaikkia automaattisia lähtöjä. Ei ilmastointia rajan alapuolella eikä latauksen ohjausta."
+  ],
+  "pl": [
+    "Konfiguracja",
+    "Minimalny SoC dla klimatyzacji",
+    "Dotyczy wszystkich automatycznych odjazdów. Brak uruchomienia poniżej progu; bez sterowania ładowaniem."
+  ],
+  "cs": [
+    "Konfigurace",
+    "Minimální SoC pro klimatizaci",
+    "Platí pro všechny automatické odjezdy. Pod prahem se klimatizace nespustí; bez řízení nabíjení."
+  ],
+  "sk": [
+    "Konfigurácia",
+    "Minimálny SoC pre klimatizáciu",
+    "Platí pre všetky automatické odchody. Pod prahom bez spustenia klimatizácie; bez riadenia nabíjania."
+  ],
+  "hu": [
+    "Konfiguráció",
+    "Minimális SoC a klíma indításához",
+    "Minden automatikus indulásra érvényes. A küszöb alatt nincs klímaindítás; nincs töltésvezérlés."
+  ],
+  "ro": [
+    "Configurare",
+    "SoC minim pentru climatizare",
+    "Se aplică tuturor plecărilor automate. Fără pornire sub prag; fără controlul încărcării."
+  ],
+  "sl": [
+    "Konfiguracija",
+    "Najnižji SoC za klimatizacijo",
+    "Velja za vse samodejne odhode. Pod pragom ni zagona klimatizacije; brez krmiljenja polnjenja."
+  ],
+  "hr": [
+    "Konfiguracija",
+    "Minimalni SoC za klimatizaciju",
+    "Vrijedi za sve automatske polaske. Nema pokretanja ispod praga; bez upravljanja punjenjem."
+  ]
+};
+for (const [language, labels] of Object.entries(DEPARTURE_CONFIGURATION_TEXT)) {
+  const keys = ["departureConfiguration","departureClimateMinSoc","departureClimateMinNote"];
+  Object.assign(FRONTEND_TEXT.dashboard[language], Object.fromEntries(keys.map((key,index)=>[key,labels[index]])));
+}
 const DEPARTURE_LIVE_TEXT = {
   "de": [
     "Automatischer Klimastart",

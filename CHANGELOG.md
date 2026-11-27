@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.3-beta.18 — shared departure configuration
+
+- Per-vehicle global minimum SoC for automatic climate starts (20–100%, default 20%), no profile-specific control. Existing legacy profile fields retained for compatibility; migration adopts the largest existing minimum or 20%, whichever is higher, so no existing reserve is lowered at upgrade. Existing profiles use the global value at execution; no charging control. Consolidate automatic climate authorization, global reserve and independent evening reminder into a collapsible configuration section below the quick planner. History and preview remain in profile column. Preserve scheduler gates and ledgers.
+
 ## 0.7.3-beta.17 — independent evening charging reminder
 
 - Daily low-SoC warning uses its own adjustable 1–100% threshold, independent of departure profiles and scheduler enable. Existing reminder enabled/time and daily attempt guard retained; missing threshold defaults to 30% on legacy stores, without writing until normal persistence. Existing notification recipients, alerts and quiet hours remain in force. No charge or climate command. Profile minimum and target remain unchanged.

@@ -4,8 +4,8 @@
  * status entity created by the backend config entry. It never derives IDs from
  * VINs or friendly names.
  */
-import { languageFor, localeFor, textFor } from "./i18n.js?v=0.7.3-beta.17";
-import { climatePresentation } from "./climate-presentation-core.js?v=0.7.3-beta.17";
+import { languageFor, localeFor, textFor } from "./i18n.js?v=0.7.3-beta.18";
+import { climatePresentation } from "./climate-presentation-core.js?v=0.7.3-beta.18";
 
 const STRATEGY_TYPE = "sv-dashboard";
 const STATUS_DOMAIN = "sv_dashboard";

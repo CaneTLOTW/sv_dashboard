@@ -15,7 +15,7 @@ _LOGGER = logging.getLogger(__name__)
 from homeassistant.util import dt as dt_util
 
 from .const import CONF_VEHICLE_SLUG, DOMAIN
-from .departure_plan import edit_profiles, normalize_profile, preview, normalize_reminder, reminder_candidate, due_occurrences, climate_gate, climate_state, quick_defaults, add_quick_profile, execution_candidates, fresh_heartbeat, expire_one_time_profiles
+from .departure_plan import edit_profiles, normalize_profile, preview, normalize_reminder, reminder_candidate, due_occurrences, climate_gate, climate_state, quick_defaults, add_quick_profile, execution_candidates, fresh_heartbeat, expire_one_time_profiles, normalize_climate_min_soc, migrate_climate_min_soc
 
 
 class DeparturePlanning:
@@ -26,6 +26,7 @@ class DeparturePlanning:
         self.profiles = []
         self.revision = 0
         self.reminder = normalize_reminder({})
+        self.climate_min_soc = 20
         self.last_reminder = None
         self._unsubscribe = None
         self._task = None
@@ -42,6 +43,8 @@ class DeparturePlanning:
                 raise ValueError("invalid_store")
             self.profiles = [normalize_profile(p, p["id"]) for p in data["profiles"]]
             self.revision = data["revision"]
+            self.climate_min_soc = (normalize_climate_min_soc(data["climate_min_soc"])
+                                    if "climate_min_soc" in data else migrate_climate_min_soc(self.profiles))
             self.reminder = normalize_reminder(data.get("reminder", {}))
             self.last_reminder = data.get("last_reminder")
             self.execution_enabled_at = dt_util.parse_datetime(data.get("execution_enabled_at") or "")
@@ -76,6 +79,7 @@ class DeparturePlanning:
     async def _persist(self, rows, revision, reminder, last_reminder):
         await self.store.async_save({"revision": revision, "profiles": rows,
                                      "reminder": reminder, "last_reminder": last_reminder,
+                                     "climate_min_soc": self.climate_min_soc,
                                      "execution_enabled_at": self.execution_enabled_at.isoformat() if self.execution_enabled_at else None,
                                      "ledger": self.ledger, "preparation": self.preparation, "held_overrides": self.held_overrides})
 
@@ -194,7 +198,7 @@ class DeparturePlanning:
                     continue
                 status = climate_gate(profile, self._numeric(battery), getattr(engine, "state", None),
                     getattr(plug, "state", None), temperature, climate_state(getattr(climate, "state", None)),
-                    button is not None and button.state != "unavailable", fresh)
+                    button is not None and button.state != "unavailable", fresh, climate_min_soc=self.climate_min_soc)
                 if row["phase"] == "missed":
                     status = "stale" if key in self.preparation and not fresh else "missed"
                 # No second command within 45 minutes, even if profiles overlap.
@@ -264,7 +268,7 @@ class DeparturePlanning:
 
     def snapshot(self):
         now = dt_util.utcnow()
-        return {"quick_defaults": quick_defaults(now, self.hass.config.time_zone), "revision": self.revision, "profiles": self.profiles, "preview_only": self.execution_enabled_at is None, "execution_enabled": self.execution_enabled_at is not None, "execution_log": sorted(self.ledger.values(), key=lambda row: row["at"], reverse=True)[:20], "preparation_log": sorted((value for key, value in self.preparation.items() if key not in self.ledger), key=lambda row: row["at"], reverse=True)[:20], "reminder": self.reminder, "last_reminder": self.last_reminder,
+        return {"quick_defaults": quick_defaults(now, self.hass.config.time_zone), "revision": self.revision, "profiles": self.profiles, "preview_only": self.execution_enabled_at is None, "execution_enabled": self.execution_enabled_at is not None, "execution_log": sorted(self.ledger.values(), key=lambda row: row["at"], reverse=True)[:20], "preparation_log": sorted((value for key, value in self.preparation.items() if key not in self.ledger), key=lambda row: row["at"], reverse=True)[:20], "reminder": self.reminder, "last_reminder": self.last_reminder, "climate_min_soc": self.climate_min_soc,
                 **preview(self._effective_profiles(), now, self.hass.config.time_zone)}
 
     async def async_apply(self, msg):
@@ -274,6 +278,17 @@ class DeparturePlanning:
                 return self.snapshot()
             if msg.get("revision") != self.revision:
                 raise ValueError("revision_conflict")
+            if msg["op"] == "climate_settings":
+                minimum = normalize_climate_min_soc(msg.get("climate_min_soc"))
+                previous = self.climate_min_soc
+                self.climate_min_soc = minimum
+                try:
+                    await self._persist(self.profiles, self.revision + 1, self.reminder, self.last_reminder)
+                except Exception:
+                    self.climate_min_soc = previous
+                    raise
+                self.revision += 1
+                return self.snapshot()
             if msg["op"] == "execution":
                 enabled = msg.get("enabled")
                 if type(enabled) is not bool:
@@ -301,12 +316,13 @@ class DeparturePlanning:
 @websocket_api.websocket_command({
     vol.Required("type"): f"{DOMAIN}/departure_plans",
     vol.Required("entry_id"): str,
-    vol.Required("op"): vol.In(("get", "save", "delete", "reminder", "execution", "quick")),
+    vol.Required("op"): vol.In(("get", "save", "delete", "reminder", "execution", "quick", "climate_settings")),
     vol.Optional("revision"): int,
     vol.Optional("profile_id"): str,
     vol.Optional("profile"): dict,
     vol.Optional("reminder"): dict,
     vol.Optional("enabled"): bool,
+    vol.Optional("climate_min_soc"): int,
 })
 @websocket_api.async_response
 async def websocket_departure_plans(hass, connection, msg):

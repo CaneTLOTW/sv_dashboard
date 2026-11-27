@@ -128,6 +128,16 @@ def preview(profiles: list, now: datetime, timezone_name: str, days: int = 14) -
     return {"today": today.isoformat(), "timezone": timezone_name, "upcoming": upcoming, "skipped": skipped}
 
 
+def normalize_climate_min_soc(value):
+    """Global automatic climate reserve; product policy floor is 20 percent."""
+    return _integer(value, 20, 100)
+
+
+def migrate_climate_min_soc(profiles):
+    """Never lower an existing profile's configured protection during upgrade."""
+    return max([20] + [p["min_soc"] for p in profiles])
+
+
 def normalize_reminder(value: dict) -> dict:
     if not isinstance(value, dict):
         raise ValueError("invalid_reminder")
@@ -172,7 +182,7 @@ def due_occurrences(profiles, now, timezone_name, enabled_at, ledger):
     return sorted(result, key=lambda row: (row["start"], row["departure"], row["profile_id"]))
 
 
-def climate_gate(profile, soc, engine, plugged, temperature, climate, button_available, fresh):
+def climate_gate(profile, soc, engine, plugged, temperature, climate, button_available, fresh, *, climate_min_soc):
     """Conservative gate; never infer availability from a cable alone."""
     if not button_available:
         return "unavailable"
@@ -184,7 +194,7 @@ def climate_gate(profile, soc, engine, plugged, temperature, climate, button_ava
         return "already_active"
     if climate is not False:
         return "unknown"
-    if soc is None or not 0 <= soc <= 100 or soc < profile["min_soc"]:
+    if soc is None or not 0 <= soc <= 100 or soc < normalize_climate_min_soc(climate_min_soc):
         return "soc"
     if profile["only_plugged"] and plugged != "on":
         return "plug"

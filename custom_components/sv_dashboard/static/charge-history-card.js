@@ -1,6 +1,6 @@
 import { LitElement, html, css, nothing } from "./vendor-lit.js?v=0.6.0-beta.7";
-import { buildChargeCurve, buildChargeSessions, buildLocalChargeSessions, chargeSessionId, findChargeSession, groupPluggedChargeSessions, mergeChargeSessionEvidence, mergeChargeSessions, samePhysicalChargeSession, storedSocHistoryStates } from "./charge-history-core.js?v=0.7.3-beta.17";
-import { localeFor, textFor } from "./i18n.js?v=0.7.3-beta.17";
+import { buildChargeCurve, buildChargeSessions, buildLocalChargeSessions, chargeSessionId, findChargeSession, groupPluggedChargeSessions, mergeChargeSessionEvidence, mergeChargeSessions, samePhysicalChargeSession, storedSocHistoryStates } from "./charge-history-core.js?v=0.7.3-beta.18";
+import { localeFor, textFor } from "./i18n.js?v=0.7.3-beta.18";
 
 const SELECTION_QUERY_PARAM = "sv_charge";
 

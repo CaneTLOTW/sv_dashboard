@@ -79,11 +79,11 @@ assert not m.due_occurrences([base], due, "Europe/Berlin", armed, {key: {}})
 assert not m.due_occurrences([base], due, "Europe/Berlin", due, {})
 assert not m.due_occurrences([base, exception], due, "Europe/Berlin", armed, {})
 assert not m.due_occurrences([base], due, "Europe/Berlin", None, {})
-assert m.climate_gate(base, 35, "off", "off", 0, False, True, True) == "ready"
-assert m.climate_gate(base, 17, "off", "on", 0, False, True, True) == "soc"
-assert m.climate_gate(base, 35, "on", "on", 0, False, True, True) == "engine"
-assert m.climate_gate(base, 35, "off", "on", 0, False, True, False) == "stale"
-assert m.climate_gate(base, 35, "off", "on", 0, True, True, True) == "already_active"
+assert m.climate_gate(base, 35, "off", "off", 0, False, True, True, climate_min_soc=30) == "ready"
+assert m.climate_gate(base, 17, "off", "on", 0, False, True, True, climate_min_soc=30) == "soc"
+assert m.climate_gate(base, 35, "on", "on", 0, False, True, True, climate_min_soc=30) == "engine"
+assert m.climate_gate(base, 35, "off", "on", 0, False, True, False, climate_min_soc=30) == "stale"
+assert m.climate_gate(base, 35, "off", "on", 0, True, True, True, climate_min_soc=30) == "already_active"
 print("Departure execution gates passed")
 
 
@@ -184,3 +184,17 @@ async def check_cleanup():
     assert s.ledger[k]["status"]=="missed" and s.ledger[k]["preparation"]["status"]=="submitted"
 asyncio.run(check_cleanup())
 print("Cleanup persistence, history retention and rollback tests passed")
+
+# Global climate reserve overrides legacy profile minima; no migration lowering.
+assert m.migrate_climate_min_soc([]) == 20
+assert m.migrate_climate_min_soc([base, exception]) == 30
+for invalid in (19,0,101,True,30.5,"30",None):
+    try: m.normalize_climate_min_soc(invalid)
+    except ValueError: pass
+    else: raise AssertionError("invalid global climate minimum")
+for profile in (base, exception):
+    assert m.climate_gate(profile, 19, "off", "on", 0, False, True, True, climate_min_soc=20) == "soc"
+    assert m.climate_gate(profile, 20, "off", "off", 0, False, True, True, climate_min_soc=20) == "ready"
+    assert m.climate_gate(profile, 29, "off", "on", 0, False, True, True, climate_min_soc=30) == "soc"
+    assert m.climate_gate(profile, 30, "off", "off", 0, False, True, True, climate_min_soc=30) == "ready"
+print("Global climate reserve tests passed")
