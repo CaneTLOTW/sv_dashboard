@@ -274,3 +274,46 @@ async def check_early_cleanup():
     assert s.ledger[key]["status"]=="missed" and s.ledger[key]["result_notification"]=="pending"
 asyncio.run(check_early_cleanup())
 print("Confirmed profile cleanup and ten-minute confirmation tests passed")
+
+# Retry is bounded by the original confirmation window and durable claim.
+assert not m.departure_retry_due(item, stamp+timedelta(minutes=4,seconds=59))
+assert m.departure_retry_due(item, stamp+timedelta(minutes=5))
+assert m.departure_retry_due(item, stamp+timedelta(minutes=7))
+assert not m.departure_retry_due(item, stamp+timedelta(minutes=8))
+assert not m.departure_retry_due({**item,"retry":{"status":"claimed"}},stamp+timedelta(minutes=5))
+assert not m.departure_retry_due({**item,"status":"confirmed"},stamp+timedelta(minutes=5))
+assert not m.departure_retry_due({**item,"status":"unconfirmed"},stamp+timedelta(minutes=5))
+assert not m.departure_retry_due({**item,"departure":(stamp+timedelta(minutes=6)).isoformat()},stamp+timedelta(minutes=5))
+# Exercise the actual retry method with a fake service and persistent claim.
+source = (Path(__file__).parents[1] / "custom_components/sv_dashboard/departure_planning.py").read_text()
+manager = next(n for n in ast.parse(source).body if isinstance(n,ast.ClassDef) and n.name=="DeparturePlanning")
+retry_method = next(n for n in manager.body if isinstance(n,ast.AsyncFunctionDef) and n.name=="_async_retry_locked")
+retry_ns={"dt_util":SimpleNamespace(utcnow=lambda:stamp+timedelta(minutes=5)), "departure_retry_due":m.departure_retry_due,"asyncio":asyncio}
+exec(compile(ast.Module(body=[retry_method],type_ignores=[]),"<retry-test>","exec"),retry_ns)
+async def check_retry():
+    calls=[]
+    current=dict(item)
+    async def persist(*args): calls.append(("persist",current.get("retry",{}).get("status")))
+    async def press(*args,**kwargs):
+        assert current["retry"]["status"]=="claimed"
+        calls.append(("press",args[2]["entity_id"]))
+    button=SimpleNamespace(entity_id="button.climate")
+    s=SimpleNamespace(_retry_button=lambda *args:button,_retry_observed={"k":True},profiles=[],revision=1,reminder={},last_reminder=None,_persist=persist,hass=SimpleNamespace(services=SimpleNamespace(async_call=press)))
+    await retry_ns["_async_retry_locked"](s,"k",current)
+    await retry_ns["_async_retry_locked"](s,"k",current)
+    assert calls==[("persist","claimed"),("press","button.climate"),("persist","submitted")]
+    assert current["status"]=="submitted" and "k" not in s._retry_observed
+    current=dict(item);calls.clear()
+    checks=iter([button,None]);s._retry_button=lambda *args:next(checks)
+    await retry_ns["_async_retry_locked"](s,"k",current)
+    assert calls==[("persist","claimed"),("persist","skipped")]
+    assert current["retry"]["status"]=="skipped"
+    current=dict(item);calls.clear();s._retry_button=lambda *args:button
+    async def bad(*args): raise OSError("storage")
+    s._persist=bad
+    try: await retry_ns["_async_retry_locked"](s,"k",current)
+    except OSError: pass
+    else: raise AssertionError("claim failure ignored")
+    assert calls==[] and "retry" not in current
+asyncio.run(check_retry())
+print("Bounded climate retry tests passed")

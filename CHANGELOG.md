@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.3-beta.22 — bounded redundant climate start
+
+- At most one retry for the same unconfirmed automatic occurrence, from five minutes after initial dispatch within the original ten-minute confirmation window. Requires unchanged enabled profile/authorization, a known OFF climate state and existing dispatch gates, plus continuous local observation of climate and the mapped stop button. No retry after observed activity, local stop, restart or claim; claim is durable and result notification remains single. A late confirmation can belong to either attempt. Unknown upstream idempotency remains a limitation; the retry may extend conditioning. No new polling.
+
 ## 0.7.3-beta.21 — delayed departure confirmation and early one-off cleanup
 
 - Wait up to ten minutes after dispatch (never beyond departure) for source-dated ON, including ambiguous service failures after attempted dispatch. Evaluate on existing minute ticks; one result alert only. No blind resend on timeout: no independently proven command rejection/idempotency contract. Delete an unchanged one-off on confirmed start, otherwise at departure, retain history and same-day series exceptions without displaying or dispatching the hidden occurrence. Record missed armed one-offs even without a preparation record. Existing weekly profiles remain intact.

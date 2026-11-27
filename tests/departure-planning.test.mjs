@@ -5,7 +5,7 @@ const read=p=>fs.readFileSync("custom_components/sv_dashboard/"+p,"utf8");
 test("departure planning stays in its own view and uses mapped climate dispatch only",()=>{
  const strategy=read("static/sv_dashboard.js"),frontend=read("static/frontend.js"),card=read("static/departure-planning-card.js"),backend=read("departure_planning.py");
  assert.match(strategy,/path: "departure", icon: "mdi:calendar-clock"/);
- assert.match(frontend,/import\("\.\/departure-planning-card\.js\?v=0\.7\.3-beta\.21"\)/);
+ assert.match(frontend,/import\("\.\/departure-planning-card\.js\?v=0\.7\.3-beta\.22"\)/);
  assert.match(card,/sv_dashboard\/departure_plans/);
  assert.match(backend,/connection\.user\.is_admin/);
  assert.match(backend,/revision_conflict/);
@@ -43,3 +43,5 @@ test("nightly warning is independent of profiles and exposes its own slider",()=
 test("global climate reserve is configured once, outside profiles",()=>{const card=read("static/departure-planning-card.js"),backend=read("departure_planning.py"),pure=read("departure_plan.py");assert.match(card,/id="climate-min-soc" type="range" min="20" max="100"/);assert.match(card,/_request\("climate_settings",\{min_soc:climateMin\}\)/);assert.match(backend,/climate_min_soc=self\.climate_min_soc/);assert.match(pure,/soc < normalize_climate_min_soc\(climate_min_soc\)/);assert.match(backend,/self\.climate_min_soc = previous/);});
 
 test("climate SOC history is passive, isolated and estimated",()=>{const card=read("static/departure-planning-card.js"),backend=read("departure_planning.py"),pure=read("departure_plan.py");assert.match(card,/row\.climate_soc\?this\._climateSoc/);assert.match(backend,/self\._soc_observed = set\(\)/);assert.match(backend,/self\._soc_observed\.clear\(\)/);assert.match(backend,/key in self\._soc_observed and self\._soc_guards_clean\(\)/);assert.match(pure,/"loss_pp": round\(before - after, 3\)/);});
+
+test("one redundant climate start is claimed before service and rechecks cancellation",()=>{const backend=read("departure_planning.py"),pure=read("departure_plan.py");assert.match(pure,/def departure_retry_due/);assert.match(backend,/item\["retry"\] = \{"at": now\.isoformat\(\), "status": "claimed"\}/);assert.match(backend,/self\._retry_observed\.clear\(\)/);assert.match(backend,/\(stop\.state, stop\.last_changed\) != observed/);assert.match(backend,/profile != item\.get\("profile_snapshot"\)/);});

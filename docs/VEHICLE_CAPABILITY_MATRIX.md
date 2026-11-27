@@ -154,3 +154,7 @@ The SOC delta is an estimated net battery loss, not a metered heater-only consum
 ## Scheduled confirmation and cleanup (beta.21)
 
 Confirmation window up to ten minutes after dispatch, capped at departure. No second command based on missing/late response, as rejection/idempotency is not established. An attempted call that errors may still have reached the vehicle; await source evidence. Positive confirmation deletes only the unchanged matching one-off; exceptions retained for the original date, execution and SOC tracking independent of profile lifetime.
+
+## Bounded climate retry (beta.22)
+
+Owner explicitly requested one redundant start when no activity is known at +5 minutes. Reuse current local telemetry and all dispatch gates; no retry on known ON/unknown, observed ON since dispatch, observed HA stop or changed stop button, missing stop observation, disarm/changed profile, restart or existing retry claim. Persist claim before pressing the same mapped start button, recheck immediately before sending. The original ten-minute confirmation deadline is not extended. Unobserved external app commands and duplicate-start behavior at the vehicle are not independently verified.

@@ -162,7 +162,7 @@ test("dual-energy hero exposes native HA interactions without nested custom card
 
 test("stored canonical SOC reconstruction prefers observation time over frozen source time", () => {
   assert.match(chargeHistory, /storedSocHistoryStates\(selected\?\.samples\)/);
-  assert.match(chargeHistory, /charge-history-core\.js\?v=0\.7\.3-beta\.21/);
+  assert.match(chargeHistory, /charge-history-core\.js\?v=0\.7\.3-beta\.22/);
 });
 
 test("charge curve prefers stored derived power and keeps SOC reconstruction as fallback", () => {
@@ -239,14 +239,14 @@ test("new card strings cover 18 languages", () => {
 
 test("frontend cache-busts changed modules", () => {
   assert.match(frontend, /gps-history-card\.js\?v=0\.6\.0-beta\.28/);
-  assert.match(frontend, /trip-history-card\.js\?v=0\.7\.3-beta\.21/);
-  assert.match(frontend, /fuel-history-card\.js\?v=0\.7\.3-beta\.21/);
-  assert.match(frontend, /charge-history-card\.js\?v=0\.7\.3-beta\.21/);
-  assert.match(frontend, /vehicle-overview-card\.js\?v=0\.7\.3-beta\.21/);
-  assert.match(frontend, /dual-energy-overview-card\.js\?v=0\.7\.3-beta\.21/);
-  assert.match(frontend, /vehicle-audit-card\.js\?v=0\.7\.3-beta\.21/);
-  assert.match(frontend, /vehicle-diagnostics-card\.js\?v=0\.7\.3-beta\.21/);
-  assert.match(frontend, /sv_dashboard\.js\?v=0\.7\.3-beta\.21/);
-  assert.match(strategy, /i18n\.js\?v=0\.7\.3-beta\.21/);
+  assert.match(frontend, /trip-history-card\.js\?v=0\.7\.3-beta\.22/);
+  assert.match(frontend, /fuel-history-card\.js\?v=0\.7\.3-beta\.22/);
+  assert.match(frontend, /charge-history-card\.js\?v=0\.7\.3-beta\.22/);
+  assert.match(frontend, /vehicle-overview-card\.js\?v=0\.7\.3-beta\.22/);
+  assert.match(frontend, /dual-energy-overview-card\.js\?v=0\.7\.3-beta\.22/);
+  assert.match(frontend, /vehicle-audit-card\.js\?v=0\.7\.3-beta\.22/);
+  assert.match(frontend, /vehicle-diagnostics-card\.js\?v=0\.7\.3-beta\.22/);
+  assert.match(frontend, /sv_dashboard\.js\?v=0\.7\.3-beta\.22/);
+  assert.match(strategy, /i18n\.js\?v=0\.7\.3-beta\.22/);
   assert.match(strategy, /modules\.trips && supportsFuel \? \{ type: "custom:sv-dashboard-fuel-history-card"/);
 });

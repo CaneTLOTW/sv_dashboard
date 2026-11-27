@@ -345,6 +345,16 @@ def departure_confirmation(item, raw_state, attributes, now):
     return item["status"]
 
 
+def departure_retry_due(item, now):
+    """One retry around +5 minutes, with time left for confirmation."""
+    if item.get("status") != "submitted" or "retry" in item or not item.get("dispatched_at"):
+        return False
+    dispatch = datetime.fromisoformat(item["dispatched_at"])
+    deadline = min(dispatch + timedelta(minutes=10), datetime.fromisoformat(item["departure"]))
+    return (dispatch + timedelta(minutes=5) <= now < dispatch + timedelta(minutes=8)
+            and now <= deadline - timedelta(minutes=2))
+
+
 def departure_result_due(item, now):
     """Never notify old ledger entries or replay a result after a restart."""
     if item.get("result_notification") != "pending" or item.get("status") in ("claimed", "submitted"):

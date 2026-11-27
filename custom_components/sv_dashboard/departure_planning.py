@@ -15,7 +15,7 @@ _LOGGER = logging.getLogger(__name__)
 from homeassistant.util import dt as dt_util
 
 from .const import CONF_VEHICLE_SLUG, DOMAIN
-from .departure_plan import edit_profiles, normalize_profile, preview, normalize_reminder, reminder_candidate, due_occurrences, climate_gate, climate_state, quick_defaults, add_quick_profile, execution_candidates, fresh_heartbeat, expire_one_time_profiles, normalize_climate_min_soc, migrate_climate_min_soc, next_climate_badge, departure_confirmation, departure_result_due, climate_source_time, climate_soc_sample, climate_soc_begin, climate_soc_advance
+from .departure_plan import edit_profiles, normalize_profile, preview, normalize_reminder, reminder_candidate, due_occurrences, climate_gate, climate_state, quick_defaults, add_quick_profile, execution_candidates, fresh_heartbeat, expire_one_time_profiles, normalize_climate_min_soc, migrate_climate_min_soc, next_climate_badge, departure_confirmation, departure_result_due, climate_source_time, climate_soc_sample, climate_soc_begin, climate_soc_advance, departure_retry_due
 
 
 class DeparturePlanning:
@@ -37,6 +37,9 @@ class DeparturePlanning:
         self._published_badge = None
         self._soc_observed = set()
         self._soc_unsubscribe = None
+        self._retry_observed = {}
+        self._retry_unsubscribe = None
+        self._retry_watch = ()
 
     async def async_initialize(self):
         data = await self.store.async_load()
@@ -69,6 +72,11 @@ class DeparturePlanning:
         watched = [mapping[k] for k in ("engine", "battery_plugged", "battery_charging") if mapping.get(k)]
         if watched:
             self._soc_unsubscribe = async_track_state_change_event(self.hass, watched, self._soc_guard_changed)
+        climate = self._state("preconditioning")
+        stop = self._state("preconditioning_stop", "button")
+        if climate is not None and stop is not None:
+            self._retry_watch = (climate.entity_id, stop.entity_id)
+            self._retry_unsubscribe = async_track_state_change_event(self.hass, list(self._retry_watch), self._retry_state_changed)
 
     @callback
     def _tick(self, _now):
@@ -76,6 +84,10 @@ class DeparturePlanning:
             self._task = self.hass.async_create_task(self._async_tick())
 
     async def async_shutdown(self):
+        if self._retry_unsubscribe:
+            self._retry_unsubscribe()
+            self._retry_unsubscribe = None
+        self._retry_observed.clear()
         if self._soc_unsubscribe:
             self._soc_unsubscribe()
             self._soc_unsubscribe = None
@@ -176,6 +188,79 @@ class DeparturePlanning:
                     sent = False
                 item["result_notification"] = "sent" if sent else "not_sent"
                 await self._persist(self.profiles, self.revision, self.reminder, self.last_reminder)
+
+    @callback
+    def _retry_state_changed(self, event):
+        entity = event.data.get("entity_id")
+        state = event.data.get("new_state")
+        old = event.data.get("old_state")
+        if entity == self._retry_watch[0]:
+            if state is None or climate_state(state.state) is not False:
+                self._retry_observed.clear()
+        elif entity == self._retry_watch[1]:
+            if state is None or old is None or state.state != old.state:
+                self._retry_observed.clear()
+
+    def _retry_button(self, key, item, now):
+        # No retry across a restart, unobservable stop button, manual stop,
+        # observed active/unknown climate, changed profile or disarmed schedule.
+        observed = self._retry_observed.get(key)
+        if observed is None or self.execution_enabled_at is None:
+            return None
+        dispatch = datetime.fromisoformat(item["dispatched_at"])
+        if self.execution_enabled_at > dispatch:
+            return None
+        profile = next((p for p in self.profiles if p["id"] == key.split("|", 1)[0]), None)
+        if profile is None or not profile["enabled"] or profile != item.get("profile_snapshot"):
+            return None
+        if not any(row["profile_id"] + "|" + row["departure"] == key
+                   for row in preview(self._effective_profiles(), now, self.hass.config.time_zone, 2)["upcoming"]):
+            return None
+        climate = self._state("preconditioning")
+        stop = self._state("preconditioning_stop", "button")
+        if (climate is None or stop is None or (climate.entity_id, stop.entity_id) != self._retry_watch
+                or (stop.state, stop.last_changed) != observed or stop.state == "unavailable"):
+            return None
+        button = self._state("preconditioning_start", "button")
+        engine, plug, battery = self._state("engine"), self._state("battery_plugged"), self._state("battery")
+        temp = self._state("temperature")
+        temperature = self._numeric(temp)
+        if temperature is not None:
+            unit = temp.attributes.get("unit_of_measurement")
+            temperature = (temperature - 32) * 5 / 9 if unit == "°F" else temperature if unit == "°C" else None
+        heartbeat, source = self.notifications._heartbeat()
+        status = climate_gate(profile, self._numeric(battery), getattr(engine, "state", None),
+            getattr(plug, "state", None), temperature, climate_state(climate.state),
+            button is not None and button.state != "unavailable",
+            fresh_heartbeat(now, heartbeat, source), climate_min_soc=self.climate_min_soc)
+        return button if status == "ready" else None
+
+    async def _async_retry_locked(self, key, item):
+        now = dt_util.utcnow()
+        if not departure_retry_due(item, now) or self._retry_button(key, item, now) is None:
+            return
+        # Persist a unique retry claim before sending. Never replay a claim.
+        item["retry"] = {"at": now.isoformat(), "status": "claimed"}
+        try:
+            await self._persist(self.profiles, self.revision, self.reminder, self.last_reminder)
+        except Exception:
+            item.pop("retry", None)
+            self._retry_observed.pop(key, None)
+            raise
+        now = dt_util.utcnow()
+        before_claim = {k: v for k, v in item.items() if k != "retry"}
+        button = self._retry_button(key, item, now) if departure_retry_due(before_claim, now) else None
+        self._retry_observed.pop(key, None)
+        if button is None:
+            item["retry"]["status"] = "skipped"
+        else:
+            try:
+                await asyncio.wait_for(self.hass.services.async_call(
+                    "button", "press", {"entity_id": button.entity_id}, blocking=True), timeout=30)
+                item["retry"]["status"] = "submitted"
+            except Exception:
+                item["retry"]["status"] = "error"
+        await self._persist(self.profiles, self.revision, self.reminder, self.last_reminder)
 
     def _soc_guards_clean(self, sample=None):
         for key in ("engine", "battery_plugged", "battery_charging"):
@@ -296,7 +381,7 @@ class DeparturePlanning:
                     button is not None and button.state != "unavailable", fresh, climate_min_soc=self.climate_min_soc)
                 if row["phase"] == "missed":
                     status = "stale" if key in self.preparation and not fresh else "missed"
-                # No second command within 45 minutes, even if profiles overlap.
+                # Block overlapping occurrences; only the same occurrence may claim its bounded retry.
                 recent = any(value.get("status") in ("claimed", "submitted", "confirmed", "unconfirmed", "failed")
                     and timedelta(0) <= now - (dt_util.parse_datetime(value.get("at", "")) or cutoff) < timedelta(minutes=45)
                     for value in self.ledger.values())
@@ -318,7 +403,7 @@ class DeparturePlanning:
                     raise
                 if status != "ready":
                     continue
-                # Durable claim precedes the only service call; no blind retry.
+                # Durable claim precedes the first service call.
                 attempted = False
                 try:
                     if dt_util.utcnow() >= datetime.fromisoformat(row["deadline"]):
@@ -335,6 +420,12 @@ class DeparturePlanning:
                             item["status"] = "missed"
                             await self._persist(self.profiles, self.revision, self.reminder, self.last_reminder)
                             continue
+                        stop = self._state("preconditioning_stop", "button")
+                        climate_now = self._state("preconditioning")
+                        if (stop is not None and stop.state != "unavailable" and climate_now is not None
+                                and climate_state(climate_now.state) is False
+                                and (climate_now.entity_id, stop.entity_id) == self._retry_watch):
+                            self._retry_observed[key] = (stop.state, stop.last_changed)
                         attempted = True
                         await asyncio.wait_for(self.hass.services.async_call(
                             "button", "press", {"entity_id": button.entity_id}, blocking=True), timeout=30)
@@ -360,6 +451,11 @@ class DeparturePlanning:
             if changed:
                 await self._persist(self.profiles, self.revision, self.reminder, self.last_reminder)
             await self._async_cleanup_locked(now)
+            for key, item in self.ledger.items():
+                if item.get("status") != "submitted":
+                    self._retry_observed.pop(key, None)
+                    continue
+                await self._async_retry_locked(key, item)
 
     async def _async_reminder(self):
         async with self.lock:
